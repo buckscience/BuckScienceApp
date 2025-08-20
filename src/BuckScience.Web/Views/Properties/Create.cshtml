@@ -1,0 +1,48 @@
+﻿@model BuckScience.Web.ViewModels.PropertyCreateVm
+@{
+    ViewData["Title"] = "Create Property";
+}
+<h1>Create Property</h1>
+
+@if (TempData["CreatedId"] is int id)
+{
+    <div class="alert alert-success">Created Property with Id @id</div>
+}
+
+<form asp-action="Create" method="post">
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Latitude" class="form-label"></label>
+        <input asp-for="Latitude" class="form-control" />
+        <span asp-validation-for="Latitude" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Longitude" class="form-label"></label>
+        <input asp-for="Longitude" class="form-control" />
+        <span asp-validation-for="Longitude" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="TimeZone" class="form-label"></label>
+        <input asp-for="TimeZone" class="form-control" />
+        <span asp-validation-for="TimeZone" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DayHour" class="form-label"></label>
+        <input asp-for="DayHour" type="number" class="form-control" />
+        <span asp-validation-for="DayHour" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="NightHour" class="form-label"></label>
+        <input asp-for="NightHour" type="number" class="form-control" />
+        <span asp-validation-for="NightHour" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Create</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
