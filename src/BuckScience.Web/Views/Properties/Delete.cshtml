@@ -1,0 +1,39 @@
+﻿@model BuckScience.Web.ViewModels.PropertyDeleteVm
+@{
+    ViewData["Title"] = "Delete Property";
+}
+<h1>Delete Property</h1>
+
+<div class="alert alert-warning">
+    Are you sure you want to delete this property? This action cannot be undone.
+</div>
+
+<dl class="row">
+    <dt class="col-sm-3">Id</dt>
+    <dd class="col-sm-9">@Model.Id</dd>
+
+    <dt class="col-sm-3">Name</dt>
+    <dd class="col-sm-9">@Model.Name</dd>
+
+    <dt class="col-sm-3">Latitude</dt>
+    <dd class="col-sm-9">@Model.Latitude</dd>
+
+    <dt class="col-sm-3">Longitude</dt>
+    <dd class="col-sm-9">@Model.Longitude</dd>
+
+    <dt class="col-sm-3">Time Zone</dt>
+    <dd class="col-sm-9">@Model.TimeZone</dd>
+
+    <dt class="col-sm-3">Day Hour</dt>
+    <dd class="col-sm-9">@Model.DayHour</dd>
+
+    <dt class="col-sm-3">Night Hour</dt>
+    <dd class="col-sm-9">@Model.NightHour</dd>
+</dl>
+
+<form asp-action="Delete" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a asp-action="Index" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>

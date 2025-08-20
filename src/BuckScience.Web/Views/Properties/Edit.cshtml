@@ -1,47 +1,56 @@
-﻿@using BuckScience.Web.ViewModels.Properties
-@model PropertyCreateVm
+﻿@model BuckScience.Web.ViewModels.PropertyEditVm
 @{
-    ViewData["Title"] = "Create Property";
+    ViewData["Title"] = "Edit Property";
 }
-<h1>Create Property</h1>
+<h1>Edit Property</h1>
 
-@if (TempData["CreatedId"] is int id)
+@if (TempData["UpdatedId"] is int id)
 {
-    <div class="alert alert-success">Created Property with Id @id</div>
+    <div class="alert alert-success">Updated Property with Id @id</div>
 }
 
-<form asp-action="Create" method="post">
+<form asp-action="Edit" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
     <div class="mb-3">
         <label asp-for="Name" class="form-label"></label>
         <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label asp-for="Latitude" class="form-label"></label>
         <input asp-for="Latitude" class="form-control" />
         <span asp-validation-for="Latitude" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label asp-for="Longitude" class="form-label"></label>
         <input asp-for="Longitude" class="form-control" />
         <span asp-validation-for="Longitude" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label asp-for="TimeZone" class="form-label"></label>
         <input asp-for="TimeZone" class="form-control" />
         <span asp-validation-for="TimeZone" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label asp-for="DayHour" class="form-label"></label>
-        <input asp-for="DayHour" type="number" class="form-control" />
+        <input asp-for="DayHour" class="form-control" />
         <span asp-validation-for="DayHour" class="text-danger"></span>
     </div>
+
     <div class="mb-3">
         <label asp-for="NightHour" class="form-label"></label>
-        <input asp-for="NightHour" type="number" class="form-control" />
+        <input asp-for="NightHour" class="form-control" />
         <span asp-validation-for="NightHour" class="text-danger"></span>
     </div>
-    <button type="submit" class="btn btn-primary">Create</button>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Create" class="btn btn-outline-secondary ms-2">Back</a>
 </form>
 
 @section Scripts {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BuckScience.Web.ViewModels;
+namespace BuckScience.Web.ViewModels.Properties;
 
 public sealed class PropertyCreateVm
 {

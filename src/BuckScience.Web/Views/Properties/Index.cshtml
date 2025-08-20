@@ -1,0 +1,48 @@
+﻿@model IEnumerable<BuckScience.Web.ViewModels.PropertyListItemVm>
+@{
+    ViewData["Title"] = "Properties";
+}
+
+<h1>Properties</h1>
+
+@if (TempData["DeletedId"] is int did)
+{
+    <div class="alert alert-success">Deleted Property with Id @did</div>
+}
+
+<div class="mb-3">
+    <a asp-action="Create" class="btn btn-primary">Create New Property</a>
+</div>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Time Zone</th>
+            <th>Day Hour</th>
+            <th>Night Hour</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Id</td>
+                <td>@p.Name</td>
+                <td>@p.Latitude</td>
+                <td>@p.Longitude</td>
+                <td>@p.TimeZone</td>
+                <td>@p.DayHour</td>
+                <td>@p.NightHour</td>
+                <td class="text-end">
+                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
