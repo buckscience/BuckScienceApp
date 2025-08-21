@@ -19,11 +19,14 @@ public static class CreateProperty
         Command cmd,
         IAppDbContext db,
         GeometryFactory geometryFactory,
+        int userId,
         CancellationToken ct)
     {
-        // NTS uses X=lon, Y=lat
+        // NTS uses X=Longitude, Y=Latitude
         var point = geometryFactory.CreatePoint(new Coordinate(cmd.Longitude, cmd.Latitude));
+
         var prop = new Property(cmd.Name, point, cmd.Boundary, cmd.TimeZone, cmd.DayHour, cmd.NightHour);
+        prop.AssignOwner(userId); // use the domain method to set the FK
 
         db.Properties.Add(prop);
         await db.SaveChangesAsync(ct);

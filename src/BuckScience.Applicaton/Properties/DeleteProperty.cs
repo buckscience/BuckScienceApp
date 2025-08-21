@@ -7,13 +7,21 @@ namespace BuckScience.Application.Properties;
 
 public static class DeleteProperty
 {
-    // In the future, add a userId parameter to enforce ownership checks.
-    public static async Task HandleAsync(int id, IAppDbContext db, CancellationToken ct)
+    // Enforce ownership: only delete if (id, userId) matches
+    public static async Task<bool> HandleAsync(
+        int id,
+        int userId,
+        IAppDbContext db,
+        CancellationToken ct)
     {
-        var entity = await db.Properties.FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (entity is null) return;
+        var prop = await db.Properties
+            .FirstOrDefaultAsync(p => p.Id == id && p.ApplicationUserId == userId, ct);
 
-        db.Properties.Remove(entity);
+        if (prop is null)
+            return false; // or throw new KeyNotFoundException("Property not found.");
+
+        db.Properties.Remove(prop);
         await db.SaveChangesAsync(ct);
+        return true;
     }
 }

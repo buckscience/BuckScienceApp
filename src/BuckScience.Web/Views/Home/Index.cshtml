@@ -1,0 +1,27 @@
+﻿@{
+    ViewData["Title"] = "Welcome";
+    var isAuthed = User?.Identity?.IsAuthenticated == true;
+}
+<div class="container mt-5">
+    <h1>BuckScience</h1>
+    <p class="lead">Sign in to manage your properties.</p>
+
+    @if (!isAuthed)
+    {
+        <a class="btn btn-primary"
+            href="@Url.Action("SignIn", "Account", new { area = "MicrosoftIdentity", returnUrl = Url.Action("Index","Properties") })">
+            Sign in
+        </a>
+
+    }
+    else
+    {
+        <a class="btn btn-success me-2" href="@Url.Action("Index", "Properties")">Go to Properties</a>
+        <a class="btn btn-outline-danger"
+           asp-area="MicrosoftIdentity"
+           asp-controller="Account"
+           asp-action="SignOut">
+            Sign out
+        </a>
+    }
+</div>

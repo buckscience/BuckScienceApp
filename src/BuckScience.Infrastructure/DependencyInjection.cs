@@ -1,10 +1,10 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Infrastructure.Auth;
 using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NetTopologySuite;
-using NetTopologySuite.Geometries;
 
 namespace BuckScience.Infrastructure;
 
@@ -18,10 +18,11 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(conn, sql => sql.UseNetTopologySuite()));
 
+        // Map the interface to the concrete context registered above
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
-        services.AddSingleton<NtsGeometryServices>(_ => NtsGeometryServices.Instance);
-        services.AddSingleton<GeometryFactory>(sp =>
-            sp.GetRequiredService<NtsGeometryServices>().CreateGeometryFactory(srid: 4326));
+
+        // If you have IUserProvisioningService in Infrastructure:
+        services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 
         return services;
     }

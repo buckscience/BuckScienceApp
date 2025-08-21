@@ -37,9 +37,18 @@ public class Property
     public int DayHour { get; private set; }
     public int NightHour { get; private set; }
 
+    // Owner for per-user segmentation
+    public int ApplicationUserId { get; private set; }
+
     // Convenience accessors (NTS uses X=Longitude, Y=Latitude)
     public double Latitude => Center?.Y ?? 0d;
     public double Longitude => Center?.X ?? 0d;
+
+    public void AssignOwner(int applicationUserId)
+    {
+        if (applicationUserId <= 0) throw new ArgumentOutOfRangeException(nameof(applicationUserId));
+        ApplicationUserId = applicationUserId;
+    }
 
     public void Rename(string newName)
     {
@@ -50,14 +59,12 @@ public class Property
     public void SetLocation(Point point)
     {
         if (point is null) throw new ArgumentNullException(nameof(point));
-        // Ensure SRID is set (4326 is common; keep if your data uses WGS84)
         if (point.SRID == 0) point.SRID = 4326;
         Center = point;
     }
 
     public void Move(double latitude, double longitude)
     {
-        // Note: X=lon, Y=lat
         SetLocation(new Point(longitude, latitude) { SRID = 4326 });
     }
 

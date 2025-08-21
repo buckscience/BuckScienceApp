@@ -1,4 +1,4 @@
-namespace BuckScience.Web.Models
+namespace BuckScience.Web.ViewModels
 {
     public class ErrorViewModel
     {
