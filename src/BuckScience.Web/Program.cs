@@ -44,12 +44,12 @@ Directory.CreateDirectory(keysPath);
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
 builder.Services.AddDistributedMemoryCache();
-//builder.Services.AddSession(o =>
-//{
-//    o.IdleTimeout = TimeSpan.FromMinutes(20);
-//    o.Cookie.HttpOnly = true;
-//    o.Cookie.IsEssential = true;
-//});
+builder.Services.AddSession(o =>
+{
+    o.IdleTimeout = TimeSpan.FromMinutes(20);
+    o.Cookie.HttpOnly = true;
+    o.Cookie.IsEssential = true;
+});
 
 var app = builder.Build();
 
@@ -64,7 +64,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-//app.UseSession();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
