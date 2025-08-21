@@ -11,7 +11,7 @@ public class CurrentUserService : ICurrentUserService
     private readonly IHttpContextAccessor _http;
     private readonly IAppDbContext _db;
 
-    // Claim that carries the DB PK (ApplicationUser.Id)
+    // Claim that could carry the DB PK (ApplicationUser.Id) if you ever decide to stamp it
     private const string AppUserIdClaim = "app_user_id";
     // Per-request cache key to avoid repeated lookups
     private const string AppUserIdItemKey = "__app_user_id";
@@ -28,9 +28,11 @@ public class CurrentUserService : ICurrentUserService
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated == true;
 
     // External identity used to map to ApplicationUser.AzureEntraB2CId
-    // Prefer 'oid' (AAD object id), fall back to 'sub' depending on B2C policy
+    // Prefer AAD object id; support both short and long claim types.
     public string? AzureEntraB2CId =>
         User?.FindFirst("oid")?.Value
+        ?? User?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+        ?? User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
         ?? User?.FindFirst("sub")?.Value;
 
     public string? Email =>
@@ -56,7 +58,7 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            // 1) From claim (best: stamped at sign-in)
+            // 1) From claim (only if you choose to stamp it later)
             if (int.TryParse(User?.FindFirst(AppUserIdClaim)?.Value, out var idFromClaim))
                 return idFromClaim;
 
@@ -68,7 +70,7 @@ public class CurrentUserService : ICurrentUserService
             var externalId = AzureEntraB2CId;
             if (string.IsNullOrWhiteSpace(externalId)) return null;
 
-            // Use async database call to avoid blocking the request thread
+            // Use async database call
             var id = Task.Run(async () =>
             {
                 return await _db.ApplicationUsers.AsNoTracking()

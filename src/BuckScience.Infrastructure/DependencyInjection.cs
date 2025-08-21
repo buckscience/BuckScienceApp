@@ -30,10 +30,6 @@ public static class DependencyInjection
         services.AddSingleton<GeometryFactory>(sp =>
             NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
 
-        // If some components request GeometryFactory specifically, map it to the same instance
-        services.AddSingleton<GeometryFactory>(sp =>
-            (GeometryFactory)sp.GetRequiredService<GeometryFactory>());
-
         return services;
     }
 }
