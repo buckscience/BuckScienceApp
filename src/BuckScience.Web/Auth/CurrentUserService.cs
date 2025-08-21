@@ -68,10 +68,14 @@ public class CurrentUserService : ICurrentUserService
             var externalId = AzureEntraB2CId;
             if (string.IsNullOrWhiteSpace(externalId)) return null;
 
-            var id = _db.ApplicationUsers.AsNoTracking()
-                .Where(u => u.AzureEntraB2CId == externalId)
-                .Select(u => (int?)u.Id)
-                .FirstOrDefault();
+            // Use async database call to avoid blocking the request thread
+            var id = Task.Run(async () =>
+            {
+                return await _db.ApplicationUsers.AsNoTracking()
+                    .Where(u => u.AzureEntraB2CId == externalId)
+                    .Select(u => (int?)u.Id)
+                    .FirstOrDefaultAsync();
+            }).GetAwaiter().GetResult();
 
             if (id.HasValue && Http is not null)
                 Http.Items[AppUserIdItemKey] = id.Value;

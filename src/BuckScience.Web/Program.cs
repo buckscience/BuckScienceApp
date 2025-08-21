@@ -1,4 +1,6 @@
 using BuckScience.Infrastructure;
+using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Web.Auth;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
@@ -9,6 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Register CurrentUserService for dependency injection
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Authentication: set defaults, then bind from AzureADB2C section
 builder.Services.AddAuthentication(options =>
