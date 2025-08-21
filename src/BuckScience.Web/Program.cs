@@ -1,7 +1,7 @@
 using BuckScience.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 
@@ -10,44 +10,46 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Authentication: let Microsoft.Identity.Web register "Cookies" + "OpenIdConnect"
-var auth = builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
-auth.AddMicrosoftIdentityWebApp(options =>
+// Authentication: set defaults, then bind from AzureADB2C section
+builder.Services.AddAuthentication(options =>
 {
-    // IMPORTANT: section name must match your appsettings key exactly
-    builder.Configuration.Bind("AzureAdB2C", options);
-});
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureADB2C"));
 
-// Configure the already-registered "Cookies" scheme instead of adding it again
 builder.Services.Configure<CookieAuthenticationOptions>(
     CookieAuthenticationDefaults.AuthenticationScheme,
-    options =>
+    cookie =>
     {
-        options.Cookie.Name = ".BuckScience.Auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.SlidingExpiration = true;
+        cookie.Cookie.Name = ".BuckScience.Auth";
+        cookie.Cookie.HttpOnly = true;
+        cookie.SlidingExpiration = true;
+        cookie.Cookie.SameSite = SameSiteMode.Lax;
+        cookie.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
     });
 
-// Microsoft Identity UI endpoints (/Account/SignIn etc.)
 builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
 
-// Authorization: require auth by default; keep your AllowAnonymous policy
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = options.DefaultPolicy;
-    options.AddPolicy("AllowAnonymous", policy => policy.RequireAssertion(_ => true));
 });
 
-// Sessions (optional)
+var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+Directory.CreateDirectory(keysPath);
+builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
 builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromMinutes(20);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-});
+//builder.Services.AddSession(o =>
+//{
+//    o.IdleTimeout = TimeSpan.FromMinutes(20);
+//    o.Cookie.HttpOnly = true;
+//    o.Cookie.IsEssential = true;
+//});
 
 var app = builder.Build();
 
@@ -62,15 +64,15 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// If you use session in auth events, keep session before auth
-app.UseSession();
-
+//app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapGet("/ping", () => Results.Text("pong")).AllowAnonymous();
 
 app.MapRazorPages();
 
