@@ -26,6 +26,7 @@ public class PropertiesController : Controller
 
     // LIST: GET /Properties
     [HttpGet]
+    [Route("/properties")]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         if (_currentUser.Id is null) return Forbid();
@@ -48,6 +49,7 @@ public class PropertiesController : Controller
 
     // CREATE
     [HttpGet]
+    [Route("/properties/add")]
     public IActionResult Create()
     {
         if (_currentUser.Id is null) return Forbid();
@@ -55,6 +57,7 @@ public class PropertiesController : Controller
     }
 
     [HttpPost]
+    [Route("/properties/add")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PropertyCreateVm vm, CancellationToken ct)
     {
@@ -74,6 +77,7 @@ public class PropertiesController : Controller
 
     // EDIT
     [HttpGet]
+    [Route("/properties/{id:int}/edit")]
     public async Task<IActionResult> Edit(int id, CancellationToken ct)
     {
         if (_currentUser.Id is null) return Forbid();
@@ -97,6 +101,7 @@ public class PropertiesController : Controller
     }
 
     [HttpPost]
+    [Route("/properties/{id:int}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(PropertyEditVm vm, CancellationToken ct)
     {
@@ -130,6 +135,7 @@ public class PropertiesController : Controller
 
     // DELETE (confirm)
     [HttpGet]
+    [Route("/properties/{id:int}/delete")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         if (_currentUser.Id is null) return Forbid();
