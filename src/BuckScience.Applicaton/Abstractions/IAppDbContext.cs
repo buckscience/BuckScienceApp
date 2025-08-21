@@ -1,6 +1,5 @@
 ﻿using BuckScience.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 
 namespace BuckScience.Application.Abstractions;
 

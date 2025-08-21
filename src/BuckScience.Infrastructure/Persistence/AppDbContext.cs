@@ -1,6 +1,7 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace BuckScience.Infrastructure.Persistence;
 
@@ -16,9 +17,9 @@ public class AppDbContext : DbContext, IAppDbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Example configuration (optional):
-        // modelBuilder.Entity<ApplicationUser>()
-        //     .HasIndex(u => u.AzureEntraB2CId)
-        //     .IsUnique();
+        // Ensure all IEntityTypeConfiguration<T> in this assembly are applied,
+        // including PropertyConfiguration that maps spatial columns to 'geometry'.
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
     }
 }

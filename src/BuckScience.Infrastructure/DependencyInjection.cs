@@ -26,8 +26,8 @@ public static class DependencyInjection
         // If you have IUserProvisioningService in Infrastructure:
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 
-        // NTS GeometryFactory (WGS84 / SRID 4326)
-        services.AddSingleton<GeometryFactory>(sp =>
+        // NTS GeometryFactory (SRID 4326)
+        services.AddSingleton<GeometryFactory>(_ =>
             NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
 
         return services;
