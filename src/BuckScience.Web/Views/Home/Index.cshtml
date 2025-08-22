@@ -1,27 +1,32 @@
 ﻿@{
     ViewData["Title"] = "Welcome";
-    var isAuthed = User?.Identity?.IsAuthenticated == true;
+    Layout = "_Landing";
 }
-<div class="container mt-5">
-    <h1>BuckScience</h1>
-    <p class="lead">Sign in to manage your properties.</p>
 
-    @if (!isAuthed)
-    {
-        <a class="btn btn-primary"
-            href="@Url.Action("SignIn", "Account", new { area = "MicrosoftIdentity", returnUrl = Url.Action("Index","Properties") })">
-            Sign in
-        </a>
+<section class="hero-copy">
+    <span class="eyebrow">Welcome</span>
+    <h1>Sign in to BuckScience</h1>
+    <p>
+        Access your projects, manage properties, and explore your data in one place.
+        Use your organization login to continue.
+    </p>
+    <div class="cta">
+        <a class="btn btn-primary" href="/auth/login" aria-label="Sign in">Sign in</a>
+        <a class="btn btn-ghost" href="#" aria-label="Learn more">Learn more</a>
+    </div>
+</section>
 
-    }
-    else
-    {
-        <a class="btn btn-success me-2" href="@Url.Action("Index", "Properties")">Go to Properties</a>
-        <a class="btn btn-outline-danger"
-           asp-area="MicrosoftIdentity"
-           asp-controller="Account"
-           asp-action="SignOut">
-            Sign out
-        </a>
-    }
-</div>
+<section>
+    <div class="panel login-card">
+        <h3>Ready to get started?</h3>
+        <p>Sign in to create, manage, and analyze your properties. We’ll add more content here later.</p>
+        <div class="login-actions">
+            <a class="btn btn-primary" href="/auth/login">Continue with your account</a>
+            <a class="btn btn-ghost" href="#">Request access</a>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <!-- Per-page scripts (optional) -->
+}

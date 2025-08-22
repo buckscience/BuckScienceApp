@@ -22,16 +22,17 @@
     padding: 2rem 1.5rem 1.5rem 1.5rem;
 }
 
-/* Ensure sidebar content doesn't overflow unnecessarily */
-.sidebar-overlay .container-fluid {
-    width: 100%;
-    min-width: 320px; /* Minimum content width */
-}
+    /* Ensure sidebar content doesn't overflow unnecessarily */
+    .sidebar-overlay .container-fluid {
+        width: 100%;
+        min-width: 320px; /* Minimum content width */
+    }
 
-.sidebar-overlay .form-control,
-.sidebar-overlay .form-select {
-    min-width: 200px; /* Ensure form controls have reasonable minimum width */
-}
+    .sidebar-overlay .form-control,
+    .sidebar-overlay .form-select {
+        min-width: 200px; /* Ensure form controls have reasonable minimum width */
+    }
+
 .sidebar-header {
     font-size: 2rem;
     font-weight: 700;
@@ -189,10 +190,10 @@
     margin-bottom: 0.5rem;
 }
 
-.content-icon-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    background: #fff;
-}
+    .content-icon-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        background: #fff;
+    }
 
 .metric-value {
     font-size: 1.3rem;

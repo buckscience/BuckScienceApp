@@ -44,6 +44,9 @@ public class Property
     public double Latitude => Center?.Y ?? 0d;
     public double Longitude => Center?.X ?? 0d;
 
+    // Navigation
+    public virtual ICollection<Camera> Cameras { get; set; } = new HashSet<Camera>();
+
     public void AssignOwner(int applicationUserId)
     {
         if (applicationUserId <= 0) throw new ArgumentOutOfRangeException(nameof(applicationUserId));

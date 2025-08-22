@@ -1,0 +1,57 @@
+﻿@{
+    Layout = null;
+    var title = ViewData["Title"] as string ?? "BuckScience";
+    var isAuth = Context?.User?.Identity?.IsAuthenticated ?? false;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@title - BuckScience</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/landing-page.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    <header class="landing-nav">
+        <div class="container nav-inner">
+            <a class="brand" href="@Url.Content("~/")" aria-label="BuckScience home">
+                <span class="dot" aria-hidden="true"></span>
+                <span>BuckScience</span>
+            </a>
+            <div class="nav-actions">
+                <a class="btn btn-ghost" href="#">Docs</a>
+                @if (isAuth)
+                {
+                    <a class="btn btn-primary" href="~/">Go to app</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" href="/auth/login">Sign in</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <main class="hero">
+        <div class="container hero-inner">
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer>
+        <div class="container" style="display:flex; align-items:center; justify-content:space-between; flex-wrap: wrap; gap: .75rem;">
+            <div>© @DateTime.UtcNow.Year BuckScience</div>
+            <div style="display:flex; gap:.75rem;">
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
