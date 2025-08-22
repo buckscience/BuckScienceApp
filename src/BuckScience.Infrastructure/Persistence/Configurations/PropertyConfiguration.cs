@@ -2,41 +2,44 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BuckScience.Infrastructure.Persistence.Configurations;
-
-public class PropertyConfiguration : IEntityTypeConfiguration<Property>
+namespace BuckScience.Infrastructure.Persistence.Configurations
 {
-    public void Configure(EntityTypeBuilder<Property> b)
+    public class PropertyConfiguration : IEntityTypeConfiguration<Property>
     {
-        b.ToTable("Properties");
-
-        b.HasKey(p => p.Id);
-
-        b.Property(p => p.Name)
-         .HasMaxLength(200)
-         .IsRequired();
-
-        b.Property(p => p.TimeZone)
-         .HasMaxLength(100)
-         .IsRequired();
-
-        b.Property(p => p.CreatedDate)
-         .HasDefaultValueSql("GETUTCDATE()");
-
-        // Spatial columns as SQL Server 'geometry'
-        b.Property(p => p.Center)
-         .HasColumnType("geometry")
-         .IsRequired();
-
-        b.Property(p => p.Boundary)
-         .HasColumnType("geometry")
-         .IsRequired(false);
-
-        // Optional: enforce SRID 4326 via a check constraint
-        b.ToTable(t =>
+        public void Configure(EntityTypeBuilder<Property> entity)
         {
-            t.HasCheckConstraint("CK_Properties_SRID",
-                "([Center].STSrid = 4326) AND ([Boundary] IS NULL OR [Boundary].STSrid = 4326)");
-        });
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.Name)
+                  .HasMaxLength(200)
+                  .IsRequired();
+
+            // Spatial columns (SQL Server geometry)
+            entity.Property(p => p.Center)
+                  .HasColumnType("geometry")
+                  .IsRequired();
+
+            entity.Property(p => p.Boundary)
+                  .HasColumnType("geometry");
+
+            entity.Property(p => p.TimeZone)
+                  .HasMaxLength(100)
+                  .IsRequired();
+
+            entity.Property(p => p.DayHour).IsRequired();
+            entity.Property(p => p.NightHour).IsRequired();
+
+            entity.Property(p => p.CreatedDate)
+                  .HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(p => p.ApplicationUserId);
+            entity.HasIndex(p => new { p.ApplicationUserId, p.Name });
+
+            // Ignore convenience, computed-at-runtime properties
+            entity.Ignore(p => p.Latitude);
+            entity.Ignore(p => p.Longitude);
+
+            // Relationship configured on Camera side WithMany(p => p.Cameras)
+        }
     }
 }
