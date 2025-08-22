@@ -13,7 +13,7 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822123837_Initial")]
+    [Migration("20250822135121_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

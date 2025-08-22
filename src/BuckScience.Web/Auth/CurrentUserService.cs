@@ -1,34 +1,20 @@
 ﻿using System.Security.Claims;
-using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 
 namespace BuckScience.Web.Auth;
 
-public class CurrentUserService : ICurrentUserService
+public sealed class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _http;
-    private readonly IAppDbContext _db;
-
-    // Claim that could carry the DB PK (ApplicationUser.Id) if you ever decide to stamp it
-    private const string AppUserIdClaim = "app_user_id";
-    // Per-request cache key to avoid repeated lookups
-    private const string AppUserIdItemKey = "__app_user_id";
-
-    public CurrentUserService(IHttpContextAccessor http, IAppDbContext db)
-    {
-        _http = http;
-        _db = db;
-    }
+    public CurrentUserService(IHttpContextAccessor http) => _http = http;
 
     private HttpContext? Http => _http.HttpContext;
     private ClaimsPrincipal? User => Http?.User;
 
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated == true;
 
-    // External identity used to map to ApplicationUser.AzureEntraB2CId
-    // Prefer AAD object id; support both short and long claim types.
+    // Prefer AAD object id; support common OIDC claims
     public string? AzureEntraB2CId =>
         User?.FindFirst("oid")?.Value
         ?? User?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
@@ -53,36 +39,20 @@ public class CurrentUserService : ICurrentUserService
         }
     }
 
-    // Database PK from ApplicationUser.Id
+    // No DB here. This is set once per request by ResolveCurrentUserMiddleware.
     public int? Id
     {
         get
         {
-            // 1) From claim (only if you choose to stamp it later)
-            if (int.TryParse(User?.FindFirst(AppUserIdClaim)?.Value, out var idFromClaim))
-                return idFromClaim;
-
-            // 2) From per-request cache
-            if (Http?.Items.TryGetValue(AppUserIdItemKey, out var boxed) == true && boxed is int cached)
-                return cached;
-
-            // 3) Fallback: resolve via AzureEntraB2CId -> DB (once per request)
-            var externalId = AzureEntraB2CId;
-            if (string.IsNullOrWhiteSpace(externalId)) return null;
-
-            // Use async database call
-            var id = Task.Run(async () =>
+            if (Http?.Items.TryGetValue(CurrentUserConstants.AppUserIdItemKey, out var boxed) == true)
             {
-                return await _db.ApplicationUsers.AsNoTracking()
-                    .Where(u => u.AzureEntraB2CId == externalId)
-                    .Select(u => (int?)u.Id)
-                    .FirstOrDefaultAsync();
-            }).GetAwaiter().GetResult();
+                // We only store an int value in HttpContext.Items
+                if (boxed is int id) return id;
 
-            if (id.HasValue && Http is not null)
-                Http.Items[AppUserIdItemKey] = id.Value;
-
-            return id;
+                // If something else got stored (e.g., string), try to parse defensively
+                if (boxed is string s && int.TryParse(s, out var parsed)) return parsed;
+            }
+            return null;
         }
     }
 }

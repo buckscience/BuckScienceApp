@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
+using BuckScience.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
@@ -103,6 +104,12 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Resolve DB user id once per request (must be BEFORE SetupFlow)
+app.UseResolveCurrentUser();
+
+// Enforce onboarding after current user is resolved
+app.UseMiddleware<SetupFlowMiddleware>();
+
 // Place these after app.UseAuthorization() and before app.Run()
 app.MapGet("/__resolve/geo", ([FromServices] NetTopologySuite.Geometries.GeometryFactory g) =>
 {
@@ -131,6 +138,9 @@ app.MapGet("/__resolve/all", (IServiceProvider sp) =>
     var u = s.GetRequiredService<BuckScience.Application.Abstractions.Auth.ICurrentUserService>();
     return Results.Text("Resolved all three successfully");
 }).AllowAnonymous();
+
+app.MapGet("/__resolve/userid", (ICurrentUserService u) =>
+    Results.Text($"IsAuth={u.IsAuthenticated}, Id={u.Id}, External={u.AzureEntraB2CId}"));
 
 app.MapControllerRoute(
     name: "default",

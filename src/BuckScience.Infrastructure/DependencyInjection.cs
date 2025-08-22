@@ -30,6 +30,9 @@ public static class DependencyInjection
         services.AddSingleton<GeometryFactory>(_ =>
             NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
 
+        // Onboarding service
+        services.AddScoped<IOnboardingService, Application.Onboarding.OnboardingService>();
+
         return services;
     }
 }
