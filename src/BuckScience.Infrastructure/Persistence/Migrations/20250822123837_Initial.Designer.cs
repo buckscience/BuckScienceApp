@@ -13,7 +13,7 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822110847_Initial")]
+    [Migration("20250822123837_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -118,7 +118,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PropertyId", "Name");
 
-                    b.ToTable("Camera");
+                    b.ToTable("Cameras");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Photo", b =>
@@ -156,7 +156,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WeatherId");
 
-                    b.ToTable("Photo");
+                    b.ToTable("Photos");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.PhotoTag", b =>
@@ -173,7 +173,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("PhotoTag");
+                    b.ToTable("PhotoTags");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Profile", b =>
@@ -206,7 +206,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PropertyId", "TagId");
 
-                    b.ToTable("Profile");
+                    b.ToTable("Profiles");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Property", b =>
@@ -303,7 +303,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     b.HasIndex("TagName")
                         .IsUnique();
 
-                    b.ToTable("Tag");
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Weather", b =>
@@ -381,7 +381,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DateTimeEpoch");
 
-                    b.ToTable("Weather");
+                    b.ToTable("Weathers");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Camera", b =>

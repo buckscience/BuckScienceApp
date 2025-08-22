@@ -52,7 +52,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tag",
+                name: "Tags",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -62,11 +62,11 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tag", x => x.Id);
+                    table.PrimaryKey("PK_Tags", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Weather",
+                name: "Weathers",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -91,11 +91,11 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Weather", x => x.Id);
+                    table.PrimaryKey("PK_Weathers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Camera",
+                name: "Cameras",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -110,9 +110,9 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Camera", x => x.Id);
+                    table.PrimaryKey("PK_Cameras", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Camera_Properties_PropertyId",
+                        name: "FK_Cameras_Properties_PropertyId",
                         column: x => x.PropertyId,
                         principalTable: "Properties",
                         principalColumn: "Id",
@@ -120,7 +120,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Profile",
+                name: "Profiles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -132,17 +132,17 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Profile", x => x.Id);
+                    table.PrimaryKey("PK_Profiles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Profile_Properties_PropertyId",
+                        name: "FK_Profiles_Properties_PropertyId",
                         column: x => x.PropertyId,
                         principalTable: "Properties",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Profile_Tag_TagId",
+                        name: "FK_Profiles_Tags_TagId",
                         column: x => x.TagId,
-                        principalTable: "Tag",
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -165,15 +165,15 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PropertyTag_Tag_TagId",
+                        name: "FK_PropertyTag_Tags_TagId",
                         column: x => x.TagId,
-                        principalTable: "Tag",
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Photo",
+                name: "Photos",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -186,23 +186,23 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Photo", x => x.Id);
+                    table.PrimaryKey("PK_Photos", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Photo_Camera_CameraId",
+                        name: "FK_Photos_Cameras_CameraId",
                         column: x => x.CameraId,
-                        principalTable: "Camera",
+                        principalTable: "Cameras",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Photo_Weather_WeatherId",
+                        name: "FK_Photos_Weathers_WeatherId",
                         column: x => x.WeatherId,
-                        principalTable: "Weather",
+                        principalTable: "Weathers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
-                name: "PhotoTag",
+                name: "PhotoTags",
                 columns: table => new
                 {
                     PhotoId = table.Column<int>(type: "int", nullable: false),
@@ -210,17 +210,17 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PhotoTag", x => new { x.PhotoId, x.TagId });
+                    table.PrimaryKey("PK_PhotoTags", x => new { x.PhotoId, x.TagId });
                     table.ForeignKey(
-                        name: "FK_PhotoTag_Photo_PhotoId",
+                        name: "FK_PhotoTags_Photos_PhotoId",
                         column: x => x.PhotoId,
-                        principalTable: "Photo",
+                        principalTable: "Photos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PhotoTag_Tag_TagId",
+                        name: "FK_PhotoTags_Tags_TagId",
                         column: x => x.TagId,
-                        principalTable: "Tag",
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -232,53 +232,53 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Camera_PropertyId",
-                table: "Camera",
+                name: "IX_Cameras_PropertyId",
+                table: "Cameras",
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Camera_PropertyId_Name",
-                table: "Camera",
+                name: "IX_Cameras_PropertyId_Name",
+                table: "Cameras",
                 columns: new[] { "PropertyId", "Name" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Photo_CameraId",
-                table: "Photo",
+                name: "IX_Photos_CameraId",
+                table: "Photos",
                 column: "CameraId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Photo_DateTaken",
-                table: "Photo",
+                name: "IX_Photos_DateTaken",
+                table: "Photos",
                 column: "DateTaken");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Photo_WeatherId",
-                table: "Photo",
+                name: "IX_Photos_WeatherId",
+                table: "Photos",
                 column: "WeatherId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PhotoTag_PhotoId",
-                table: "PhotoTag",
+                name: "IX_PhotoTags_PhotoId",
+                table: "PhotoTags",
                 column: "PhotoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PhotoTag_TagId",
-                table: "PhotoTag",
+                name: "IX_PhotoTags_TagId",
+                table: "PhotoTags",
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Profile_PropertyId",
-                table: "Profile",
+                name: "IX_Profiles_PropertyId",
+                table: "Profiles",
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Profile_PropertyId_TagId",
-                table: "Profile",
+                name: "IX_Profiles_PropertyId_TagId",
+                table: "Profiles",
                 columns: new[] { "PropertyId", "TagId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Profile_TagId",
-                table: "Profile",
+                name: "IX_Profiles_TagId",
+                table: "Profiles",
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
@@ -302,19 +302,19 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tag_TagName",
-                table: "Tag",
+                name: "IX_Tags_TagName",
+                table: "Tags",
                 column: "TagName",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Weather_DateTime",
-                table: "Weather",
+                name: "IX_Weathers_DateTime",
+                table: "Weathers",
                 column: "DateTime");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Weather_DateTimeEpoch",
-                table: "Weather",
+                name: "IX_Weathers_DateTimeEpoch",
+                table: "Weathers",
                 column: "DateTimeEpoch");
         }
 
@@ -325,25 +325,25 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 name: "ApplicationUsers");
 
             migrationBuilder.DropTable(
-                name: "PhotoTag");
+                name: "PhotoTags");
 
             migrationBuilder.DropTable(
-                name: "Profile");
+                name: "Profiles");
 
             migrationBuilder.DropTable(
                 name: "PropertyTag");
 
             migrationBuilder.DropTable(
-                name: "Photo");
+                name: "Photos");
 
             migrationBuilder.DropTable(
-                name: "Tag");
+                name: "Tags");
 
             migrationBuilder.DropTable(
-                name: "Camera");
+                name: "Cameras");
 
             migrationBuilder.DropTable(
-                name: "Weather");
+                name: "Weathers");
 
             migrationBuilder.DropTable(
                 name: "Properties");
