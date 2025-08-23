@@ -13,6 +13,14 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ApplicationUser> ApplicationUsers => Set<ApplicationUser>();
     public DbSet<Property> Properties => Set<Property>();
 
+    public DbSet<Camera> Cameras => Set<Camera>();
+    public DbSet<Photo> Photos => Set<Photo>();
+    public DbSet<PhotoTag> PhotoTags => Set<PhotoTag>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<Profile> Profiles => Set<Profile>();
+    public DbSet<Weather> Weathers => Set<Weather>();
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

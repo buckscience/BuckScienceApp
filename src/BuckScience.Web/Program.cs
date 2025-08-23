@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
+using BuckScience.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
@@ -103,38 +104,15 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Place these after app.UseAuthorization() and before app.Run()
-app.MapGet("/__resolve/geo", ([FromServices] NetTopologySuite.Geometries.GeometryFactory g) =>
-{
-    return Results.Text($"GeometryFactory: {g.GetType().FullName}");
-}).AllowAnonymous();
-
-app.MapGet("/__resolve/appdb", ([FromServices] BuckScience.Application.Abstractions.IAppDbContext db) =>
-{
-    // Do not query. Just resolving should be instant.
-    return Results.Text($"IAppDbContext: {db.GetType().FullName}");
-}).AllowAnonymous();
-
-app.MapGet("/__resolve/current", ([FromServices] BuckScience.Application.Abstractions.Auth.ICurrentUserService u) =>
-{
-    // Do not access HttpContext here; just verify it resolves.
-    return Results.Text($"ICurrentUserService: {u.GetType().FullName}");
-}).AllowAnonymous();
-
-// Optional: resolve all in a fresh scope (helps catch cycles)
-app.MapGet("/__resolve/all", (IServiceProvider sp) =>
-{
-    using var scope = sp.CreateScope();
-    var s = scope.ServiceProvider;
-    var g = s.GetRequiredService<NetTopologySuite.Geometries.GeometryFactory>();
-    var db = s.GetRequiredService<BuckScience.Application.Abstractions.IAppDbContext>();
-    var u = s.GetRequiredService<BuckScience.Application.Abstractions.Auth.ICurrentUserService>();
-    return Results.Text("Resolved all three successfully");
-}).AllowAnonymous();
+// Resolve DB user id once per request (must be BEFORE SetupFlow)
+app.UseResolveCurrentUser();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Enforce onboarding after current user is resolved
+app.UseMiddleware<SetupFlowMiddleware>();
 
 app.MapRazorPages();
 

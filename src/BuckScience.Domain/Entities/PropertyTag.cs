@@ -1,22 +1,29 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
 
 namespace BuckScience.Domain.Entities
 {
     public class PropertyTag
     {
-        [Key]
-        public int PropertyId { get; set; }
-        [NotMapped]
-        public Property Property { get; set; }
+        protected PropertyTag() { } // EF
 
-        [Key]
-        public int TagId { get; set; }
-        public bool IsFastTag { get; set; }
-        [NotMapped]
-        public Tag Tag { get; set; }
-        [NotMapped]
-        public ICollection<Profile>? Profiles { get; set; }
+        public PropertyTag(int propertyId, int tagId, bool isFastTag = false)
+        {
+            if (propertyId <= 0) throw new ArgumentOutOfRangeException(nameof(propertyId));
+            if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId));
+
+            PropertyId = propertyId;
+            TagId = tagId;
+            IsFastTag = isFastTag;
+        }
+
+        public int PropertyId { get; private set; }
+        public int TagId { get; private set; }
+        public bool IsFastTag { get; private set; }
+
+        public void SetFastTag(bool isFast) => IsFastTag = isFast;
+
+        // Optional navigations for convenience
+        public virtual Property Property { get; private set; } = default!;
+        public virtual Tag Tag { get; private set; } = default!;
     }
-
 }

@@ -1,17 +1,23 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace BuckScience.Domain.Entities
+﻿namespace BuckScience.Domain.Entities
 {
     public class PhotoTag
     {
-        public int PhotoId { get; set; }
-        [NotMapped]
-        public Photo Photo { get; set; }
+        protected PhotoTag() { } // EF
 
-        public int TagId { get; set; }
-        [NotMapped]
-        public Tag Tag { get; set; }
+        public PhotoTag(int photoId, int tagId)
+        {
+            if (photoId <= 0) throw new ArgumentOutOfRangeException(nameof(photoId));
+            if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId));
+
+            PhotoId = photoId;
+            TagId = tagId;
+        }
+
+        public int PhotoId { get; private set; }
+        public int TagId { get; private set; }
+
+        // Optional navigations for convenience
+        public virtual Photo Photo { get; private set; } = default!;
+        public virtual Tag Tag { get; private set; } = default!;
     }
-
 }
