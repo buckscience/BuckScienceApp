@@ -7,6 +7,12 @@
     right: 0; /* full width behind sidebar */
 }
 
+/* Make the in-form geocoder fill the form width */
+#property-geocoder .mapboxgl-ctrl-geocoder {
+    width: 100%;
+    min-width: 100%;
+}
+
 .sidebar-overlay {
     position: fixed;
     top: 0;
@@ -164,6 +170,42 @@
         color: #4B5320;
         border-color: #8A9442;
     }
+
+/* Property List */
+.property-list {
+    padding: 12px;
+    overflow-y: auto;
+    max-height: calc(100vh - 100px);
+}
+
+.property-card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.property-info h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #374151;
+}
+
+.property-info p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* Actions */
+.property-actions {
+    display: flex;
+    gap: 8px;
+}
 
 /* Property Details Card Styles */
 .property-details-card {

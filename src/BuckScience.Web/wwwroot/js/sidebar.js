@@ -6,9 +6,9 @@ window.App = window.App || {};
 (function () {
     const routeMap = {
         // Map your mini-navbar hash links to real endpoints here
-        '#properties': '/Properties',
-        '#account': '/Account',
-        '#settings': '/Settings'
+        '#properties': '/properties',
+        '#account': '/account',
+        '#settings': 'account/settings'
     };
 
     function isHtml(str) {
