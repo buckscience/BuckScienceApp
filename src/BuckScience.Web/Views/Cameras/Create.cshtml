@@ -1,0 +1,71 @@
+﻿@model BuckScience.Web.ViewModels.Cameras.CameraCreateVm
+
+<form action="@Url.Content($"~/properties/{Model.PropertyId}/cameras/add")"
+      method="post" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="PropertyId" />
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="alert alert-info mb-4" role="alert">
+        <div class="d-flex align-items-start">
+            @if (Context.Request.Query["fromSetup"] == "1")
+            {
+                <div class="me-3">
+                    <span class="badge bg-primary">Step 2</span>
+                </div>
+            }
+            <div class="flex-grow-1">
+                <h5 class="mb-2">Add your first camera</h5>
+                <p class="mb-2">Add a camera to this property so you can start uploading photos.</p>
+                <ol class="mb-0">
+                    <li>Name the camera so it’s easy to recognize (e.g., “Gate Cam” or “Ridge Cam”).</li>
+                    <li>We will drop a pin on the map and you can move it to fine tune the location.</li>
+                    <li>Save to continue to photo upload.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="Brand" class="form-label"></label>
+            <input asp-for="Brand" class="form-control" />
+            <span asp-validation-for="Brand" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Model" class="form-label"></label>
+            <input asp-for="Model" class="form-control" />
+            <span asp-validation-for="Model" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-6">
+            <label asp-for="Latitude" class="form-label"></label>
+            <input asp-for="Latitude" class="form-control" step="any" placeholder="e.g., 40.7128" />
+            <span asp-validation-for="Latitude" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Longitude" class="form-label"></label>
+            <input asp-for="Longitude" class="form-control" step="any" placeholder="e.g., -74.0060" />
+            <span asp-validation-for="Longitude" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="form-check form-switch mt-3">
+        <input class="form-check-input" type="checkbox" asp-for="IsActive" />
+        <label class="form-check-label" asp-for="IsActive"></label>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Create camera</button>
+        <a href="@Url.Content($"~/properties/{Model.PropertyId}")" class="btn btn-outline-secondary">
+            Back to property
+        </a>
+    </div>
+</form>

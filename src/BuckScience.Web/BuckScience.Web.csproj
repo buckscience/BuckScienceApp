@@ -21,4 +21,8 @@
     <ProjectReference Include="..\BuckScience.Shared\BuckScience.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Views\Photos\" />
+  </ItemGroup>
+
 </Project>

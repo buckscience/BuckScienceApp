@@ -2,6 +2,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Web.ViewModels.Cameras;
+using BuckScience.Web.ViewModels.Photos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -233,5 +234,39 @@ public class CamerasController : Controller
 
         TempData["DeletedId"] = id;
         return RedirectToAction(nameof(Index), new { propertyId });
+    }
+
+    // UPLOAD PHOTO: GET
+    [HttpGet("/cameras/{id:int}/upload")]
+    public async Task<IActionResult> UploadPhoto([FromRoute] int id, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // NOTE: Adjust the owner field name to your schema:
+        // If your Property entity uses ApplicationUserId (as your snippet shows), keep it.
+        // If it uses OwnerUserId (common in your other controllers), swap accordingly.
+        var cam = await _db.Cameras
+            .AsNoTracking()
+            .Include(c => c.Property)
+            .FirstOrDefaultAsync(
+                c => c.Id == id
+                     && c.Property != null
+                     && c.Property.ApplicationUserId == _currentUser.Id.Value, // or: c.Property.OwnerUserId == _currentUser.Id.Value
+                ct);
+
+        if (cam is null) return NotFound();
+
+        ViewBag.PropertyId = cam.PropertyId;
+        ViewBag.CameraId = cam.Id;
+        ViewBag.CameraName = cam.Name;
+        ViewBag.PropertyName = cam.Property?.Name;
+
+        var vm = new PhotoUploadVm
+        {
+            PropertyId = cam.PropertyId,
+            CameraId = cam.Id
+        };
+
+        return View("Upload", vm);
     }
 }
