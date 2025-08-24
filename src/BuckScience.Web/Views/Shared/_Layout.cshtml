@@ -1,5 +1,6 @@
 ﻿@{
     Layout = null;
+    @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -12,6 +13,10 @@
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
     <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" rel="stylesheet" />
     <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.2/mapbox-gl-draw.css" rel="stylesheet" />
+
+    
+    <!-- Expose token from configuration -->
+    <meta name="mapbox-token" content="@Configuration["Mapbox:AccessToken"]" />
 
     <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
