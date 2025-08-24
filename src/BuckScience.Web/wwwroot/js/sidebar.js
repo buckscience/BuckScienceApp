@@ -92,12 +92,21 @@ window.App = window.App || {};
 
         btn.addEventListener('click', () => {
             aside.classList.toggle('collapsed');
+            const icon = btn.querySelector('i');
 
             // Simple collapsed style
             if (aside.classList.contains('collapsed')) {
                 aside.style.transform = 'translateX(-100%)';
+                // Change icon to point right (to open)
+                if (icon) {
+                    icon.className = 'fas fa-chevron-right';
+                }
             } else {
                 aside.style.transform = '';
+                // Change icon to point left (to close)
+                if (icon) {
+                    icon.className = 'fas fa-chevron-left';
+                }
             }
         });
     }

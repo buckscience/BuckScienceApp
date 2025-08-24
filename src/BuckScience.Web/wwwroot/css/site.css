@@ -16,7 +16,7 @@
 .sidebar-overlay {
     position: fixed;
     top: 0;
-    left: 60px;
+    left: 80px;
     bottom: 0;
     min-width: 380px;
     width: max-content;
@@ -26,6 +26,7 @@
     box-shadow: 2px 0 16px rgba(0,0,0,0.18);
     z-index: 1000;
     padding: 2rem 1.5rem 1.5rem 1.5rem;
+    transition: transform 0.3s ease;
 }
 
     /* Ensure sidebar content doesn't overflow unnecessarily */
@@ -47,10 +48,11 @@
 }
 
 .sidebar-toggle {
-    position: absolute;
+    position: fixed;
     top: 50%;
+    left: calc(80px + 380px); /* Position at the right edge of the sidebar */
     transform: translateY(-50%);
-    z-index: 100;
+    z-index: 1001; /* Above sidebar */
     width: 20px;
     height: 40px;
     background: #1e1e2f;
@@ -60,8 +62,13 @@
     align-items: center;
     justify-content: center;
     border-radius: 0 20px 20px 0;
-    transition: background 0.2s;
+    transition: left 0.3s ease, background 0.2s;
     cursor: pointer;
+}
+
+/* When sidebar is collapsed, move toggle button to the navbar edge */
+.sidebar-overlay.collapsed + .sidebar-toggle {
+    left: 80px; /* At the edge of the navbar */
 }
 
 .sidebar-actions {
