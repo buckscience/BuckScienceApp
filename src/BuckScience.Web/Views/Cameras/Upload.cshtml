@@ -32,9 +32,10 @@
         </div>
     </div>
     <div class="mb-3">
-        <label asp-for="File" class="form-label"></label>
-        <input asp-for="File" type="file" class="form-control" />
-        <span asp-validation-for="File" class="text-danger"></span>
+        <label asp-for="Files" class="form-label"></label>
+        <input asp-for="Files" type="file" class="form-control" multiple accept="image/jpeg,image/png,image/jpg" />
+        <span asp-validation-for="Files" class="text-danger"></span>
+        <div class="form-text">You can select multiple image files (JPEG/PNG). Hold Ctrl/Cmd while clicking to select multiple files.</div>
     </div>
 
     <div class="mb-3">
