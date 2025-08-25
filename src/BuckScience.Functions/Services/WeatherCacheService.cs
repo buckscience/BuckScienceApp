@@ -1,23 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using BuckScience.Domain.Entities;
 
 namespace BuckScience.Functions.Services;
 
 /// <summary>
-/// Simple EF Context for Functions that only deals with WeatherCache and Photos tables
+/// Simple EF Context for Functions that only deals with WeatherCache and PipelinePhotos tables
 /// </summary>
 public class WeatherDbContext : DbContext
 {
     public WeatherDbContext(DbContextOptions<WeatherDbContext> options) : base(options) { }
 
-    public DbSet<WeatherCacheEntry> WeatherCache { get; set; } = null!;
-    public DbSet<PhotoEntry> Photos { get; set; } = null!;
+    public DbSet<WeatherCache> WeatherCaches { get; set; } = null!;
+    public DbSet<PipelinePhoto> PipelinePhotos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // WeatherCache configuration
-        modelBuilder.Entity<WeatherCacheEntry>(entity =>
+        modelBuilder.Entity<WeatherCache>(entity =>
         {
             entity.ToTable("WeatherCache");
             entity.HasKey(e => e.Id);
@@ -25,41 +26,20 @@ public class WeatherDbContext : DbContext
             entity.Property(e => e.WeatherJson).HasMaxLength(4000);
         });
 
-        // Photos configuration (simplified for Functions use)
-        modelBuilder.Entity<PhotoEntry>(entity =>
+        // PipelinePhotos configuration (simplified for Functions use)
+        modelBuilder.Entity<PipelinePhoto>(entity =>
         {
             entity.ToTable("Photos");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Status).HasMaxLength(50);
-            entity.Property(e => e.WeatherJson).HasMaxLength(4000);
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.ContentHash).HasMaxLength(64);
+            entity.Property(e => e.ThumbBlobName).HasMaxLength(500);
+            entity.Property(e => e.DisplayBlobName).HasMaxLength(500);
+            entity.Property(e => e.Latitude).HasPrecision(10, 8);
+            entity.Property(e => e.Longitude).HasPrecision(11, 8);
         });
     }
-}
-
-public class WeatherCacheEntry
-{
-    public int Id { get; set; }
-    public int CameraId { get; set; }
-    public DateOnly LocalDate { get; set; }
-    public string WeatherJson { get; set; } = string.Empty;
-    public DateTime CreatedAtUtc { get; set; }
-}
-
-public class PhotoEntry
-{
-    public int Id { get; set; }
-    public string UserId { get; set; } = string.Empty;
-    public int CameraId { get; set; }
-    public string ContentHash { get; set; } = string.Empty;
-    public string ThumbBlobName { get; set; } = string.Empty;
-    public string DisplayBlobName { get; set; } = string.Empty;
-    public DateTime? TakenAtUtc { get; set; }
-    public decimal? Latitude { get; set; }
-    public decimal? Longitude { get; set; }
-    public string? WeatherJson { get; set; }
-    public string Status { get; set; } = "processing";
-    public DateTime CreatedAtUtc { get; set; }
-    public DateTime UpdatedAtUtc { get; set; }
 }
 
 /// <summary>
@@ -91,7 +71,7 @@ public class WeatherCacheService : IWeatherCacheService
             var localDate = DateOnly.FromDateTime(takenAtUtc.Date);
 
             // Check cache first
-            var cached = await _context.WeatherCache
+            var cached = await _context.WeatherCaches
                 .FirstOrDefaultAsync(w => w.CameraId == cameraId && w.LocalDate == localDate);
 
             if (cached != null)
@@ -166,15 +146,9 @@ public class WeatherCacheService : IWeatherCacheService
     {
         try
         {
-            var entry = new WeatherCacheEntry
-            {
-                CameraId = cameraId,
-                LocalDate = localDate,
-                WeatherJson = weatherJson,
-                CreatedAtUtc = DateTime.UtcNow
-            };
+            var entry = new WeatherCache(cameraId, localDate, weatherJson);
 
-            _context.WeatherCache.Add(entry);
+            _context.WeatherCaches.Add(entry);
             await _context.SaveChangesAsync();
         }
         catch (Exception ex)

@@ -35,7 +35,7 @@ public class ProcessPhotoQueue
             }
 
             // Find the photo record
-            var photo = await _context.Photos.FindAsync(message.PhotoId);
+            var photo = await _context.PipelinePhotos.FindAsync(message.PhotoId);
             if (photo == null)
             {
                 _logger.LogError("Photo with ID {PhotoId} not found", message.PhotoId);
@@ -43,8 +43,7 @@ public class ProcessPhotoQueue
             }
 
             // Update photo status to 'processing'
-            photo.Status = "processing";
-            photo.UpdatedAtUtc = DateTime.UtcNow;
+            photo.SetStatus("processing");
 
             string? weatherJson = null;
 
@@ -63,9 +62,7 @@ public class ProcessPhotoQueue
             }
 
             // Update photo with weather data and mark as ready
-            photo.WeatherJson = weatherJson;
-            photo.Status = "ready";
-            photo.UpdatedAtUtc = DateTime.UtcNow;
+            photo.MarkReady(weatherJson);
 
             await _context.SaveChangesAsync();
 
@@ -84,11 +81,10 @@ public class ProcessPhotoQueue
                     var message = JsonSerializer.Deserialize<PhotoIngestMessage>(queueMessage);
                     if (message?.PhotoId > 0)
                     {
-                        var photo = await _context.Photos.FindAsync(message.PhotoId);
+                        var photo = await _context.PipelinePhotos.FindAsync(message.PhotoId);
                         if (photo != null)
                         {
-                            photo.Status = "failed";
-                            photo.UpdatedAtUtc = DateTime.UtcNow;
+                            photo.MarkFailed();
                             await _context.SaveChangesAsync();
                         }
                     }

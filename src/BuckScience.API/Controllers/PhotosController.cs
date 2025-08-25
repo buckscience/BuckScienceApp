@@ -1,3 +1,5 @@
+using BuckScience.Application.Abstractions;
+using BuckScience.Domain.Entities;
 using BuckScience.Infrastructure.Queues;
 using BuckScience.Shared.Photos;
 using Microsoft.AspNetCore.Mvc;
@@ -8,10 +10,12 @@ namespace BuckScience.API.Controllers;
 [Route("[controller]")]
 public class PhotosController : ControllerBase
 {
+    private readonly IAppDbContext _context;
     private readonly IPhotoQueue _photoQueue;
 
-    public PhotosController(IPhotoQueue photoQueue)
+    public PhotosController(IAppDbContext context, IPhotoQueue photoQueue)
     {
+        _context = context;
         _photoQueue = photoQueue;
     }
 
@@ -25,7 +29,7 @@ public class PhotosController : ControllerBase
     {
         try
         {
-            // TODO: Add validation
+            // Validate request
             if (string.IsNullOrWhiteSpace(request.UserId) ||
                 request.CameraId <= 0 ||
                 string.IsNullOrWhiteSpace(request.ContentHash) ||
@@ -35,14 +39,24 @@ public class PhotosController : ControllerBase
                 return BadRequest("Invalid request data");
             }
 
-            // TODO: Insert photo record into database
-            // For now, we'll simulate the photo ID generation
-            var photoId = Random.Shared.Next(1, 1000000); // This should come from database insert
+            // Create and save photo record
+            var photo = new PipelinePhoto(
+                request.UserId,
+                request.CameraId,
+                request.ContentHash,
+                request.ThumbBlobName,
+                request.DisplayBlobName,
+                request.TakenAtUtc,
+                request.Latitude,
+                request.Longitude);
+
+            _context.PipelinePhotos.Add(photo);
+            await _context.SaveChangesAsync();
 
             // Create queue message for background processing
             var queueMessage = new PhotoIngestMessage
             {
-                PhotoId = photoId,
+                PhotoId = photo.Id,
                 UserId = request.UserId,
                 CameraId = request.CameraId,
                 ContentHash = request.ContentHash,
@@ -54,7 +68,7 @@ public class PhotosController : ControllerBase
             // Send message to queue
             await _photoQueue.SendPhotoIngestMessageAsync(queueMessage);
 
-            return Ok(new { PhotoId = photoId, Status = "processing" });
+            return Ok(new { PhotoId = photo.Id, Status = photo.Status });
         }
         catch (Exception ex)
         {

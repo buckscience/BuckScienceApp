@@ -13,5 +13,10 @@ public interface IAppDbContext
     DbSet<Tag> Tags { get; }
     DbSet<Profile> Profiles { get; }
     DbSet<Weather> Weathers { get; }
+    
+    // Pipeline entities
+    DbSet<PipelinePhoto> PipelinePhotos { get; }
+    DbSet<WeatherCache> WeatherCaches { get; }
+    
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

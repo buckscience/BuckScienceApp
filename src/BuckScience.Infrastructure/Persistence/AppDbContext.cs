@@ -20,6 +20,10 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<Weather> Weathers => Set<Weather>();
 
+    // Pipeline entities
+    public DbSet<PipelinePhoto> PipelinePhotos => Set<PipelinePhoto>();
+    public DbSet<WeatherCache> WeatherCaches => Set<WeatherCache>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
