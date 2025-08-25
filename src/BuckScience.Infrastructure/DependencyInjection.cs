@@ -1,10 +1,14 @@
-﻿using BuckScience.Application.Abstractions;
+﻿using Azure.Storage.Blobs;
+using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Infrastructure.Auth;
+using BuckScience.Infrastructure.Options;
 using BuckScience.Infrastructure.Persistence;
+using BuckScience.Infrastructure.Queues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 
@@ -32,6 +36,22 @@ public static class DependencyInjection
 
         // Onboarding service
         services.AddScoped<IOnboardingService, Application.Onboarding.OnboardingService>();
+
+        // Configure Azure Storage options
+        var queueSection = config.GetSection(QueueOptions.SectionName);
+        services.Configure<QueueOptions>(options =>
+        {
+            options.ConnectionString = queueSection["ConnectionString"] ?? throw new InvalidOperationException("Queue:ConnectionString not found.");
+            options.Name = queueSection["Name"] ?? "photo-ingest";
+        });
+
+        // Register Azure Storage services
+        var storageConnectionString = config.GetConnectionString("Storage") 
+                                     ?? config["Storage:ConnectionString"]
+                                     ?? throw new InvalidOperationException("Storage connection string not found.");
+        
+        services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(storageConnectionString));
+        services.AddScoped<IPhotoQueue, PhotoQueue>();
 
         return services;
     }
