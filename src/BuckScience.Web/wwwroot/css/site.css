@@ -29,6 +29,11 @@
     transition: transform 0.3s ease;
 }
 
+/* When sidebar is collapsed, put it behind the mini navbar */
+.sidebar-overlay.collapsed {
+    z-index: 5; /* Below mini navbar (z-index: 10) but above map */
+}
+
     /* Ensure sidebar content doesn't overflow unnecessarily */
     .sidebar-overlay .container-fluid {
         width: 100%;
