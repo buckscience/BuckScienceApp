@@ -13,5 +13,9 @@ public interface IAppDbContext
     DbSet<Tag> Tags { get; }
     DbSet<Profile> Profiles { get; }
     DbSet<Weather> Weathers { get; }
+    
+    // Weather cache for Azure pipeline
+    DbSet<WeatherCache> WeatherCaches { get; }
+    
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

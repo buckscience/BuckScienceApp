@@ -20,6 +20,9 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<Weather> Weathers => Set<Weather>();
 
+    // Weather cache for Azure pipeline
+    public DbSet<WeatherCache> WeatherCaches => Set<WeatherCache>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

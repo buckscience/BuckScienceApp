@@ -1,0 +1,58 @@
+@{
+    ViewData["Title"] = "Upload Photos";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Upload Photos</h1>
+            
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        <h5 class="mb-2">Photo Upload Pipeline</h5>
+                        <p class="mb-2">Select multiple photos to upload. Each photo will be:</p>
+                        <ol class="mb-0">
+                            <li>Resized to two WebP formats: 256x256 thumbnail and 1200x932 display image</li>
+                            <li>Uploaded directly to Azure Blob Storage with a unique hash-based name</li>
+                            <li>Registered in the system for background weather enrichment</li>
+                        </ol>
+                    </div>
+
+                    <form id="photoUploadForm">
+                        <div class="mb-3">
+                            <label for="photoFiles" class="form-label">Select Photos</label>
+                            <input type="file" class="form-control" id="photoFiles" multiple accept="image/*" required>
+                            <div class="form-text">Choose JPEG, PNG, or other image files. Multiple files are supported.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="cameraId" class="form-label">Camera ID</label>
+                            <input type="number" class="form-control" id="cameraId" value="1" required>
+                            <div class="form-text">Enter the camera ID that took these photos.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            Upload Photos
+                        </button>
+                    </form>
+
+                    <div id="uploadProgress" class="mt-4 d-none">
+                        <h5>Upload Progress</h5>
+                        <div class="progress mb-3">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div id="uploadStatus" class="text-muted"></div>
+                    </div>
+
+                    <div id="uploadResults" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/scripts/upload.js"></script>
+}

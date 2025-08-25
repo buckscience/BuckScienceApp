@@ -4,6 +4,7 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,9 +13,11 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250825204900_AddAzurePipelineColumnsToPhotos")]
+    partial class AddAzurePipelineColumnsToPhotos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -102,10 +105,6 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Photos");
                 });
-
-            // Note: Other entities like Camera, Weather, etc. would be included in a full migration
-            // but are omitted here since we're only focusing on the Photos table extensions
-
 #pragma warning restore 612, 618
         }
     }
