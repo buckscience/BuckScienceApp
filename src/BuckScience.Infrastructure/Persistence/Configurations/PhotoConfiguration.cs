@@ -14,6 +14,13 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
                   .HasMaxLength(2048)
                   .IsRequired();
 
+            entity.Property(p => p.ThumbnailUrl)
+                  .HasMaxLength(2048);
+
+            entity.Property(p => p.FileSizeBytes);
+
+            entity.Property(p => p.ThumbnailSizeBytes);
+
             entity.Property(p => p.DateTaken)
                   .IsRequired();
 

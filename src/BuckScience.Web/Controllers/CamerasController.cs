@@ -1,6 +1,7 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
+using BuckScience.Application.Photos;
 using BuckScience.Web.ViewModels.Cameras;
 using BuckScience.Web.ViewModels.Photos;
 using Microsoft.AspNetCore.Authorization;
@@ -16,12 +17,21 @@ public class CamerasController : Controller
     private readonly IAppDbContext _db;
     private readonly GeometryFactory _geometryFactory;
     private readonly ICurrentUserService _currentUser;
+    private readonly IFileStorageService _fileStorage;
+    private readonly IPhotoProcessingService _photoProcessor;
 
-    public CamerasController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser)
+    public CamerasController(
+        IAppDbContext db, 
+        GeometryFactory geometryFactory, 
+        ICurrentUserService currentUser,
+        IFileStorageService fileStorage,
+        IPhotoProcessingService photoProcessor)
     {
         _db = db;
         _geometryFactory = geometryFactory;
         _currentUser = currentUser;
+        _fileStorage = fileStorage;
+        _photoProcessor = photoProcessor;
     }
 
     // LIST: GET /properties/{propertyId}/cameras
@@ -266,6 +276,105 @@ public class CamerasController : Controller
             PropertyId = cam.PropertyId,
             CameraId = cam.Id
         };
+
+        return View("Upload", vm);
+    }
+
+    // UPLOAD PHOTO: POST
+    [HttpPost("/cameras/{id:int}/photos/upload")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadPhotoPost([FromRoute] int id, PhotoUploadVm vm, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+        {
+            // Reload camera info for redisplay
+            if (_currentUser.Id is null) return Forbid();
+            
+            var cam = await _db.Cameras
+                .AsNoTracking()
+                .Include(c => c.Property)
+                .FirstOrDefaultAsync(
+                    c => c.Id == id
+                         && c.Property != null
+                         && c.Property.ApplicationUserId == _currentUser.Id.Value, 
+                    ct);
+
+            if (cam is null) return NotFound();
+
+            ViewBag.PropertyId = cam.PropertyId;
+            ViewBag.CameraId = cam.Id;
+            ViewBag.CameraName = cam.Name;
+            ViewBag.PropertyName = cam.Property?.Name;
+
+            return View("Upload", vm);
+        }
+
+        // Route parameter is source of truth
+        if (vm.CameraId != id)
+            return BadRequest("Route and model CameraId mismatch.");
+
+        try
+        {
+            var photoId = await Application.Photos.UploadPhoto.HandleAsync(
+                new Application.Photos.UploadPhoto.Command(
+                    CameraId: id,
+                    File: vm.File!,
+                    Caption: vm.Caption
+                ),
+                _db,
+                _fileStorage,
+                _photoProcessor,
+                _currentUser,
+                ct);
+
+            TempData["SuccessMessage"] = "Photo uploaded and processed successfully!";
+            TempData["UploadedPhotoId"] = photoId;
+
+            // Check if this is part of setup flow
+            if (Request.Query["fromSetup"] == "1")
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            return RedirectToAction("Index", new { propertyId = vm.PropertyId });
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError("File", ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"An error occurred while processing your photo: {ex.Message}");
+        }
+
+        // If we get here, there was an error - redisplay the form
+        if (_currentUser.Id is not null)
+        {
+            var camera = await _db.Cameras
+                .AsNoTracking()
+                .Include(c => c.Property)
+                .FirstOrDefaultAsync(
+                    c => c.Id == id
+                         && c.Property != null
+                         && c.Property.ApplicationUserId == _currentUser.Id.Value, 
+                    ct);
+
+            if (camera is not null)
+            {
+                ViewBag.PropertyId = camera.PropertyId;
+                ViewBag.CameraId = camera.Id;
+                ViewBag.CameraName = camera.Name;
+                ViewBag.PropertyName = camera.Property?.Name;
+            }
+        }
 
         return View("Upload", vm);
     }

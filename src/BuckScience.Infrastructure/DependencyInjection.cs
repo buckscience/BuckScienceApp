@@ -1,7 +1,9 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Photos;
 using BuckScience.Infrastructure.Auth;
 using BuckScience.Infrastructure.Persistence;
+using BuckScience.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +34,10 @@ public static class DependencyInjection
 
         // Onboarding service
         services.AddScoped<IOnboardingService, Application.Onboarding.OnboardingService>();
+
+        // Photo processing services
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IPhotoProcessingService, PhotoProcessingService>();
 
         return services;
     }
