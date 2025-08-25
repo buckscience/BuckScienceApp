@@ -21,7 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\BuckScience.Applicaton\BuckScience.Applicaton.csproj" />
     <ProjectReference Include="..\BuckScience.Domain\BuckScience.Domain.csproj" />
-    <ProjectReference Include="..\BuckScience.Shared\BuckScience.Shared.csproj" />
   </ItemGroup>
 
 </Project>

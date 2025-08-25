@@ -1,6 +1,6 @@
 using Azure.Storage.Queues;
+using BuckScience.Application.Photos.Messages;
 using BuckScience.Infrastructure.Options;
-using BuckScience.Shared.Photos;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 

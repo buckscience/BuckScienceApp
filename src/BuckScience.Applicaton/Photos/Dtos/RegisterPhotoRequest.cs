@@ -1,4 +1,4 @@
-namespace BuckScience.Shared.Photos;
+namespace BuckScience.Application.Photos.Dtos;
 
 /// <summary>
 /// Request DTO for registering a photo after it has been uploaded to blob storage

@@ -4,10 +4,10 @@ using NetTopologySuite.Geometries;
 
 #nullable disable
 
-namespace BuckScience.Infrastructure.Persistence.Migrations
+namespace BuckScience.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class AddAzurePipelineColumnsToPhotos : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -63,6 +63,22 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tags", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "WeatherCache",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CameraId = table.Column<int>(type: "int", nullable: false),
+                    LocalDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    WeatherJson = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_WeatherCache", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -179,10 +195,19 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DateTaken = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DateUploaded = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    DateUploaded = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PhotoUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
                     CameraId = table.Column<int>(type: "int", nullable: false),
-                    WeatherId = table.Column<int>(type: "int", nullable: true)
+                    WeatherId = table.Column<int>(type: "int", nullable: true),
+                    UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    ContentHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    ThumbBlobName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    DisplayBlobName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TakenAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Latitude = table.Column<decimal>(type: "decimal(10,8)", precision: 10, scale: 8, nullable: true),
+                    Longitude = table.Column<decimal>(type: "decimal(11,8)", precision: 11, scale: 8, nullable: true),
+                    WeatherJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -247,9 +272,31 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 column: "CameraId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Photos_ContentHash",
+                table: "Photos",
+                column: "ContentHash");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Photos_DateTaken",
                 table: "Photos",
                 column: "DateTaken");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Photos_Status",
+                table: "Photos",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Photos_UserId",
+                table: "Photos",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Photos_UserId_CameraId_ContentHash",
+                table: "Photos",
+                columns: new[] { "UserId", "CameraId", "ContentHash" },
+                unique: true,
+                filter: "[UserId] IS NOT NULL AND [ContentHash] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Photos_WeatherId",
@@ -308,6 +355,22 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_WeatherCache_CameraId",
+                table: "WeatherCache",
+                column: "CameraId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WeatherCache_CameraId_LocalDate",
+                table: "WeatherCache",
+                columns: new[] { "CameraId", "LocalDate" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_WeatherCache_LocalDate",
+                table: "WeatherCache",
+                column: "LocalDate");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Weathers_DateTime",
                 table: "Weathers",
                 column: "DateTime");
@@ -332,6 +395,9 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "PropertyTag");
+
+            migrationBuilder.DropTable(
+                name: "WeatherCache");
 
             migrationBuilder.DropTable(
                 name: "Photos");

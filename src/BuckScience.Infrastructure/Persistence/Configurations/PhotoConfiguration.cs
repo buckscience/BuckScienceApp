@@ -10,6 +10,7 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
         {
             entity.HasKey(p => p.Id);
 
+            // Existing table structure - match user's current Photos table
             entity.Property(p => p.PhotoUrl)
                   .HasMaxLength(2048)
                   .IsRequired();
@@ -18,9 +19,14 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
                   .IsRequired();
 
             entity.Property(p => p.DateUploaded)
-                  .HasDefaultValueSql("GETUTCDATE()");
+                  .IsRequired();
 
-            // Azure pipeline properties (optional for backward compatibility)
+            entity.Property(p => p.CameraId)
+                  .IsRequired();
+
+            entity.Property(p => p.WeatherId);
+
+            // New Azure pipeline properties (optional for backward compatibility)
             entity.Property(p => p.UserId)
                   .HasMaxLength(450);
 
@@ -33,19 +39,25 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.Property(p => p.DisplayBlobName)
                   .HasMaxLength(500);
 
+            entity.Property(p => p.TakenAtUtc);
+
             entity.Property(p => p.Latitude)
                   .HasPrecision(10, 8);
 
             entity.Property(p => p.Longitude)
                   .HasPrecision(11, 8);
 
+            entity.Property(p => p.WeatherJson);
+
             entity.Property(p => p.Status)
                   .HasMaxLength(50);
 
-            // Indexes for common queries
+            // Indexes for existing structure
             entity.HasIndex(p => p.CameraId);
             entity.HasIndex(p => p.DateTaken);
             entity.HasIndex(p => p.WeatherId);
+
+            // New indexes for Azure pipeline
             entity.HasIndex(p => p.UserId);
             entity.HasIndex(p => p.ContentHash);
             entity.HasIndex(p => p.Status);
@@ -55,6 +67,7 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
                   .IsUnique()
                   .HasFilter("[UserId] IS NOT NULL AND [ContentHash] IS NOT NULL");
 
+            // Foreign key relationships
             entity.HasOne(p => p.Camera)
                   .WithMany(c => c.Photos)
                   .HasForeignKey(p => p.CameraId)

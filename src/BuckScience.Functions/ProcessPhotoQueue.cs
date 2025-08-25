@@ -1,5 +1,5 @@
+using BuckScience.Application.Photos.Messages;
 using BuckScience.Functions.Services;
-using BuckScience.Shared.Photos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;

@@ -4,20 +4,17 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
 #nullable disable
 
-namespace BuckScience.Infrastructure.Persistence.Migrations
+namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822135121_Initial")]
-    partial class Initial
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -132,29 +129,71 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     b.Property<int>("CameraId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("DateTaken")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DateUploaded")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayBlobName")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(10, 8)
+                        .HasColumnType("decimal(10,8)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(11, 8)
+                        .HasColumnType("decimal(11,8)");
 
                     b.Property<string>("PhotoUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
 
+                    b.Property<string>("Status")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("TakenAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ThumbBlobName")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int?>("WeatherId")
                         .HasColumnType("int");
+
+                    b.Property<string>("WeatherJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CameraId");
 
+                    b.HasIndex("ContentHash");
+
                     b.HasIndex("DateTaken");
 
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
                     b.HasIndex("WeatherId");
+
+                    b.HasIndex("UserId", "CameraId", "ContentHash")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL AND [ContentHash] IS NOT NULL");
 
                     b.ToTable("Photos");
                 });
@@ -382,6 +421,42 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     b.HasIndex("DateTimeEpoch");
 
                     b.ToTable("Weathers");
+                });
+
+            modelBuilder.Entity("BuckScience.Domain.Entities.WeatherCache", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CameraId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("WeatherJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CameraId");
+
+                    b.HasIndex("LocalDate");
+
+                    b.HasIndex("CameraId", "LocalDate")
+                        .IsUnique();
+
+                    b.ToTable("WeatherCache", (string)null);
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Camera", b =>

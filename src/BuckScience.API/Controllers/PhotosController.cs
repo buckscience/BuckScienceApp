@@ -1,7 +1,8 @@
 using BuckScience.Application.Abstractions;
+using BuckScience.Application.Photos.Dtos;
+using BuckScience.Application.Photos.Messages;
 using BuckScience.Domain.Entities;
 using BuckScience.Infrastructure.Queues;
-using BuckScience.Shared.Photos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BuckScience.API.Controllers;

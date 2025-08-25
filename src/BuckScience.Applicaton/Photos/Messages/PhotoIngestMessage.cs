@@ -1,4 +1,4 @@
-namespace BuckScience.Shared.Photos;
+namespace BuckScience.Application.Photos.Messages;
 
 /// <summary>
 /// Queue message for background photo processing
