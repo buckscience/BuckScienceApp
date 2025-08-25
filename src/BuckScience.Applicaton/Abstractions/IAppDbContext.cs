@@ -14,8 +14,7 @@ public interface IAppDbContext
     DbSet<Profile> Profiles { get; }
     DbSet<Weather> Weathers { get; }
     
-    // Pipeline entities
-    DbSet<PipelinePhoto> PipelinePhotos { get; }
+    // Weather cache for Azure pipeline
     DbSet<WeatherCache> WeatherCaches { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

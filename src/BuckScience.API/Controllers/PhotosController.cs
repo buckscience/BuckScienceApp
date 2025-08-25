@@ -39,8 +39,8 @@ public class PhotosController : ControllerBase
                 return BadRequest("Invalid request data");
             }
 
-            // Create and save photo record
-            var photo = new PipelinePhoto(
+            // Create and save photo record using Azure pipeline constructor
+            var photo = new Photo(
                 request.UserId,
                 request.CameraId,
                 request.ContentHash,
@@ -50,7 +50,7 @@ public class PhotosController : ControllerBase
                 request.Latitude,
                 request.Longitude);
 
-            _context.PipelinePhotos.Add(photo);
+            _context.Photos.Add(photo);
             await _context.SaveChangesAsync();
 
             // Create queue message for background processing

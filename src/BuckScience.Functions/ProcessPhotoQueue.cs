@@ -35,7 +35,7 @@ public class ProcessPhotoQueue
             }
 
             // Find the photo record
-            var photo = await _context.PipelinePhotos.FindAsync(message.PhotoId);
+            var photo = await _context.Photos.FindAsync(message.PhotoId);
             if (photo == null)
             {
                 _logger.LogError("Photo with ID {PhotoId} not found", message.PhotoId);
@@ -81,7 +81,7 @@ public class ProcessPhotoQueue
                     var message = JsonSerializer.Deserialize<PhotoIngestMessage>(queueMessage);
                     if (message?.PhotoId > 0)
                     {
-                        var photo = await _context.PipelinePhotos.FindAsync(message.PhotoId);
+                        var photo = await _context.Photos.FindAsync(message.PhotoId);
                         if (photo != null)
                         {
                             photo.MarkFailed();

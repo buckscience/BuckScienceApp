@@ -20,8 +20,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<Weather> Weathers => Set<Weather>();
 
-    // Pipeline entities
-    public DbSet<PipelinePhoto> PipelinePhotos => Set<PipelinePhoto>();
+    // Weather cache for Azure pipeline
     public DbSet<WeatherCache> WeatherCaches => Set<WeatherCache>();
 
 

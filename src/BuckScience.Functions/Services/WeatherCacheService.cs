@@ -6,14 +6,14 @@ using BuckScience.Domain.Entities;
 namespace BuckScience.Functions.Services;
 
 /// <summary>
-/// Simple EF Context for Functions that only deals with WeatherCache and PipelinePhotos tables
+/// Simple EF Context for Functions that only deals with WeatherCache and Photos tables
 /// </summary>
 public class WeatherDbContext : DbContext
 {
     public WeatherDbContext(DbContextOptions<WeatherDbContext> options) : base(options) { }
 
     public DbSet<WeatherCache> WeatherCaches { get; set; } = null!;
-    public DbSet<PipelinePhoto> PipelinePhotos { get; set; } = null!;
+    public DbSet<Photo> Photos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,11 +26,12 @@ public class WeatherDbContext : DbContext
             entity.Property(e => e.WeatherJson).HasMaxLength(4000);
         });
 
-        // PipelinePhotos configuration (simplified for Functions use)
-        modelBuilder.Entity<PipelinePhoto>(entity =>
+        // Photos configuration (simplified for Functions use)
+        modelBuilder.Entity<Photo>(entity =>
         {
             entity.ToTable("Photos");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.PhotoUrl).HasMaxLength(2048);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.UserId).HasMaxLength(450);
             entity.Property(e => e.ContentHash).HasMaxLength(64);
