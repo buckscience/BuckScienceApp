@@ -60,7 +60,7 @@
     z-index: 1001; /* Above sidebar */
     width: 20px;
     height: 40px;
-    background: #1e1e2f;
+    background: #36454F;
     border: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     display: flex;
@@ -156,31 +156,49 @@
 /* Button Styles */
 .theme-btn,
 .btn-primary,
-.subscribe-btn {
-    background-color: #8A9442;
-    border-color: #6B7A2A;
+.subscribe-btn,
+.btn-custom-primary {
+    background-color: #527A52;
+    border-color: #527A52;
     color: #fff;
     transition: background-color 0.3s, border-color 0.3s;
 }
 
     .theme-btn:hover,
     .btn-primary:hover,
-    .subscribe-btn:hover {
-        background-color: #B5C16B;
-        border-color: #8A9442;
-        color: #4B5320;
+    .subscribe-btn:hover,
+    .btn-custom-primary:hover {
+        background-color: #8CAF8C;
+        border-color: #8CAF8C;
+        color: #fff;
     }
 
 .btn-outline-primary {
-    color: #6B7A2A;
-    border-color: #B5C16B;
+    color: #527A52;
+    border-color: #527A52;
     background-color: #fff;
 }
 
     .btn-outline-primary:hover {
-        background-color: #D7E3B2;
-        color: #4B5320;
-        border-color: #8A9442;
+        background-color: #527A52;
+        color: #fff;
+        border-color: #527A52;
+    }
+
+/* Cancel/Secondary Button Styles */
+.btn-custom-cancel,
+.btn-outline-cancel {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+    .btn-custom-cancel:hover,
+    .btn-outline-cancel:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+        color: #fff;
     }
 
 /* Property List */
@@ -206,7 +224,6 @@
     border: 1px solid #e1e4e8;
     border-radius: 10px;
     padding: 10px 12px;
-    cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
@@ -215,6 +232,18 @@
         background: #f9fafb;
         border-color: #d1d5db;
     }
+
+/* Property Actions */
+.property-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.property-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
 
 /* Icon Styling */
 .property-icon {
@@ -345,4 +374,100 @@
     background: #fff;
     width: 48px;
     height: 48px;
+}
+
+/* Property Details Styles */
+.property-details .accordion-item {
+    border: 1px solid #e1e4e8;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+}
+
+.property-details .accordion-button {
+    background-color: #f8f9fa;
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.property-details .accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    box-shadow: none;
+}
+
+.property-details .accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+.property-details .camera-card,
+.property-details .profile-card,
+.property-details .feature-card {
+    transition: all 0.2s ease;
+    border: 1px solid #e1e4e8;
+}
+
+.property-details .camera-card:hover,
+.property-details .profile-card:hover,
+.property-details .feature-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    border-color: #d1d5db;
+}
+
+.property-details .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background-color: #f0f4f8;
+    border-radius: 8px;
+}
+
+.property-details .card-title {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.property-details .badge {
+    font-size: 0.75rem;
+}
+
+/* Custom Badge Styles */
+.badge-custom-primary {
+    background-color: #527A52;
+    color: #fff;
+}
+
+.badge-custom-success {
+    background-color: #527A52;
+    color: #fff;
+}
+
+.badge-custom-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.badge-custom-info {
+    background-color: #8CAF8C;
+    color: #fff;
+}
+
+.badge-custom-warning {
+    background-color: #f0ad4e;
+    color: #fff;
+}
+
+.badge-custom-light {
+    background-color: #f8f9fa;
+    color: #36454F;
+    border: 1px solid #e1e4e8;
+}
+
+/* Custom Text Colors */
+.text-custom-primary {
+    color: #527A52 !important;
 }

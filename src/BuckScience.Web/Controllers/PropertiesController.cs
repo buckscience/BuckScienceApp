@@ -1,6 +1,9 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Cameras;
+using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
+using BuckScience.Domain.Enums;
 using BuckScience.Web.ViewModels;
 using BuckScience.Web.ViewModels.Properties;
 using Microsoft.AspNetCore.Authorization;
@@ -132,6 +135,82 @@ public class PropertiesController : Controller
         TempData["UpdatedId"] = vm.Id;
         return RedirectToAction(nameof(Index));
     }
+
+    // DETAILS
+    [HttpGet]
+    [Route("/properties/{id:int}/details")]
+    public async Task<IActionResult> Details(int id, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        var prop = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (prop is null) return NotFound();
+
+        // Get cameras for this property
+        var cameras = await ListPropertyCameras.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+        
+        // Get profiles for this property
+        var profiles = await ListPropertyProfiles.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+
+        // Create feature placeholders based on ClassificationType enum
+        var features = Enum.GetValues<ClassificationType>()
+            .Select(type => new PropertyFeatureVm
+            {
+                Type = type,
+                Name = GetFeatureName(type),
+                Description = GetFeatureDescription(type),
+                Icon = GetFeatureIcon(type)
+            })
+            .ToList();
+
+        var vm = new PropertyDetailsVm
+        {
+            Id = prop.Id,
+            Name = prop.Name,
+            Cameras = cameras,
+            Profiles = profiles,
+            Features = features
+        };
+
+        return View(vm);
+    }
+
+    private static string GetFeatureName(ClassificationType type) => type switch
+    {
+        ClassificationType.BeddingArea => "Bedding Area",
+        ClassificationType.FeedingZone => "Feeding Zone",
+        ClassificationType.TravelCorridor => "Travel Corridor",
+        ClassificationType.PinchPointFunnel => "Pinch Point/Funnel",
+        ClassificationType.WaterSource => "Water Source",
+        ClassificationType.SecurityCover => "Security Cover",
+        ClassificationType.Other => "Other",
+        _ => type.ToString()
+    };
+
+    private static string GetFeatureDescription(ClassificationType type) => type switch
+    {
+        ClassificationType.BeddingArea => "Areas where deer rest during the day",
+        ClassificationType.FeedingZone => "Primary feeding and foraging areas",
+        ClassificationType.TravelCorridor => "Paths deer use to move between areas",
+        ClassificationType.PinchPointFunnel => "Natural funnels that concentrate deer movement",
+        ClassificationType.WaterSource => "Water sources like creeks, ponds, or springs",
+        ClassificationType.SecurityCover => "Thick cover that provides security for deer",
+        ClassificationType.Other => "Other important features on the property",
+        _ => $"Features related to {type}"
+    };
+
+    private static string GetFeatureIcon(ClassificationType type) => type switch
+    {
+        ClassificationType.BeddingArea => "fas fa-bed",
+        ClassificationType.FeedingZone => "fas fa-seedling",
+        ClassificationType.TravelCorridor => "fas fa-route",
+        ClassificationType.PinchPointFunnel => "fas fa-compress-arrows-alt",
+        ClassificationType.WaterSource => "fas fa-tint",
+        ClassificationType.SecurityCover => "fas fa-shield-alt",
+        ClassificationType.Other => "fas fa-map-pin",
+        _ => "fas fa-map-pin"
+    };
 
     // DELETE (confirm)
     [HttpGet]
