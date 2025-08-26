@@ -273,6 +273,44 @@ public class CamerasController : Controller
         return View("Upload", vm);
     }
 
+    // PHOTOS: GET /cameras/{id}/photos
+    [HttpGet("/cameras/{id:int}/photos")]
+    public async Task<IActionResult> Photos([FromRoute] int id, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Get camera info for header display
+        var camera = await _db.Cameras
+            .AsNoTracking()
+            .Include(c => c.Property)
+            .FirstOrDefaultAsync(c => 
+                c.Id == id && 
+                c.Property != null && 
+                c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+
+        if (camera is null) return NotFound();
+
+        // Get photos for this camera
+        var photos = await ListCameraPhotos.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+
+        var vm = new CameraPhotosVm
+        {
+            CameraId = camera.Id,
+            PropertyId = camera.PropertyId,
+            CameraName = camera.Name,
+            PropertyName = camera.Property?.Name ?? "",
+            Photos = photos.Select(p => new PhotoListItemVm
+            {
+                Id = p.Id,
+                PhotoUrl = p.PhotoUrl,
+                DateTaken = p.DateTaken,
+                DateUploaded = p.DateUploaded
+            }).ToList()
+        };
+
+        return View(vm);
+    }
+
     // UPLOAD PHOTO: POST
     [HttpPost("/cameras/{id:int}/photos/upload")]
     [ValidateAntiForgeryToken]
@@ -347,36 +385,13 @@ public class CamerasController : Controller
                 _blobStorageService,
                 ct);
 
-            TempData["UploadedPhotos"] = photoIds.Count;
-            
-            // Check if this is from setup flow
-            if (HttpContext.Request.Query["fromSetup"] == "1")
-            {
-                // Redirect to cameras list for the property
-                return RedirectToAction("Index", "Cameras", new { propertyId = vm.PropertyId, fromSetup = 1 });
-            }
-
-            return RedirectToAction("Index", "Cameras", new { propertyId = vm.PropertyId });
+            // Return JSON response for AJAX handling
+            return Json(new { success = true, photoCount = photoIds.Count, cameraId = vm.CameraId });
         }
         catch (Exception ex)
         {
-            ModelState.AddModelError("", $"Upload failed: {ex.Message}");
-            
-            // Reload view data for error display
-            var cam = await _db.Cameras
-                .AsNoTracking()
-                .Include(c => c.Property)
-                .FirstOrDefaultAsync(
-                    c => c.Id == id && c.Property != null && c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
-
-            if (cam is null) return NotFound();
-
-            ViewBag.PropertyId = cam.PropertyId;
-            ViewBag.CameraId = cam.Id;
-            ViewBag.CameraName = cam.Name;
-            ViewBag.PropertyName = cam.Property?.Name;
-
-            return View("Upload", vm);
+            // Return error as JSON for AJAX handling
+            return Json(new { success = false, error = ex.Message });
         }
     }
 }
