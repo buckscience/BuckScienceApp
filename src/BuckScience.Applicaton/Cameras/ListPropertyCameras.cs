@@ -37,7 +37,7 @@ public static class ListPropertyCameras
                 c.Latitude,
                 c.Longitude,
                 c.IsActive,
-                c.PhotoCount,
+                c.Photos.Count(),
                 c.CreatedDate))
             .ToListAsync(ct);
     }
