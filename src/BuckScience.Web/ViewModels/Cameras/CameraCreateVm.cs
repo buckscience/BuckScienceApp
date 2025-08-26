@@ -23,4 +23,8 @@ public class CameraCreateVm
     public double Longitude { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    // Property coordinates for map centering (not editable by user)
+    public double PropertyLatitude { get; set; }
+    public double PropertyLongitude { get; set; }
 }

@@ -69,3 +69,34 @@
         </a>
     </div>
 </form>
+
+@section Scripts {
+    <script>
+        // Expose property coordinates to JavaScript for map centering
+        window.App = window.App || {};
+        window.App.propertyCoords = {
+            lat: @Model.PropertyLatitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            lng: @Model.PropertyLongitude.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+
+        // Wire up camera form when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof App !== 'undefined' && App.wireCameraForm) {
+                    const container = document.getElementById('sidebar-content') || document.body;
+                    App.wireCameraForm(container);
+                }
+            }, 500); // Give the map time to initialize
+        });
+
+        // Also wire up when sidebar loads (for AJAX navigation)
+        document.addEventListener('sidebar:loaded', function() {
+            setTimeout(function() {
+                if (typeof App !== 'undefined' && App.wireCameraForm) {
+                    const container = document.getElementById('sidebar-content') || document.body;
+                    App.wireCameraForm(container);
+                }
+            }, 500);
+        });
+    </script>
+}
