@@ -26,7 +26,10 @@ if (!string.IsNullOrEmpty(storageConnectionString))
 {
     // Register the actual blob storage service
     builder.Services.AddSingleton<BlobStorageService>(provider => 
-        new BlobStorageService(storageConnectionString));
+    {
+        var logger = provider.GetRequiredService<ILogger<BlobStorageService>>();
+        return new BlobStorageService(storageConnectionString, logger);
+    });
     
     // Register the local file storage service
     builder.Services.AddSingleton<ILocalFileStorageService>(provider =>

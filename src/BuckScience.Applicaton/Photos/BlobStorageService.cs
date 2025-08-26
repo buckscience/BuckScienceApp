@@ -1,5 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure;
+using Microsoft.Extensions.Logging;
 
 namespace BuckScience.Application.Photos;
 
@@ -11,45 +13,92 @@ public interface IBlobStorageService
 public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly ILogger<BlobStorageService> _logger;
     private const string ContainerName = "photos";
 
-    public BlobStorageService(string connectionString)
+    public BlobStorageService(string connectionString, ILogger<BlobStorageService> logger)
     {
-        _blobServiceClient = new BlobServiceClient(connectionString);
+        var options = new BlobClientOptions()
+        {
+            Retry = {
+                MaxRetries = 2,
+                Delay = TimeSpan.FromSeconds(1),
+                MaxDelay = TimeSpan.FromSeconds(5)
+            }
+        };
+        
+        _blobServiceClient = new BlobServiceClient(connectionString, options);
+        _logger = logger;
+    }
+
+    // Test connectivity method
+    public async Task<bool> TestConnectivityAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            _logger.LogInformation("Testing Azure Blob Storage connectivity");
+            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+            
+            // Try to check if container exists (this will test connectivity)
+            var response = await containerClient.ExistsAsync(ct);
+            _logger.LogInformation("Azure Blob Storage connectivity test successful");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Azure Blob Storage connectivity test failed: {Error}", ex.Message);
+            return false;
+        }
     }
 
     public async Task<string> UploadPhotoAsync(Stream content, string fileName, int userId, int cameraId, int photoId, CancellationToken ct = default)
     {
-        // Get or create the container
-        var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-        await containerClient.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
-
-        // Generate a unique blob name
-        var blobName = $"{Guid.NewGuid()}_{fileName}";
-        var blobClient = containerClient.GetBlobClient(blobName);
-
-        // Set metadata for the blob
-        var metadata = new Dictionary<string, string>
+        try
         {
-            { "userId", userId.ToString() },
-            { "cameraId", cameraId.ToString() },
-            { "photoId", photoId.ToString() },
-            { "originalFileName", fileName },
-            { "uploadedAt", DateTime.UtcNow.ToString("O") }
-        };
+            _logger.LogInformation("Starting Azure Blob Storage upload for photo {PhotoId}", photoId);
+            
+            // Get or create the container
+            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
 
-        // Upload the blob with metadata
-        content.Position = 0;
-        await blobClient.UploadAsync(content, new BlobUploadOptions
-        {
-            Metadata = metadata,
-            HttpHeaders = new BlobHttpHeaders
+            // Generate a unique blob name
+            var blobName = $"{Guid.NewGuid()}_{fileName}";
+            var blobClient = containerClient.GetBlobClient(blobName);
+
+            // Set metadata for the blob
+            var metadata = new Dictionary<string, string>
             {
-                ContentType = GetContentType(fileName)
-            }
-        }, ct);
+                { "userId", userId.ToString() },
+                { "cameraId", cameraId.ToString() },
+                { "photoId", photoId.ToString() },
+                { "originalFileName", fileName },
+                { "uploadedAt", DateTime.UtcNow.ToString("O") }
+            };
 
-        return blobClient.Uri.ToString();
+            // Upload the blob with metadata
+            content.Position = 0;
+            await blobClient.UploadAsync(content, new BlobUploadOptions
+            {
+                Metadata = metadata,
+                HttpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = GetContentType(fileName)
+                }
+            }, ct);
+
+            _logger.LogInformation("Successfully uploaded photo {PhotoId} to Azure Blob Storage", photoId);
+            return blobClient.Uri.ToString();
+        }
+        catch (RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Azure Blob Storage request failed for photo {PhotoId}: {Error}", photoId, ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error uploading photo {PhotoId} to Azure Blob Storage", photoId);
+            throw;
+        }
     }
 
     private static string GetContentType(string fileName)
