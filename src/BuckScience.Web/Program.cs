@@ -1,4 +1,5 @@
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Photos;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
 using BuckScience.Web.Middleware;
@@ -18,6 +19,18 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Register CurrentUserService for dependency injection
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+// Register BlobStorageService
+var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");
+if (!string.IsNullOrEmpty(storageConnectionString))
+{
+    builder.Services.AddSingleton<IBlobStorageService>(provider => 
+        new BlobStorageService(storageConnectionString));
+}
+else
+{
+    throw new InvalidOperationException("StorageConnectionString is required in configuration.");
+}
 
 // Authentication: set defaults, then bind from AzureADB2C section
 builder.Services.AddAuthentication(options =>

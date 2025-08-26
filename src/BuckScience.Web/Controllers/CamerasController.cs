@@ -17,12 +17,14 @@ public class CamerasController : Controller
     private readonly IAppDbContext _db;
     private readonly GeometryFactory _geometryFactory;
     private readonly ICurrentUserService _currentUser;
+    private readonly IBlobStorageService _blobStorageService;
 
-    public CamerasController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser)
+    public CamerasController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser, IBlobStorageService blobStorageService)
     {
         _db = db;
         _geometryFactory = geometryFactory;
         _currentUser = currentUser;
+        _blobStorageService = blobStorageService;
     }
 
     // LIST: GET /properties/{propertyId}/cameras
@@ -344,7 +346,7 @@ public class CamerasController : Controller
                 new UploadPhotos.Command(vm.CameraId, fileDataList, vm.Caption),
                 _db,
                 _currentUser.Id.Value,
-                uploadPath,
+                _blobStorageService,
                 ct);
 
             TempData["UploadedPhotos"] = photoIds.Count;

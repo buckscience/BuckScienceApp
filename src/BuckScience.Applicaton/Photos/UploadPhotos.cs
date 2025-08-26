@@ -24,7 +24,7 @@ public static class UploadPhotos
         Command cmd,
         IAppDbContext db,
         int userId,
-        string uploadPath,
+        IBlobStorageService blobStorageService,
         CancellationToken ct)
     {
         // Verify camera ownership through property
@@ -46,25 +46,24 @@ public static class UploadPhotos
                 // Extract date taken from EXIF data
                 var dateTaken = ExtractDateTakenFromExif(file.Content) ?? DateTime.UtcNow;
                 
-                // Create uploads directory if it doesn't exist
-                System.IO.Directory.CreateDirectory(uploadPath);
-                
-                // Create a simple filename. In production, you'd use proper file storage
-                var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                var relativePath = $"/uploads/photos/{fileName}";
-                
-                // Save file to upload path
-                var filePath = Path.Combine(uploadPath, fileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    file.Content.Position = 0;
-                    await file.Content.CopyToAsync(stream, ct);
-                }
-
-                // Create Photo entity with EXIF-extracted date
-                var photo = new Photo(cmd.CameraId, relativePath, dateTaken);
+                // Create Photo entity first to get the ID for metadata
+                var photo = new Photo(cmd.CameraId, string.Empty, dateTaken);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
+                
+                // Upload to Azure Blob Storage with metadata
+                var blobUrl = await blobStorageService.UploadPhotoAsync(
+                    file.Content, 
+                    file.FileName, 
+                    userId, 
+                    cmd.CameraId, 
+                    photo.Id, 
+                    ct);
+                
+                // Update the photo with the blob URL
+                photo.SetPhotoUrl(blobUrl);
+                await db.SaveChangesAsync(ct);
+                
                 photoIds.Add(photo.Id);
             }
         }
