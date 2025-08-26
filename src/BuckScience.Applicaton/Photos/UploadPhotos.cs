@@ -62,8 +62,8 @@ public static class UploadPhotos
                     await file.Content.CopyToAsync(stream, ct);
                 }
 
-                // Create Photo entity with EXIF-extracted date
-                var photo = new Photo(cmd.CameraId, relativePath, dateTaken);
+                // Create Photo entity with EXIF-extracted date and userId
+                var photo = new Photo(cmd.CameraId, relativePath, dateTaken, userId);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
                 photoIds.Add(photo.Id);

@@ -20,8 +20,12 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.Property(p => p.DateUploaded)
                   .HasDefaultValueSql("GETUTCDATE()");
 
+            entity.Property(p => p.UserId)
+                  .IsRequired();
+
             entity.HasIndex(p => p.CameraId);
             entity.HasIndex(p => p.DateTaken);
+            entity.HasIndex(p => p.UserId);
             entity.HasIndex(p => p.WeatherId);
 
             entity.HasOne(p => p.Camera)
