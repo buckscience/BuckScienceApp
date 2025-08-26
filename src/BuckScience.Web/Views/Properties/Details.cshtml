@@ -24,6 +24,12 @@
             </h2>
             <div id="camerasCollapse" class="accordion-collapse collapse show" aria-labelledby="camerasHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Manage cameras for this property</span>
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i> Add Camera
+                        </a>
+                    </div>
                     @if (Model.Cameras.Any())
                     {
                         <div class="row g-3">
@@ -64,7 +70,7 @@
                         <div class="text-center py-4">
                             <i class="fas fa-camera fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No cameras configured for this property yet.</p>
-                            <a href="#" class="btn btn-custom-primary">Add Camera</a>
+                            <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary">Add Camera</a>
                         </div>
                     }
                 </div>
