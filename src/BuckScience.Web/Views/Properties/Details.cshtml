@@ -29,7 +29,7 @@
                         <div class="row g-3">
                             @foreach (var camera in Model.Cameras)
                             {
-                                <div class="col-lg-4 col-md-6">
+                                <div class="col-lg-6 col-md-6">
                                     <div class="card h-100 camera-card" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-start">
@@ -139,7 +139,7 @@
                                     <div class="card-body">
                                         <div class="d-flex align-items-start">
                                             <div class="feature-icon me-3">
-                                                <i class="@feature.Icon fa-2x text-primary"></i>
+                                                <i class="@feature.Icon fa-2x text-custom-primary"></i>
                                             </div>
                                             <div>
                                                 <h6 class="card-title">@feature.Name</h6>
@@ -186,6 +186,95 @@
         function navigateToFeature(featureType) {
             // Placeholder for feature navigation
             console.log('Navigate to feature:', featureType);
+        }
+
+        // Add camera markers to the map
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for map to be initialized
+            setTimeout(function() {
+                if (typeof App !== 'undefined' && App.getMap) {
+                    const map = App.getMap();
+                    if (map) {
+                        addCameraMarkers(map);
+                    }
+                }
+            }, 1000); // Give the map time to initialize
+        });
+
+        function addCameraMarkers(map) {
+            // Camera data from the server
+            const cameras = @Html.Raw(Json.Serialize(Model.Cameras.Select(c => new { 
+                id = c.Id, 
+                name = c.Name, 
+                lat = c.Latitude, 
+                lng = c.Longitude, 
+                isActive = c.IsActive,
+                brand = c.Brand,
+                model = c.Model,
+                photoCount = c.PhotoCount
+            })));
+
+            cameras.forEach(function(camera) {
+                // Create a custom marker element
+                const markerElement = document.createElement('div');
+                markerElement.className = 'camera-marker';
+                markerElement.style.cssText = `
+                    width: 30px;
+                    height: 30px;
+                    background: ${camera.isActive ? '#527A52' : '#6c757d'};
+                    border: 2px solid #fff;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                `;
+                markerElement.innerHTML = '<i class="fas fa-camera" style="font-size: 14px;"></i>';
+                markerElement.title = `${camera.name} - ${camera.isActive ? 'Active' : 'Inactive'}`;
+
+                // Create popup content
+                const popupContent = `
+                    <div style="padding: 5px;">
+                        <h6 style="margin: 0 0 5px 0;">${camera.name}</h6>
+                        <p style="margin: 0; font-size: 12px; color: #666;">
+                            <strong>${camera.brand}</strong> ${camera.model || ''}<br>
+                            ${camera.photoCount} photos<br>
+                            <span style="color: ${camera.isActive ? '#527A52' : '#6c757d'};">
+                                ${camera.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </p>
+                    </div>
+                `;
+
+                // Create marker with popup
+                const marker = new mapboxgl.Marker(markerElement)
+                    .setLngLat([camera.lng, camera.lat])
+                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
+                    .addTo(map);
+
+                // Add click handler to marker
+                markerElement.addEventListener('click', function() {
+                    navigateToCamera(camera.id);
+                });
+            });
+
+            // If we have cameras, fit the map to show all of them
+            if (cameras.length > 0) {
+                const bounds = new mapboxgl.LngLatBounds();
+                cameras.forEach(camera => {
+                    bounds.extend([camera.lng, camera.lat]);
+                });
+                
+                // Add some padding and ensure minimum zoom
+                map.fitBounds(bounds, {
+                    padding: 50,
+                    maxZoom: 15
+                });
+            }
         }
     </script>
 }

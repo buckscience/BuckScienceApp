@@ -466,3 +466,8 @@
     color: #36454F;
     border: 1px solid #e1e4e8;
 }
+
+/* Custom Text Colors */
+.text-custom-primary {
+    color: #527A52 !important;
+}
