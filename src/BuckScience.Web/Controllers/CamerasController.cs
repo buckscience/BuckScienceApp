@@ -338,7 +338,7 @@ public class CamerasController : Controller
                 }
             }
 
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "photos");
+            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
             
             var photoIds = await UploadPhotos.HandleAsync(
                 new UploadPhotos.Command(vm.CameraId, fileDataList, vm.Caption),
