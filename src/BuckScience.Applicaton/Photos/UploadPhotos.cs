@@ -46,24 +46,23 @@ public static class UploadPhotos
                 // Extract date taken from EXIF data
                 var dateTaken = ExtractDateTakenFromExif(file.Content) ?? DateTime.UtcNow;
                 
-                // Create user-specific directory structure
-                var userDirectory = Path.Combine(uploadPath, userId.ToString());
-                System.IO.Directory.CreateDirectory(userDirectory);
+                // Create uploads directory if it doesn't exist
+                System.IO.Directory.CreateDirectory(uploadPath);
                 
                 // Create a simple filename. In production, you'd use proper file storage
                 var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                var relativePath = $"/uploads/{userId}/{fileName}";
+                var relativePath = $"/uploads/photos/{fileName}";
                 
-                // Save file to user-specific upload path
-                var filePath = Path.Combine(userDirectory, fileName);
+                // Save file to upload path
+                var filePath = Path.Combine(uploadPath, fileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     file.Content.Position = 0;
                     await file.Content.CopyToAsync(stream, ct);
                 }
 
-                // Create Photo entity with EXIF-extracted date and userId
-                var photo = new Photo(cmd.CameraId, relativePath, dateTaken, userId);
+                // Create Photo entity with EXIF-extracted date
+                var photo = new Photo(cmd.CameraId, relativePath, dateTaken);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
                 photoIds.Add(photo.Id);

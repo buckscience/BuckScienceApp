@@ -142,9 +142,6 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("nvarchar(2048)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("WeatherId")
                         .HasColumnType("int");
 
@@ -153,8 +150,6 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     b.HasIndex("CameraId");
 
                     b.HasIndex("DateTaken");
-
-                    b.HasIndex("UserId");
 
                     b.HasIndex("WeatherId");
 

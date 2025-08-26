@@ -7,12 +7,11 @@ namespace BuckScience.Domain.Entities
     {
         protected Photo() { } // EF
 
-        public Photo(int cameraId, string photoUrl, DateTime dateTaken, int userId, DateTime? dateUploaded = null)
+        public Photo(int cameraId, string photoUrl, DateTime dateTaken, DateTime? dateUploaded = null)
         {
             SetCamera(cameraId);
             SetPhotoUrl(photoUrl);
             SetDateTaken(dateTaken);
-            SetUserId(userId);
             DateUploaded = dateUploaded ?? DateTime.UtcNow;
         }
 
@@ -21,9 +20,6 @@ namespace BuckScience.Domain.Entities
         public DateTime DateTaken { get; private set; }
         public DateTime DateUploaded { get; private set; }
         public string PhotoUrl { get; private set; } = string.Empty;
-
-        // User who uploaded the photo
-        public int UserId { get; private set; }
 
         // Required relationship to Camera
         public int CameraId { get; private set; }
@@ -57,12 +53,6 @@ namespace BuckScience.Domain.Entities
         {
             if (cameraId <= 0) throw new ArgumentOutOfRangeException(nameof(cameraId));
             CameraId = cameraId;
-        }
-
-        public void SetUserId(int userId)
-        {
-            if (userId <= 0) throw new ArgumentOutOfRangeException(nameof(userId));
-            UserId = userId;
         }
 
         public void SetWeather(int? weatherId)
