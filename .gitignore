@@ -1,3 +1,7 @@
 .vs/
 bin/
 obj/
+
+# Uploaded files
+src/BuckScience.Web/wwwroot/uploads/*
+!src/BuckScience.Web/wwwroot/uploads/photos/.gitkeep

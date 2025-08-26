@@ -1,0 +1,122 @@
+@model BuckScience.Web.ViewModels.Photos.CameraPhotosVm
+@{
+    ViewData["Title"] = $"Photos - {Model.CameraName}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>Photos from @Model.CameraName</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("Index", "Properties")">Properties</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("Index", "Cameras", new { propertyId = Model.PropertyId })">@Model.PropertyName</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Photos</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a href="@Url.Action("UploadPhoto", "Cameras", new { id = Model.CameraId })" 
+           class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload Photos
+        </a>
+    </div>
+</div>
+
+@if (Model.Photos.Any())
+{
+    <div class="row">
+        @foreach (var photo in Model.Photos)
+        {
+            <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                <div class="card h-100">
+                    <div class="position-relative">
+                        <img src="@photo.PhotoUrl" 
+                             class="card-img-top" 
+                             alt="Photo taken @photo.DateTaken.ToString("MM/dd/yyyy")"
+                             style="height: 200px; object-fit: cover; cursor: pointer;"
+                             data-bs-toggle="modal" 
+                             data-bs-target="#photoModal"
+                             data-photo-url="@photo.PhotoUrl"
+                             data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                             data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")" />
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-dark bg-opacity-75">
+                                @photo.DateTaken.ToString("MM/dd/yy")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <small class="text-muted">
+                            <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
+                            <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-camera fa-4x text-muted"></i>
+        </div>
+        <h3 class="text-muted">No photos yet</h3>
+        <p class="text-muted mb-4">Upload some photos from this camera to get started.</p>
+        <a href="@Url.Action("UploadPhoto", "Cameras", new { id = Model.CameraId })" 
+           class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload Your First Photos
+        </a>
+    </div>
+}
+
+<!-- Photo Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalLabel">Photo Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 70vh;" />
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">
+                            <strong>Date Taken:</strong><br>
+                            <span id="modalDateTaken"></span>
+                        </small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">
+                            <strong>Date Uploaded:</strong><br>
+                            <span id="modalDateUploaded"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Handle photo modal
+        const photoModal = document.getElementById('photoModal');
+        photoModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const photoUrl = button.getAttribute('data-photo-url');
+            const dateTaken = button.getAttribute('data-date-taken');
+            const dateUploaded = button.getAttribute('data-date-uploaded');
+            
+            document.getElementById('modalPhoto').src = photoUrl;
+            document.getElementById('modalDateTaken').textContent = dateTaken;
+            document.getElementById('modalDateUploaded').textContent = dateUploaded;
+        });
+    </script>
+}

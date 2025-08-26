@@ -4,14 +4,17 @@
 }
 <h1>Upload Photo</h1>
 
-<form action="@Url.Content($"~/cameras/{Model.CameraId}/photos/upload")"
+<form id="uploadForm" action="@Url.Content($"~/cameras/{Model.CameraId}/photos/upload")"
       method="post" enctype="multipart/form-data" novalidate>
     @Html.AntiForgeryToken()
 
     <input type="hidden" asp-for="PropertyId" />
     <input type="hidden" asp-for="CameraId" />
 
-    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div id="errorContainer" class="alert alert-danger d-none" role="alert">
+        <div id="errorMessage"></div>
+    </div>
+    
     <div class="alert alert-info mb-4" role="alert">
         <div class="d-flex align-items-start">
             @if (Context.Request.Query["fromSetup"] == "1")
@@ -32,9 +35,10 @@
         </div>
     </div>
     <div class="mb-3">
-        <label asp-for="File" class="form-label"></label>
-        <input asp-for="File" type="file" class="form-control" />
-        <span asp-validation-for="File" class="text-danger"></span>
+        <label asp-for="Files" class="form-label"></label>
+        <input asp-for="Files" type="file" class="form-control" multiple accept="image/jpeg,image/png,image/jpg" />
+        <span asp-validation-for="Files" class="text-danger"></span>
+        <div class="form-text">You can select multiple image files (JPEG/PNG). Hold Ctrl/Cmd while clicking to select multiple files.</div>
     </div>
 
     <div class="mb-3">
@@ -44,12 +48,139 @@
     </div>
 
     <div class="mt-4 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Upload</button>
+        <button type="submit" id="uploadBtn" class="btn btn-primary">
+            <span class="spinner-border spinner-border-sm d-none me-2" id="uploadSpinner" role="status" aria-hidden="true"></span>
+            <span id="uploadText">Upload</span>
+        </button>
         <a href="@Url.Action("Details", "Cameras", new { propertyId = Model.PropertyId, id = Model.CameraId })"
            class="btn btn-outline-secondary">Back to camera</a>
     </div>
 </form>
 
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Upload Successful!
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-images fa-3x text-success mb-3"></i>
+                    <h4 id="uploadMessage">Photos uploaded successfully!</h4>
+                    <p class="text-muted">What would you like to do next?</p>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" id="viewPhotosBtn">
+                    <i class="fas fa-eye me-2"></i>View Photos
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="uploadMoreBtn">
+                    <i class="fas fa-plus me-2"></i>Upload More
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <style>
+        /* Ensure modal appears above all other elements including sidebar */
+        #successModal {
+            z-index: 1070 !important;
+        }
+        #successModal .modal-backdrop {
+            z-index: 1060 !important;
+        }
+        /* Bootstrap modal backdrop fix */
+        .modal-backdrop {
+            z-index: 1060 !important;
+        }
+    </style>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const formData = new FormData(form);
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadText = document.getElementById('uploadText');
+            const errorContainer = document.getElementById('errorContainer');
+            
+            // Show loading state
+            uploadBtn.disabled = true;
+            uploadSpinner.classList.remove('d-none');
+            uploadText.textContent = 'Uploading...';
+            errorContainer.classList.add('d-none');
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success modal
+                    const message = data.photoCount === 1 
+                        ? `${data.photoCount} photo uploaded successfully!`
+                        : `${data.photoCount} photos uploaded successfully!`;
+                    document.getElementById('uploadMessage').textContent = message;
+                    
+                    // Set up modal buttons
+                    document.getElementById('viewPhotosBtn').onclick = function() {
+                        window.location.href = `/cameras/${data.cameraId}/photos`;
+                    };
+                    
+                    document.getElementById('uploadMoreBtn').onclick = function() {
+                        // Reset form and hide modal
+                        form.reset();
+                        const modalElement = document.getElementById('successModal');
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        modal.hide();
+                        resetUploadButton();
+                    };
+                    
+                    // Move modal to body to ensure it appears above sidebar
+                    const modalElement = document.getElementById('successModal');
+                    document.body.appendChild(modalElement);
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                } else {
+                    // Show error
+                    document.getElementById('errorMessage').textContent = data.error || 'Upload failed. Please try again.';
+                    errorContainer.classList.remove('d-none');
+                    resetUploadButton();
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                document.getElementById('errorMessage').textContent = 'Upload failed. Please try again.';
+                errorContainer.classList.remove('d-none');
+                resetUploadButton();
+            });
+        });
+        
+        function resetUploadButton() {
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadText = document.getElementById('uploadText');
+            
+            uploadBtn.disabled = false;
+            if (uploadSpinner) {
+                uploadSpinner.classList.add('d-none');
+            }
+            if (uploadText) {
+                uploadText.textContent = 'Upload';
+            }
+        }
+    </script>
 }
