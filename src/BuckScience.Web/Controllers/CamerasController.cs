@@ -2,6 +2,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
+using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels.Cameras;
 using BuckScience.Web.ViewModels.Photos;
 using Microsoft.AspNetCore.Authorization;
@@ -282,6 +283,7 @@ public class CamerasController : Controller
     }
 
     // PHOTOS: GET /cameras/{id}/photos
+    [SkipSetupCheck]
     [HttpGet("/cameras/{id:int}/photos")]
     public async Task<IActionResult> Photos([FromRoute] int id, CancellationToken ct)
     {
@@ -320,6 +322,7 @@ public class CamerasController : Controller
     }
 
     // UPLOAD PHOTO: POST
+    [SkipSetupCheck]
     [HttpPost("/cameras/{id:int}/photos/upload")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadPhoto([FromRoute] int id, PhotoUploadVm vm, CancellationToken ct)
