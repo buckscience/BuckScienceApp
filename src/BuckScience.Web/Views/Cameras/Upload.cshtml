@@ -50,7 +50,7 @@
     <div class="mt-4 d-flex gap-2">
         <button type="submit" id="uploadBtn" class="btn btn-primary">
             <span class="spinner-border spinner-border-sm d-none me-2" id="uploadSpinner" role="status" aria-hidden="true"></span>
-            Upload
+            <span id="uploadText">Upload</span>
         </button>
         <a href="@Url.Action("Details", "Cameras", new { propertyId = Model.PropertyId, id = Model.CameraId })"
            class="btn btn-outline-secondary">Back to camera</a>
@@ -108,12 +108,13 @@
             const formData = new FormData(form);
             const uploadBtn = document.getElementById('uploadBtn');
             const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadText = document.getElementById('uploadText');
             const errorContainer = document.getElementById('errorContainer');
             
             // Show loading state
             uploadBtn.disabled = true;
             uploadSpinner.classList.remove('d-none');
-            uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Uploading...';
+            uploadText.textContent = 'Uploading...';
             errorContainer.classList.add('d-none');
             
             fetch(form.action, {
@@ -171,10 +172,15 @@
         function resetUploadButton() {
             const uploadBtn = document.getElementById('uploadBtn');
             const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadText = document.getElementById('uploadText');
             
             uploadBtn.disabled = false;
-            uploadSpinner.classList.add('d-none');
-            uploadBtn.innerHTML = 'Upload';
+            if (uploadSpinner) {
+                uploadSpinner.classList.add('d-none');
+            }
+            if (uploadText) {
+                uploadText.textContent = 'Upload';
+            }
         }
     </script>
 }
