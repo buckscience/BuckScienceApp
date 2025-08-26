@@ -35,29 +35,30 @@
                         <div class="row g-3">
                             @foreach (var camera in Model.Cameras)
                             {
-                                <div class="col-12">
-                                    <div class="card h-100 camera-card" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h6 class="card-title">@camera.Name</h6>
-                                                    <p class="card-text text-muted mb-1">
-                                                        <strong>@camera.Brand</strong> @camera.Model
-                                                    </p>
-                                                    <p class="card-text text-muted small mb-1">
-                                                        <i class="fas fa-map-marker-alt me-1"></i>
-                                                        @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
-                                                    </p>
-                                                    <p class="card-text small">
-                                                        <i class="fas fa-images me-1"></i>
-                                                        @camera.PhotoCount photos
-                                                    </p>
-                                                </div>
-                                                <div class="text-end">
-                                                    <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
-                                                        @(camera.IsActive ? "Active" : "Inactive")
-                                                    </span>
-                                                </div>
+                                <div class="@(Model.Cameras.Count == 1 ? "col-8 mx-auto" : "col-6")">
+                                    <div class="card h-100 camera-card" style="cursor: pointer; min-height: 140px;" onclick="navigateToCamera(@camera.Id)">
+                                        <div class="card-body d-flex flex-column">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-0">@camera.Name</h6>
+                                                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                                                    @(camera.IsActive ? "Active" : "Inactive")
+                                                </span>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <p class="card-text text-muted mb-2">
+                                                    <i class="fas fa-video me-1"></i>
+                                                    @camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")
+                                                </p>
+                                                <p class="card-text text-muted small mb-2">
+                                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                                    @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
+                                                </p>
+                                            </div>
+                                            <div class="mt-auto">
+                                                <p class="card-text small mb-0">
+                                                    <i class="fas fa-images me-1 text-custom-primary"></i>
+                                                    <strong>@camera.PhotoCount</strong> photos
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -81,7 +82,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header" id="profilesHeading">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
-                    <i class="fas fa-user-circle me-2"></i>
+                    <i class="fas fa-crosshairs me-2"></i>
                     Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
                 </button>
             </h2>

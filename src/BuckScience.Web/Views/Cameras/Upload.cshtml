@@ -52,7 +52,7 @@
             <span class="spinner-border spinner-border-sm d-none me-2" id="uploadSpinner" role="status" aria-hidden="true"></span>
             <span id="uploadText">Upload</span>
         </button>
-        <a href="@Url.Action("Details", "Cameras", new { propertyId = Model.PropertyId, id = Model.CameraId })"
+        <a href="/cameras/@Model.CameraId/photos"
            class="btn btn-outline-secondary">Back to camera</a>
     </div>
 </form>

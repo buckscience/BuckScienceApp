@@ -163,8 +163,81 @@ window.App = window.App || {};
         wirePropertyForm(container);
     });
 
+    // Mount camera form and wire map <-> form with property recentering
+    function wireCameraForm(container) {
+        const m = map();
+        if (!m || typeof mapboxgl === 'undefined') return;
+
+        const latInput = container?.querySelector?.('#Latitude');
+        const lngInput = container?.querySelector?.('#Longitude');
+        if (!latInput || !lngInput) return; // not the camera create/edit view
+
+        // Check if we have property coordinates for centering
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        // Ensure one marker reused across loads
+        if (!window.App._cameraMarker) {
+            window.App._cameraMarker = new mapboxgl.Marker({ draggable: true, color: '#FF6B35' }); // Different color for camera
+        }
+        const marker = window.App._cameraMarker;
+
+        function setCoords(lat, lng, opts = {}) {
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            latInput.value = Number(lat).toFixed(6);
+            lngInput.value = Number(lng).toFixed(6);
+            marker.setLngLat([lng, lat]).addTo(m);
+            if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 14) });
+        }
+
+        // First, recenter map to property location
+        m.flyTo({ 
+            center: [propertyCoords.lng, propertyCoords.lat], 
+            zoom: Math.max(m.getZoom(), 14) 
+        });
+
+        // Initialize camera coordinates from inputs or property center
+        const currentLat = parseFloat(latInput.value);
+        const currentLng = parseFloat(lngInput.value);
+        if (Number.isFinite(currentLat) && Number.isFinite(currentLng) && (currentLat !== 0 || currentLng !== 0)) {
+            setCoords(currentLat, currentLng);
+        } else {
+            // Default to property center
+            setCoords(propertyCoords.lat, propertyCoords.lng);
+        }
+
+        // Marker drag updates inputs
+        if (marker._onDragEnd) marker.off('dragend', marker._onDragEnd);
+        marker._onDragEnd = () => {
+            const ll = marker.getLngLat();
+            setCoords(ll.lat, ll.lng);
+        };
+        marker.on('dragend', marker._onDragEnd);
+
+        // Map click sets coords
+        if (window.App._cameraClickHandler) m.off('click', window.App._cameraClickHandler);
+        window.App._cameraClickHandler = (e) => setCoords(e.lngLat.lat, e.lngLat.lng);
+        m.on('click', window.App._cameraClickHandler);
+
+        // Inputs change -> move marker
+        if (latInput._onChange) latInput.removeEventListener('change', latInput._onChange);
+        if (lngInput._onChange) lngInput.removeEventListener('change', lngInput._onChange);
+        const onInputChange = () => {
+            const lat = parseFloat(latInput.value);
+            const lng = parseFloat(lngInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) marker.setLngLat([lng, lat]).addTo(m);
+        };
+        latInput._onChange = onInputChange;
+        lngInput._onChange = onInputChange;
+        latInput.addEventListener('change', onInputChange);
+        lngInput.addEventListener('change', onInputChange);
+    }
+
     // Public API
     window.App.focusProperty = function ({ bbox }) {
         if (bbox) fitToBbox(bbox);
     };
+
+    // Expose wireCameraForm function
+    window.App.wireCameraForm = wireCameraForm;
 })();

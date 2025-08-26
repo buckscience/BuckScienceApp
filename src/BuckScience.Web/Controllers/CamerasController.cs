@@ -2,6 +2,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
+using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels.Cameras;
 using BuckScience.Web.ViewModels.Photos;
 using Microsoft.AspNetCore.Authorization;
@@ -68,12 +69,20 @@ public class CamerasController : Controller
     {
         if (_currentUser.Id is null) return Forbid();
 
-        var owned = await _db.Properties.AsNoTracking()
-            .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
-        if (!owned) return NotFound();
+        var property = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (property is null) return NotFound();
 
         ViewBag.PropertyId = propertyId;
-        return View(new CameraCreateVm { PropertyId = propertyId });
+        return View(new CameraCreateVm 
+        { 
+            PropertyId = propertyId,
+            PropertyLatitude = property.Latitude,
+            PropertyLongitude = property.Longitude,
+            // Initialize camera coordinates to property center
+            Latitude = property.Latitude,
+            Longitude = property.Longitude
+        });
     }
 
     // CREATE: POST /properties/{propertyId}/cameras/add
@@ -274,6 +283,7 @@ public class CamerasController : Controller
     }
 
     // PHOTOS: GET /cameras/{id}/photos
+    [SkipSetupCheck]
     [HttpGet("/cameras/{id:int}/photos")]
     public async Task<IActionResult> Photos([FromRoute] int id, CancellationToken ct)
     {
@@ -312,6 +322,7 @@ public class CamerasController : Controller
     }
 
     // UPLOAD PHOTO: POST
+    [SkipSetupCheck]
     [HttpPost("/cameras/{id:int}/photos/upload")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UploadPhoto([FromRoute] int id, PhotoUploadVm vm, CancellationToken ct)
