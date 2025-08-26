@@ -20,12 +20,26 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// Register BlobStorageService
+// Register storage services with hybrid approach
 var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");
 if (!string.IsNullOrEmpty(storageConnectionString))
 {
-    builder.Services.AddSingleton<IBlobStorageService>(provider => 
+    // Register the actual blob storage service
+    builder.Services.AddSingleton<BlobStorageService>(provider => 
         new BlobStorageService(storageConnectionString));
+    
+    // Register the local file storage service
+    builder.Services.AddSingleton<ILocalFileStorageService>(provider =>
+        new LocalFileStorageService(builder.Environment.WebRootPath));
+    
+    // Register the hybrid service that tries blob storage first, then falls back to local
+    builder.Services.AddSingleton<IBlobStorageService>(provider =>
+    {
+        var blobStorageService = provider.GetRequiredService<BlobStorageService>();
+        var localFileStorageService = provider.GetRequiredService<ILocalFileStorageService>();
+        var logger = provider.GetRequiredService<ILogger<HybridStorageService>>();
+        return new HybridStorageService(blobStorageService, localFileStorageService, logger);
+    });
 }
 else
 {
