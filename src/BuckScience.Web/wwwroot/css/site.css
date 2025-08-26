@@ -206,7 +206,6 @@
     border: 1px solid #e1e4e8;
     border-radius: 10px;
     padding: 10px 12px;
-    cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
@@ -215,6 +214,18 @@
         background: #f9fafb;
         border-color: #d1d5db;
     }
+
+/* Property Actions */
+.property-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.property-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
 
 /* Icon Styling */
 .property-icon {
@@ -345,4 +356,63 @@
     background: #fff;
     width: 48px;
     height: 48px;
+}
+
+/* Property Details Styles */
+.property-details .accordion-item {
+    border: 1px solid #e1e4e8;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+}
+
+.property-details .accordion-button {
+    background-color: #f8f9fa;
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+}
+
+.property-details .accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    box-shadow: none;
+}
+
+.property-details .accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+.property-details .camera-card,
+.property-details .profile-card,
+.property-details .feature-card {
+    transition: all 0.2s ease;
+    border: 1px solid #e1e4e8;
+}
+
+.property-details .camera-card:hover,
+.property-details .profile-card:hover,
+.property-details .feature-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    border-color: #d1d5db;
+}
+
+.property-details .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background-color: #f0f4f8;
+    border-radius: 8px;
+}
+
+.property-details .card-title {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.property-details .badge {
+    font-size: 0.75rem;
 }
