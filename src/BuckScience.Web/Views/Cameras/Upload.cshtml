@@ -87,6 +87,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <style>
+        /* Ensure modal appears above all other elements including sidebar */
+        #successModal {
+            z-index: 1070 !important;
+        }
+        #successModal .modal-backdrop {
+            z-index: 1060 !important;
+        }
+        /* Bootstrap modal backdrop fix */
+        .modal-backdrop {
+            z-index: 1060 !important;
+        }
+    </style>
     <script>
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -127,13 +140,18 @@
                     document.getElementById('uploadMoreBtn').onclick = function() {
                         // Reset form and hide modal
                         form.reset();
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('successModal'));
+                        const modalElement = document.getElementById('successModal');
+                        const modal = bootstrap.Modal.getInstance(modalElement);
                         modal.hide();
                         resetUploadButton();
                     };
                     
+                    // Move modal to body to ensure it appears above sidebar
+                    const modalElement = document.getElementById('successModal');
+                    document.body.appendChild(modalElement);
+                    
                     // Show modal
-                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                    const modal = new bootstrap.Modal(modalElement);
                     modal.show();
                 } else {
                     // Show error
