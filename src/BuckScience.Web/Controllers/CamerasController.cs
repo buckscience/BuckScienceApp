@@ -249,6 +249,7 @@ public class CamerasController : Controller
     }
 
     // UPLOAD PHOTO: GET
+    [SkipSetupCheck]
     [HttpGet("/cameras/{id:int}/upload")]
     public async Task<IActionResult> UploadPhoto([FromRoute] int id, CancellationToken ct)
     {
