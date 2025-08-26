@@ -48,6 +48,13 @@ window.App = window.App || {};
             if (push) {
                 history.pushState({ url }, '', url);
             }
+
+            // Update toggle position after content load
+            setTimeout(() => {
+                if (window.updateTogglePosition) {
+                    window.updateTogglePosition();
+                }
+            }, 50);
         } catch (err) {
             console.error(err);
             container.innerHTML = `<div class="alert alert-danger">Failed to load content.</div>`;
@@ -85,10 +92,33 @@ window.App = window.App || {};
         });
     }
 
+    function updateTogglePosition() {
+        const btn = document.getElementById('sidebar-toggle');
+        const aside = document.getElementById('sidebar');
+        if (!btn || !aside) return;
+
+        // Calculate the actual width of the sidebar
+        const sidebarRect = aside.getBoundingClientRect();
+        const sidebarRight = sidebarRect.right;
+        
+        // Position the toggle at the right edge of the sidebar
+        // Don't update position when collapsed to let CSS handle it
+        if (!aside.classList.contains('collapsed')) {
+            btn.style.left = sidebarRight + 'px';
+        } else {
+            // Reset to let CSS handle collapsed positioning
+            btn.style.left = '';
+        }
+    }
+
     function wireSidebarToggle() {
         const btn = document.getElementById('sidebar-toggle');
         const aside = document.getElementById('sidebar');
         if (!btn || !aside) return;
+
+        // Update position initially and on window resize
+        updateTogglePosition();
+        window.addEventListener('resize', updateTogglePosition);
 
         btn.addEventListener('click', () => {
             aside.classList.toggle('collapsed');
@@ -108,6 +138,9 @@ window.App = window.App || {};
                     icon.className = 'fas fa-chevron-left';
                 }
             }
+            
+            // Update toggle position after animation
+            setTimeout(updateTogglePosition, 300);
         });
     }
 
@@ -125,4 +158,5 @@ window.App = window.App || {};
 
     // Expose for other modules
     window.App.loadSidebar = loadSidebar;
+    window.updateTogglePosition = updateTogglePosition;
 })();
