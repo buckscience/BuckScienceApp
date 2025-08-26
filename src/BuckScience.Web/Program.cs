@@ -20,28 +20,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// Register storage services with hybrid approach
+// Register Azure Blob Storage service
 var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");
 if (!string.IsNullOrEmpty(storageConnectionString))
 {
-    // Register the actual blob storage service
-    builder.Services.AddSingleton<BlobStorageService>(provider => 
+    // Register the blob storage service directly as IBlobStorageService
+    builder.Services.AddSingleton<IBlobStorageService>(provider => 
     {
         var logger = provider.GetRequiredService<ILogger<BlobStorageService>>();
         return new BlobStorageService(storageConnectionString, logger);
-    });
-    
-    // Register the local file storage service
-    builder.Services.AddSingleton<ILocalFileStorageService>(provider =>
-        new LocalFileStorageService(builder.Environment.WebRootPath));
-    
-    // Register the hybrid service that tries blob storage first, then falls back to local
-    builder.Services.AddSingleton<IBlobStorageService>(provider =>
-    {
-        var blobStorageService = provider.GetRequiredService<BlobStorageService>();
-        var localFileStorageService = provider.GetRequiredService<ILocalFileStorageService>();
-        var logger = provider.GetRequiredService<ILogger<HybridStorageService>>();
-        return new HybridStorageService(blobStorageService, localFileStorageService, logger);
     });
 }
 else

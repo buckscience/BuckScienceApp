@@ -31,26 +31,6 @@ public class BlobStorageService : IBlobStorageService
         _logger = logger;
     }
 
-    // Test connectivity method
-    public async Task<bool> TestConnectivityAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            _logger.LogInformation("Testing Azure Blob Storage connectivity");
-            var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-            
-            // Try to check if container exists (this will test connectivity)
-            var response = await containerClient.ExistsAsync(ct);
-            _logger.LogInformation("Azure Blob Storage connectivity test successful");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Azure Blob Storage connectivity test failed: {Error}", ex.Message);
-            return false;
-        }
-    }
-
     public async Task<string> UploadPhotoAsync(Stream content, string fileName, int userId, int cameraId, int photoId, CancellationToken ct = default)
     {
         try
