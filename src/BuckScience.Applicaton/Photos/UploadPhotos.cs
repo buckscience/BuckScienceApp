@@ -46,8 +46,8 @@ public static class UploadPhotos
                 // Extract date taken from EXIF data
                 var dateTaken = ExtractDateTakenFromExif(file.Content) ?? DateTime.UtcNow;
                 
-                // Create Photo entity first to get the ID for metadata
-                var photo = new Photo(cmd.CameraId, string.Empty, dateTaken);
+                // Create Photo entity first with placeholder URL to get the ID for metadata
+                var photo = new Photo(cmd.CameraId, "UPLOADING", dateTaken);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
                 
