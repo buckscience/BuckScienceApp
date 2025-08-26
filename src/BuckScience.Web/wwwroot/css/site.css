@@ -60,7 +60,7 @@
     z-index: 1001; /* Above sidebar */
     width: 20px;
     height: 40px;
-    background: #1e1e2f;
+    background: #36454F;
     border: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     display: flex;
@@ -156,31 +156,49 @@
 /* Button Styles */
 .theme-btn,
 .btn-primary,
-.subscribe-btn {
-    background-color: #8A9442;
-    border-color: #6B7A2A;
+.subscribe-btn,
+.btn-custom-primary {
+    background-color: #527A52;
+    border-color: #527A52;
     color: #fff;
     transition: background-color 0.3s, border-color 0.3s;
 }
 
     .theme-btn:hover,
     .btn-primary:hover,
-    .subscribe-btn:hover {
-        background-color: #B5C16B;
-        border-color: #8A9442;
-        color: #4B5320;
+    .subscribe-btn:hover,
+    .btn-custom-primary:hover {
+        background-color: #8CAF8C;
+        border-color: #8CAF8C;
+        color: #fff;
     }
 
 .btn-outline-primary {
-    color: #6B7A2A;
-    border-color: #B5C16B;
+    color: #527A52;
+    border-color: #527A52;
     background-color: #fff;
 }
 
     .btn-outline-primary:hover {
-        background-color: #D7E3B2;
-        color: #4B5320;
-        border-color: #8A9442;
+        background-color: #527A52;
+        color: #fff;
+        border-color: #527A52;
+    }
+
+/* Cancel/Secondary Button Styles */
+.btn-custom-cancel,
+.btn-outline-cancel {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+    .btn-custom-cancel:hover,
+    .btn-outline-cancel:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+        color: #fff;
     }
 
 /* Property List */
@@ -415,4 +433,36 @@
 
 .property-details .badge {
     font-size: 0.75rem;
+}
+
+/* Custom Badge Styles */
+.badge-custom-primary {
+    background-color: #527A52;
+    color: #fff;
+}
+
+.badge-custom-success {
+    background-color: #527A52;
+    color: #fff;
+}
+
+.badge-custom-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.badge-custom-info {
+    background-color: #8CAF8C;
+    color: #fff;
+}
+
+.badge-custom-warning {
+    background-color: #f0ad4e;
+    color: #fff;
+}
+
+.badge-custom-light {
+    background-color: #f8f9fa;
+    color: #36454F;
+    border: 1px solid #e1e4e8;
 }
