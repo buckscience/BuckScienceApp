@@ -55,7 +55,7 @@
 .sidebar-toggle {
     position: fixed;
     top: 50%;
-    left: calc(80px + 380px); /* Position at the right edge of the sidebar */
+    /* left position will be set dynamically by JavaScript */
     transform: translateY(-50%);
     z-index: 1001; /* Above sidebar */
     width: 20px;
