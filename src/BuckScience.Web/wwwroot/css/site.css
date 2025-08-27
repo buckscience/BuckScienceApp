@@ -479,6 +479,7 @@
 
 .modal-backdrop {
     z-index: 9998 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Ensure modal content is interactive */
@@ -488,4 +489,15 @@
 
 .modal-dialog {
     z-index: 10000 !important;
+    position: relative;
+}
+
+/* Ensure modal backdrop doesn't interfere with clicks */
+.modal-backdrop.show {
+    opacity: 0.5 !important;
+}
+
+/* Make sure body doesn't interfere when modal is open */
+body.modal-open {
+    overflow: hidden;
 }

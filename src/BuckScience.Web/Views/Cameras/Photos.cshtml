@@ -31,7 +31,8 @@
                              data-bs-target="#photoModal"
                              data-photo-url="@photo.EncodedPhotoUrl"
                              data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
-                             data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")" />
+                             data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                             onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
                         <div class="position-absolute top-0 end-0 m-2">
                             <span class="badge bg-dark bg-opacity-75">
                                 @photo.DateTaken.ToString("MM/dd/yy")
@@ -97,15 +98,48 @@ else
     <script>
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
-        photoModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const photoUrl = button.getAttribute('data-photo-url');
-            const dateTaken = button.getAttribute('data-date-taken');
-            const dateUploaded = button.getAttribute('data-date-uploaded');
+        if (photoModal) {
+            photoModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const photoUrl = button.getAttribute('data-photo-url');
+                const dateTaken = button.getAttribute('data-date-taken');
+                const dateUploaded = button.getAttribute('data-date-uploaded');
+                
+                console.log('Loading photo URL:', photoUrl); // Debug logging
+                
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = photoUrl;
+                    modalPhotoImg.onerror = function() {
+                        console.error('Failed to load photo:', photoUrl);
+                        this.alt = 'Failed to load photo';
+                    };
+                }
+                
+                const modalDateTaken = document.getElementById('modalDateTaken');
+                const modalDateUploaded = document.getElementById('modalDateUploaded');
+                
+                if (modalDateTaken) modalDateTaken.textContent = dateTaken;
+                if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
+            });
             
-            document.getElementById('modalPhoto').src = photoUrl;
-            document.getElementById('modalDateTaken').textContent = dateTaken;
-            document.getElementById('modalDateUploaded').textContent = dateUploaded;
+            // Ensure modal is properly disposed when hidden
+            photoModal.addEventListener('hidden.bs.modal', function (event) {
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = '';
+                }
+            });
+        }
+        
+        // Debug: Log all photo URLs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoImages = document.querySelectorAll('img[data-photo-url]');
+            console.log('Found', photoImages.length, 'photo images');
+            photoImages.forEach((img, index) => {
+                const url = img.getAttribute('data-photo-url');
+                console.log(`Photo ${index + 1} URL:`, url);
+            });
         });
     </script>
 }
