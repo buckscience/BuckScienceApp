@@ -49,12 +49,12 @@ window.App = window.App || {};
                 history.pushState({ url }, '', url);
             }
 
-            // Update toggle position after content load
+            // Update toggle position after content load with improved timing
             setTimeout(() => {
                 if (window.updateTogglePosition) {
                     window.updateTogglePosition();
                 }
-            }, 50);
+            }, 100); // Increased from 50ms to 100ms for better reliability
         } catch (err) {
             console.error(err);
             container.innerHTML = `<div class="alert alert-danger">Failed to load content.</div>`;
@@ -97,19 +97,31 @@ window.App = window.App || {};
         const aside = document.getElementById('sidebar');
         if (!btn || !aside) return;
 
-        // Calculate the actual width of the sidebar
-        const sidebarRect = aside.getBoundingClientRect();
-        const sidebarRight = sidebarRect.right;
-        
-        // Position the toggle at the right edge of the sidebar
-        // Don't update position when collapsed to let CSS handle it
-        if (!aside.classList.contains('collapsed')) {
-            btn.style.left = sidebarRight + 'px';
-        } else {
-            // Reset to let CSS handle collapsed positioning
-            btn.style.left = '';
-        }
+        // Use requestAnimationFrame to ensure positioning happens after layout
+        requestAnimationFrame(() => {
+            // Calculate the actual width of the sidebar
+            const sidebarRect = aside.getBoundingClientRect();
+            const sidebarRight = sidebarRect.right;
+            
+            // Position the toggle at the right edge of the sidebar
+            // Don't update position when collapsed to let CSS handle it
+            if (!aside.classList.contains('collapsed')) {
+                btn.style.left = sidebarRight + 'px';
+            } else {
+                // Reset to let CSS handle collapsed positioning
+                btn.style.left = '';
+            }
+        });
     }
+
+    // Debounced version of updateTogglePosition to prevent excessive calls
+    let updateTogglePositionDebounced = (() => {
+        let timeoutId;
+        return () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(updateTogglePosition, 16); // ~60fps
+        };
+    })();
 
     function wireSidebarToggle() {
         const btn = document.getElementById('sidebar-toggle');
@@ -118,7 +130,7 @@ window.App = window.App || {};
 
         // Update position initially and on window resize
         updateTogglePosition();
-        window.addEventListener('resize', updateTogglePosition);
+        window.addEventListener('resize', updateTogglePositionDebounced);
 
         btn.addEventListener('click', () => {
             aside.classList.toggle('collapsed');
@@ -141,6 +153,25 @@ window.App = window.App || {};
             
             // Update toggle position after animation
             setTimeout(updateTogglePosition, 300);
+        });
+
+        // Listen for Bootstrap accordion events that might change sidebar content size
+        document.addEventListener('shown.bs.collapse', updateTogglePositionDebounced);
+        document.addEventListener('hidden.bs.collapse', updateTogglePositionDebounced);
+        
+        // Use ResizeObserver to watch for sidebar size changes (modern browsers)
+        if (window.ResizeObserver) {
+            const resizeObserver = new ResizeObserver(updateTogglePositionDebounced);
+            resizeObserver.observe(aside);
+        }
+        
+        // Use MutationObserver to watch for content changes that might affect sidebar width
+        const mutationObserver = new MutationObserver(updateTogglePositionDebounced);
+        mutationObserver.observe(aside, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
         });
     }
 
