@@ -69,6 +69,11 @@
     border-radius: 0 20px 20px 0;
     transition: left 0.3s ease, background 0.2s;
     cursor: pointer;
+    color: white;
+}
+
+.sidebar-toggle:hover {
+    background: #4a5a5f;
 }
 
 /* When sidebar is collapsed, move toggle button to the navbar edge */
@@ -477,6 +482,33 @@
     min-height: 100%;
     max-width: 1200px;
     min-width: 600px;
+}
+
+/* Photo grid improvements for single image */
+.photo-grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* When there's only one photo, make it larger */
+.photo-grid-container .photo-item:only-child {
+    max-width: 400px;
+    width: 100%;
+}
+
+/* For multiple photos, use responsive sizing */
+.photo-grid-container .photo-item {
+    flex: 1 1 300px;
+    max-width: 350px;
+    min-width: 250px;
+}
+
+/* Override Bootstrap grid for photo cards when using custom photo grid */
+.photo-grid-container .photo-item .card-img-top {
+    height: 250px;
+    object-fit: cover;
+    cursor: pointer;
 }
 
 .sidebar-title {

@@ -99,17 +99,25 @@ window.App = window.App || {};
 
         // Use requestAnimationFrame to ensure positioning happens after layout
         requestAnimationFrame(() => {
-            // Calculate the actual width of the sidebar
-            const sidebarRect = aside.getBoundingClientRect();
-            const sidebarRight = sidebarRect.right;
-            
-            // Position the toggle at the right edge of the sidebar
-            // Don't update position when collapsed to let CSS handle it
-            if (!aside.classList.contains('collapsed')) {
-                btn.style.left = sidebarRight + 'px';
-            } else {
-                // Reset to let CSS handle collapsed positioning
-                btn.style.left = '';
+            try {
+                // Calculate the actual width of the sidebar
+                const sidebarRect = aside.getBoundingClientRect();
+                const sidebarRight = sidebarRect.right;
+                
+                // Position the toggle at the right edge of the sidebar
+                // Don't update position when collapsed to let CSS handle it
+                if (!aside.classList.contains('collapsed')) {
+                    btn.style.left = sidebarRight + 'px';
+                    btn.style.display = 'flex'; // Ensure button is visible
+                } else {
+                    // Reset to let CSS handle collapsed positioning
+                    btn.style.left = '';
+                    btn.style.display = 'flex';
+                }
+            } catch (error) {
+                console.warn('Error updating toggle position:', error);
+                // Fallback: ensure button is at least visible
+                btn.style.display = 'flex';
             }
         });
     }

@@ -108,8 +108,6 @@
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="?sort=DateTakenDesc">Date Taken (Newest)</a></li>
                                     <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="?sort=DateTakenAsc">Date Taken (Oldest)</a></li>
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="?sort=DateUploadedDesc">Date Uploaded (Newest)</a></li>
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="?sort=DateUploadedAsc">Date Uploaded (Oldest)</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -118,16 +116,15 @@
                         @foreach (var group in Model.PhotoGroups)
                         {
                             <h5 class="mt-4 mb-3 text-primary">@group.MonthYear</h5>
-                            <div class="row">
+                            <div class="photo-grid-container">
                                 @foreach (var photo in group.Photos)
                                 {
-                                    <div class="col-md-6 col-lg-4 col-xl-3 mb-3">
+                                    <div class="photo-item mb-3">
                                         <div class="card h-100">
                                             <div class="position-relative">
                                                 <img src="@photo.EncodedPhotoUrl" 
                                                      class="card-img-top" 
                                                      alt="Photo" 
-                                                     style="height: 200px; object-fit: cover; cursor: pointer;"
                                                      data-bs-toggle="modal" 
                                                      data-bs-target="#photoModal"
                                                      data-photo-url="@photo.EncodedPhotoUrl"
