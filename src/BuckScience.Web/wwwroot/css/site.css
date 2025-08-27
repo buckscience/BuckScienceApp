@@ -198,6 +198,28 @@
         box-shadow: 0 0 0 0.2rem rgba(82, 122, 82, 0.25) !important;
     }
 
+/* Dropdown menu item styling to use green theme colors */
+.dropdown-item {
+    color: #527A52 !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.dropdown-item.active {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+}
+
 /* Cancel/Secondary Button Styles */
 .btn-custom-cancel,
 .btn-outline-cancel {
