@@ -406,4 +406,31 @@ public class CamerasController : Controller
             return Json(new { success = false, error = ex.Message });
         }
     }
+
+    // DETAILS: GET /cameras/{id}/details
+    [HttpGet("/cameras/{id:int}/details")]
+    public async Task<IActionResult> Details([FromRoute] int id, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        var camera = await GetCameraDetails.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+        if (camera is null) return NotFound();
+
+        var vm = new CameraDetailsVm
+        {
+            Id = camera.Id,
+            Name = camera.Name,
+            Brand = camera.Brand,
+            Model = camera.Model,
+            Latitude = camera.Latitude,
+            Longitude = camera.Longitude,
+            IsActive = camera.IsActive,
+            PhotoCount = camera.PhotoCount,
+            CreatedDate = camera.CreatedDate,
+            PropertyId = camera.PropertyId,
+            PropertyName = camera.PropertyName
+        };
+
+        return View(vm);
+    }
 }

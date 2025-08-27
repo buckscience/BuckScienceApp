@@ -1,0 +1,160 @@
+@model BuckScience.Web.ViewModels.Cameras.CameraDetailsVm
+@{
+    ViewData["Title"] = $"{Model.Name} - Camera Details";
+}
+
+<div class="camera-details">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">@Model.Name</h2>
+        <a href="javascript:void(0)" onclick="navigateBackToProperty(@Model.PropertyId)" class="btn btn-custom-cancel btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to @Model.PropertyName
+        </a>
+    </div>
+    <hr class="sidebar-title-separator" />
+
+    <div class="accordion" id="cameraDetailsAccordion">
+        
+        <!-- Basic Information Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="basicInfoHeading">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#basicInfoCollapse" aria-expanded="true" aria-controls="basicInfoCollapse">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Camera Information
+                </button>
+            </h2>
+            <div id="basicInfoCollapse" class="accordion-collapse collapse show" aria-labelledby="basicInfoHeading" data-bs-parent="#cameraDetailsAccordion">
+                <div class="accordion-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fw-bold">Status</span>
+                                <span class="badge @(Model.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                                    @(Model.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Brand</label>
+                            <p class="mb-0 fw-semibold">@Model.Brand</p>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(Model.Model))
+                        {
+                            <div class="col-6">
+                                <label class="form-label text-muted small">Model</label>
+                                <p class="mb-0">@Model.Model</p>
+                            </div>
+                        }
+                        
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Location</label>
+                            <p class="mb-0">
+                                <i class="fas fa-map-marker-alt me-1 text-custom-primary"></i>
+                                @Model.Latitude.ToString("F4"), @Model.Longitude.ToString("F4")
+                            </p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Photos</label>
+                            <p class="mb-0">
+                                <i class="fas fa-images me-1 text-custom-primary"></i>
+                                <strong>@Model.PhotoCount</strong> photos
+                            </p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Created</label>
+                            <p class="mb-0">@Model.CreatedDate.ToString("MMM dd, yyyy")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photos Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="photosHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#photosCollapse" aria-expanded="false" aria-controls="photosCollapse">
+                    <i class="fas fa-images me-2"></i>
+                    Photos <span class="badge badge-custom-primary ms-2">@Model.PhotoCount</span>
+                </button>
+            </h2>
+            <div id="photosCollapse" class="accordion-collapse collapse" aria-labelledby="photosHeading" data-bs-parent="#cameraDetailsAccordion">
+                <div class="accordion-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Manage photos for this camera</span>
+                        <div>
+                            <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary btn-sm me-2">
+                                <i class="fas fa-upload me-1"></i> Upload Photos
+                            </a>
+                            @if (Model.PhotoCount > 0)
+                            {
+                                <a href="/cameras/@Model.Id/photos" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View All
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    
+                    @if (Model.PhotoCount == 0)
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No photos uploaded to this camera yet.</p>
+                            <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary">Upload First Photos</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This camera has <strong>@Model.PhotoCount</strong> photos. 
+                            <a href="/cameras/@Model.Id/photos" class="alert-link">View all photos</a> to browse and manage them.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Management Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="managementHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#managementCollapse" aria-expanded="false" aria-controls="managementCollapse">
+                    <i class="fas fa-cogs me-2"></i>
+                    Camera Management
+                </button>
+            </h2>
+            <div id="managementCollapse" class="accordion-collapse collapse" aria-labelledby="managementHeading" data-bs-parent="#cameraDetailsAccordion">
+                <div class="accordion-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Edit or remove this camera</span>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <a href="/properties/@Model.PropertyId/cameras/@Model.Id/edit" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-edit me-1"></i> Edit Camera
+                            </a>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <a href="/properties/@Model.PropertyId/cameras/@Model.Id/delete" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-trash me-1"></i> Delete Camera
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function navigateBackToProperty(propertyId) {
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/properties/${propertyId}`, { push: true });
+        } else {
+            window.location.href = `/properties/${propertyId}`;
+        }
+    }
+</script>

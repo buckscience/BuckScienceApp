@@ -180,8 +180,11 @@
 @section Scripts {
     <script>
         function navigateToCamera(cameraId) {
-            // Placeholder for camera navigation
-            console.log('Navigate to camera:', cameraId);
+            if (window.App && window.App.loadSidebar) {
+                window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+            } else {
+                console.log('Navigate to camera:', cameraId);
+            }
         }
 
         function navigateToProfile(profileId) {
