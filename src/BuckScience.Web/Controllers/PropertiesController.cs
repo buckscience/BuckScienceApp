@@ -1,10 +1,12 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
+using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.ViewModels;
+using BuckScience.Web.ViewModels.Photos;
 using BuckScience.Web.ViewModels.Properties;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -211,6 +213,46 @@ public class PropertiesController : Controller
         ClassificationType.Other => "fas fa-map-pin",
         _ => "fas fa-map-pin"
     };
+
+    // PHOTOS: GET /properties/{id}/photos
+    [HttpGet]
+    [Route("/properties/{id:int}/photos")]
+    public async Task<IActionResult> Photos(int id, [FromQuery] string sort = "DateTakenDesc", CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify property ownership
+        var property = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (property is null) return NotFound();
+
+        // Get sort option
+        var sortBy = sort switch
+        {
+            "DateTakenAsc" => ListPropertyPhotos.SortBy.DateTakenAsc,
+            "DateTakenDesc" => ListPropertyPhotos.SortBy.DateTakenDesc,
+            "DateUploadedAsc" => ListPropertyPhotos.SortBy.DateUploadedAsc,
+            "DateUploadedDesc" => ListPropertyPhotos.SortBy.DateUploadedDesc,
+            _ => ListPropertyPhotos.SortBy.DateTakenDesc
+        };
+
+        // Get all photos from all cameras on this property
+        var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, ct);
+
+        // Group photos by month/year
+        var photoGroups = photos.GroupByMonth();
+
+        var vm = new PropertyPhotosVm
+        {
+            PropertyId = property.Id,
+            PropertyName = property.Name,
+            PhotoGroups = photoGroups,
+            CurrentSort = sort,
+            TotalPhotoCount = photos.Count
+        };
+
+        return View(vm);
+    }
 
     // DELETE (confirm)
     [HttpGet]

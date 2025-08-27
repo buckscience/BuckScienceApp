@@ -80,17 +80,11 @@
             <div id="photosCollapse" class="accordion-collapse collapse" aria-labelledby="photosHeading" data-bs-parent="#cameraDetailsAccordion">
                 <div class="accordion-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted">Manage photos for this camera</span>
+                        <span class="text-muted">Photos from this camera</span>
                         <div>
                             <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary btn-sm me-2">
                                 <i class="fas fa-upload me-1"></i> Upload Photos
                             </a>
-                            @if (Model.PhotoCount > 0)
-                            {
-                                <a href="/cameras/@Model.Id/photos" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-eye me-1"></i> View All
-                                </a>
-                            }
                         </div>
                     </div>
                     
@@ -104,11 +98,54 @@
                     }
                     else
                     {
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            This camera has <strong>@Model.PhotoCount</strong> photos. 
-                            <a href="/cameras/@Model.Id/photos" class="alert-link">View all photos</a> to browse and manage them.
+                        <!-- Sorting Controls -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted">@Model.PhotoCount total photos</span>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-sort me-1"></i> Sort
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="?sort=DateTakenDesc">Date Taken (Newest)</a></li>
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="?sort=DateTakenAsc">Date Taken (Oldest)</a></li>
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="?sort=DateUploadedDesc">Date Uploaded (Newest)</a></li>
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="?sort=DateUploadedAsc">Date Uploaded (Oldest)</a></li>
+                                </ul>
+                            </div>
                         </div>
+
+                        <!-- Photos grouped by month/year -->
+                        @foreach (var group in Model.PhotoGroups)
+                        {
+                            <h5 class="mt-4 mb-3 text-primary">@group.MonthYear</h5>
+                            <div class="row">
+                                @foreach (var photo in group.Photos)
+                                {
+                                    <div class="col-md-6 col-lg-4 col-xl-3 mb-3">
+                                        <div class="card h-100">
+                                            <div class="position-relative">
+                                                <img src="@photo.EncodedPhotoUrl" 
+                                                     class="card-img-top" 
+                                                     alt="Photo" 
+                                                     style="height: 200px; object-fit: cover; cursor: pointer;"
+                                                     data-bs-toggle="modal" 
+                                                     data-bs-target="#photoModal"
+                                                     data-photo-url="@photo.EncodedPhotoUrl"
+                                                     data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
+                                                     data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
+                                                     loading="lazy" />
+                                            </div>
+                                            <div class="card-body p-2">
+                                                <small class="text-muted">
+                                                    <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
+                                                    <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -146,6 +183,35 @@
     </div>
 </div>
 
+<!-- Photo Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalLabel">Photo Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 70vh;" />
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">
+                            <strong>Date Taken:</strong><br>
+                            <span id="modalDateTaken"></span>
+                        </small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">
+                            <strong>Date Uploaded:</strong><br>
+                            <span id="modalDateUploaded"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function navigateBackToProperty(propertyId) {
         if (window.App && window.App.loadSidebar) {
@@ -169,4 +235,40 @@
             setTimeout(window.updateTogglePosition, 150);
         }
     });
+
+    // Handle photo modal
+    const photoModal = document.getElementById('photoModal');
+    if (photoModal) {
+        photoModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const photoUrl = button.getAttribute('data-photo-url');
+            const dateTaken = button.getAttribute('data-date-taken');
+            const dateUploaded = button.getAttribute('data-date-uploaded');
+            
+            console.log('Loading photo URL:', photoUrl); // Debug logging
+            
+            const modalPhotoImg = document.getElementById('modalPhoto');
+            if (modalPhotoImg) {
+                modalPhotoImg.src = photoUrl;
+                modalPhotoImg.onerror = function() {
+                    console.error('Failed to load photo:', photoUrl);
+                    this.alt = 'Failed to load photo';
+                };
+            }
+            
+            const modalDateTaken = document.getElementById('modalDateTaken');
+            const modalDateUploaded = document.getElementById('modalDateUploaded');
+            
+            if (modalDateTaken) modalDateTaken.textContent = dateTaken;
+            if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
+        });
+        
+        // Clean up modal when hidden
+        photoModal.addEventListener('hidden.bs.modal', function (event) {
+            const modalPhotoImg = document.getElementById('modalPhoto');
+            if (modalPhotoImg) {
+                modalPhotoImg.src = '';
+            }
+        });
+    }
 </script>
