@@ -41,8 +41,9 @@ public class BlobStorageService : IBlobStorageService
             var containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
 
-            // Generate a unique blob name
-            var blobName = $"{Guid.NewGuid()}_{fileName}";
+            // Generate a unique blob name with URL-encoded filename
+            var sanitizedFileName = SanitizeFileName(fileName);
+            var blobName = $"{Guid.NewGuid()}_{sanitizedFileName}";
             var blobClient = containerClient.GetBlobClient(blobName);
 
             // Set metadata for the blob
@@ -93,5 +94,61 @@ public class BlobStorageService : IBlobStorageService
             ".webp" => "image/webp",
             _ => "application/octet-stream"
         };
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return "photo";
+
+        // Remove path information and get just the filename
+        fileName = Path.GetFileName(fileName);
+        
+        // Replace spaces and special characters that are problematic in URLs
+        var sanitized = fileName
+            .Replace(" ", "_")
+            .Replace("(", "")
+            .Replace(")", "")
+            .Replace("[", "")
+            .Replace("]", "")
+            .Replace("{", "")
+            .Replace("}", "")
+            .Replace("&", "and")
+            .Replace("%", "pct")
+            .Replace("#", "")
+            .Replace("?", "")
+            .Replace("!", "")
+            .Replace("@", "at")
+            .Replace("$", "")
+            .Replace("^", "")
+            .Replace("+", "plus")
+            .Replace("=", "")
+            .Replace("|", "")
+            .Replace("\\", "")
+            .Replace("/", "")
+            .Replace(":", "")
+            .Replace(";", "")
+            .Replace("\"", "")
+            .Replace("'", "")
+            .Replace("<", "")
+            .Replace(">", "")
+            .Replace(",", "");
+
+        // Remove multiple consecutive underscores
+        while (sanitized.Contains("__"))
+        {
+            sanitized = sanitized.Replace("__", "_");
+        }
+        
+        // Trim underscores from start and end
+        sanitized = sanitized.Trim('_');
+        
+        // If the result is empty or too short, provide a default
+        if (string.IsNullOrWhiteSpace(sanitized) || sanitized.Length < 3)
+        {
+            sanitized = "photo";
+        }
+        
+        return sanitized;
     }
 }

@@ -157,4 +157,19 @@
             window.location.href = `/properties/${propertyId}`;
         }
     }
+
+    // Update sidebar toggle position when the view loads
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.updateTogglePosition) {
+            // Small delay to ensure content is fully rendered
+            setTimeout(window.updateTogglePosition, 150);
+        }
+    });
+
+    // Also update when sidebar content is loaded via AJAX
+    document.addEventListener('sidebar:loaded', function() {
+        if (window.updateTogglePosition) {
+            setTimeout(window.updateTogglePosition, 150);
+        }
+    });
 </script>
