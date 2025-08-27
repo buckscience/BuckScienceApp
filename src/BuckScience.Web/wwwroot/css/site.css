@@ -178,16 +178,24 @@
         color: #fff;
     }
 
-.btn-outline-primary {
-    color: #527A52;
-    border-color: #527A52;
-    background-color: #fff;
+.btn-outline-primary,
+.btn-outline-primary.dropdown-toggle {
+    color: #527A52 !important;
+    border-color: #527A52 !important;
+    background-color: #fff !important;
 }
 
-    .btn-outline-primary:hover {
-        background-color: #527A52;
-        color: #fff;
-        border-color: #527A52;
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus,
+    .btn-outline-primary:active,
+    .btn-outline-primary.dropdown-toggle:hover,
+    .btn-outline-primary.dropdown-toggle:focus,
+    .btn-outline-primary.dropdown-toggle:active,
+    .btn-outline-primary.show {
+        background-color: #527A52 !important;
+        color: #fff !important;
+        border-color: #527A52 !important;
+        box-shadow: 0 0 0 0.2rem rgba(82, 122, 82, 0.25) !important;
     }
 
 /* Cancel/Secondary Button Styles */
