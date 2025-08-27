@@ -14,7 +14,7 @@ public class BlobStorageService : IBlobStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<BlobStorageService> _logger;
-    private const string ContainerName = "photos";
+    private const string ContainerName = "buckscience-camera-pics";
 
     public BlobStorageService(string connectionString, ILogger<BlobStorageService> logger)
     {

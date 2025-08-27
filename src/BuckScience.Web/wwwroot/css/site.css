@@ -472,22 +472,31 @@
     color: #527A52 !important;
 }
 
-/* Modal z-index fixes for sidebar */
+/* Camera Details Styling */
+.camera-details {
+    min-height: 100%;
+}
+
+.sidebar-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    letter-spacing: -1px;
+    color: #222;
+}
+
+.sidebar-title-separator {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(to right, #e9ecef, transparent);
+    margin: 1rem 0 1.5rem 0;
+}
+
+/* Modal z-index fixes for sidebar - use higher values to ensure modals work */
 .modal {
-    z-index: 2000 !important;
+    z-index: 1055 !important;
 }
 
 .modal-backdrop {
-    z-index: 1999 !important;
-}
-
-/* Ensure modal content is always interactive */
-.modal-dialog {
-    position: relative;
-    z-index: 2001 !important;
-}
-
-.modal-content {
-    position: relative;
-    z-index: 2002 !important;
+    z-index: 1050 !important;
 }
