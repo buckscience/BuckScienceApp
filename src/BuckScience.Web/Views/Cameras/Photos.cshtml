@@ -68,7 +68,7 @@ else
 }
 
 <!-- Photo Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -98,7 +98,7 @@ else
 
 @section Scripts {
     <script>
-        // Handle photo modal with improved interaction
+        // Handle photo modal
         const photoModal = document.getElementById('photoModal');
         if (photoModal) {
             photoModal.addEventListener('show.bs.modal', function (event) {
@@ -125,28 +125,13 @@ else
                 if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
             });
             
-            // Ensure modal is properly disposed when hidden
+            // Clean up modal when hidden
             photoModal.addEventListener('hidden.bs.modal', function (event) {
                 const modalPhotoImg = document.getElementById('modalPhoto');
                 if (modalPhotoImg) {
                     modalPhotoImg.src = '';
                 }
             });
-            
-            // Prevent backdrop clicks from closing modal accidentally
-            photoModal.addEventListener('click', function (event) {
-                if (event.target === photoModal) {
-                    event.stopPropagation();
-                }
-            });
-            
-            // Ensure clicks on modal content work properly
-            const modalDialog = photoModal.querySelector('.modal-dialog');
-            if (modalDialog) {
-                modalDialog.addEventListener('click', function (event) {
-                    event.stopPropagation();
-                });
-            }
         }
         
         // Debug: Log all photo URLs on page load
