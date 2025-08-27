@@ -474,9 +474,18 @@
 
 /* Modal z-index fixes for sidebar */
 .modal {
-    z-index: 2000 !important;
+    z-index: 9999 !important;
 }
 
 .modal-backdrop {
-    z-index: 1999 !important;
+    z-index: 9998 !important;
+}
+
+/* Ensure modal content is interactive */
+.modal.show {
+    z-index: 9999 !important;
+}
+
+.modal-dialog {
+    z-index: 10000 !important;
 }
