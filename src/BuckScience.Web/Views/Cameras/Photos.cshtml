@@ -6,17 +6,6 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1>Photos from @Model.CameraName</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="@Url.Action("Index", "Properties")">Properties</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="@Url.Action("Index", "Cameras", new { propertyId = Model.PropertyId })">@Model.PropertyName</a>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Photos</li>
-            </ol>
-        </nav>
     </div>
     <div>
         <a href="/cameras/@Model.CameraId/upload" 
@@ -28,36 +17,39 @@
 
 @if (Model.Photos.Any())
 {
-    <div class="row">
-        @foreach (var photo in Model.Photos)
-        {
-            <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
-                <div class="card h-100">
-                    <div class="position-relative">
-                        <img src="@photo.PhotoUrl" 
-                             class="card-img-top" 
-                             alt="Photo taken @photo.DateTaken.ToString("MM/dd/yyyy")"
-                             style="height: 200px; object-fit: cover; cursor: pointer;"
-                             data-bs-toggle="modal" 
-                             data-bs-target="#photoModal"
-                             data-photo-url="@photo.PhotoUrl"
-                             data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
-                             data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")" />
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-dark bg-opacity-75">
-                                @photo.DateTaken.ToString("MM/dd/yy")
-                            </span>
+    <div class="photo-gallery-container mx-auto" style="max-width: 1200px;">
+        <div class="row">
+            @foreach (var photo in Model.Photos)
+            {
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            <img src="@photo.EncodedPhotoUrl" 
+                                 class="card-img-top" 
+                                 alt="Photo taken @photo.DateTaken.ToString("MM/dd/yyyy")"
+                                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                                 data-bs-toggle="modal" 
+                                 data-bs-target="#photoModal"
+                                 data-photo-url="@photo.EncodedPhotoUrl"
+                                 data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                                 data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                                 onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-dark bg-opacity-75">
+                                    @photo.DateTaken.ToString("MM/dd/yy")
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
+                                <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
+                            </small>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <small class="text-muted">
-                            <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
-                            <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
-                        </small>
-                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
     </div>
 }
 else
@@ -108,15 +100,48 @@ else
     <script>
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
-        photoModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const photoUrl = button.getAttribute('data-photo-url');
-            const dateTaken = button.getAttribute('data-date-taken');
-            const dateUploaded = button.getAttribute('data-date-uploaded');
+        if (photoModal) {
+            photoModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const photoUrl = button.getAttribute('data-photo-url');
+                const dateTaken = button.getAttribute('data-date-taken');
+                const dateUploaded = button.getAttribute('data-date-uploaded');
+                
+                console.log('Loading photo URL:', photoUrl); // Debug logging
+                
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = photoUrl;
+                    modalPhotoImg.onerror = function() {
+                        console.error('Failed to load photo:', photoUrl);
+                        this.alt = 'Failed to load photo';
+                    };
+                }
+                
+                const modalDateTaken = document.getElementById('modalDateTaken');
+                const modalDateUploaded = document.getElementById('modalDateUploaded');
+                
+                if (modalDateTaken) modalDateTaken.textContent = dateTaken;
+                if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
+            });
             
-            document.getElementById('modalPhoto').src = photoUrl;
-            document.getElementById('modalDateTaken').textContent = dateTaken;
-            document.getElementById('modalDateUploaded').textContent = dateUploaded;
+            // Clean up modal when hidden
+            photoModal.addEventListener('hidden.bs.modal', function (event) {
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = '';
+                }
+            });
+        }
+        
+        // Debug: Log all photo URLs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoImages = document.querySelectorAll('img[data-photo-url]');
+            console.log('Found', photoImages.length, 'photo images');
+            photoImages.forEach((img, index) => {
+                const url = img.getAttribute('data-photo-url');
+                console.log(`Photo ${index + 1} URL:`, url);
+            });
         });
     </script>
 }
