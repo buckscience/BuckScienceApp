@@ -17,37 +17,39 @@
 
 @if (Model.Photos.Any())
 {
-    <div class="row">
-        @foreach (var photo in Model.Photos)
-        {
-            <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
-                <div class="card h-100">
-                    <div class="position-relative">
-                        <img src="@photo.EncodedPhotoUrl" 
-                             class="card-img-top" 
-                             alt="Photo taken @photo.DateTaken.ToString("MM/dd/yyyy")"
-                             style="height: 200px; object-fit: cover; cursor: pointer;"
-                             data-bs-toggle="modal" 
-                             data-bs-target="#photoModal"
-                             data-photo-url="@photo.EncodedPhotoUrl"
-                             data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
-                             data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
-                             onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-dark bg-opacity-75">
-                                @photo.DateTaken.ToString("MM/dd/yy")
-                            </span>
+    <div class="photo-gallery-container mx-auto" style="max-width: 1200px;">
+        <div class="row">
+            @foreach (var photo in Model.Photos)
+            {
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            <img src="@photo.EncodedPhotoUrl" 
+                                 class="card-img-top" 
+                                 alt="Photo taken @photo.DateTaken.ToString("MM/dd/yyyy")"
+                                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                                 data-bs-toggle="modal" 
+                                 data-bs-target="#photoModal"
+                                 data-photo-url="@photo.EncodedPhotoUrl"
+                                 data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                                 data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                                 onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
+                            <div class="position-absolute top-0 end-0 m-2">
+                                <span class="badge bg-dark bg-opacity-75">
+                                    @photo.DateTaken.ToString("MM/dd/yy")
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
+                                <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
+                            </small>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <small class="text-muted">
-                            <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
-                            <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
-                        </small>
-                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
     </div>
 }
 else
@@ -66,7 +68,7 @@ else
 }
 
 <!-- Photo Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -96,7 +98,7 @@ else
 
 @section Scripts {
     <script>
-        // Handle photo modal
+        // Handle photo modal with improved interaction
         const photoModal = document.getElementById('photoModal');
         if (photoModal) {
             photoModal.addEventListener('show.bs.modal', function (event) {
@@ -130,6 +132,21 @@ else
                     modalPhotoImg.src = '';
                 }
             });
+            
+            // Prevent backdrop clicks from closing modal accidentally
+            photoModal.addEventListener('click', function (event) {
+                if (event.target === photoModal) {
+                    event.stopPropagation();
+                }
+            });
+            
+            // Ensure clicks on modal content work properly
+            const modalDialog = photoModal.querySelector('.modal-dialog');
+            if (modalDialog) {
+                modalDialog.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            }
         }
         
         // Debug: Log all photo URLs on page load

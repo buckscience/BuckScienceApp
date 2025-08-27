@@ -474,27 +474,45 @@
 
 /* Modal z-index fixes for sidebar */
 .modal {
-    z-index: 9999 !important;
+    z-index: 10050 !important;
 }
 
 .modal-backdrop {
-    z-index: 9998 !important;
+    z-index: 10040 !important;
     background-color: rgba(0, 0, 0, 0.5) !important;
+    pointer-events: none !important;
 }
 
 /* Ensure modal content is interactive */
 .modal.show {
-    z-index: 9999 !important;
+    z-index: 10050 !important;
 }
 
 .modal-dialog {
-    z-index: 10000 !important;
+    z-index: 10051 !important;
     position: relative;
+    pointer-events: auto !important;
+}
+
+.modal-content {
+    z-index: 10052 !important;
+    position: relative;
+    pointer-events: auto !important;
 }
 
 /* Ensure modal backdrop doesn't interfere with clicks */
 .modal-backdrop.show {
     opacity: 0.5 !important;
+    pointer-events: none !important;
+}
+
+/* Override Bootstrap's modal backdrop click behavior */
+.modal.fade {
+    pointer-events: none !important;
+}
+
+.modal.show {
+    pointer-events: auto !important;
 }
 
 /* Make sure body doesn't interfere when modal is open */
