@@ -493,7 +493,7 @@
 
 /* When there's only one photo, make it larger */
 .photo-grid-container .photo-item:only-child {
-    max-width: 400px;
+    max-width: 375px;
     width: 100%;
 }
 

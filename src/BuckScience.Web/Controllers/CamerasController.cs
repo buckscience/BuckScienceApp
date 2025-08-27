@@ -399,8 +399,9 @@ public class CamerasController : Controller
             _ => photos.OrderByDescending(p => p.DateTaken).ToList()
         };
 
-        // Group photos by month/year
-        var photoGroups = photos.GroupByMonth();
+        // Group photos by month/year with proper sort direction
+        var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
+        var photoGroups = photos.GroupByMonth(isAscending);
 
         var vm = new CameraDetailsVm
         {

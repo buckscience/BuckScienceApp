@@ -67,12 +67,16 @@ public class CameraPhotoMonthGroup
 
 public static class CameraPhotoGroupingExtensions
 {
-    public static List<CameraPhotoMonthGroup> GroupByMonth(this List<Application.Photos.ListCameraPhotos.PhotoListItem> photos)
+    public static List<CameraPhotoMonthGroup> GroupByMonth(this List<Application.Photos.ListCameraPhotos.PhotoListItem> photos, bool isAscending = false)
     {
-        return photos
-            .GroupBy(p => new { p.DateTaken.Year, p.DateTaken.Month })
-            .OrderByDescending(g => g.Key.Year)
-            .ThenByDescending(g => g.Key.Month)
+        var groups = photos.GroupBy(p => new { p.DateTaken.Year, p.DateTaken.Month });
+        
+        // Order groups based on sort direction
+        var orderedGroups = isAscending 
+            ? groups.OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+            : groups.OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month);
+        
+        return orderedGroups
             .Select(g => new CameraPhotoMonthGroup
             {
                 MonthYear = $"{System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(g.Key.Month)} {g.Key.Year}",

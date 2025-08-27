@@ -239,8 +239,9 @@ public class PropertiesController : Controller
         // Get all photos from all cameras on this property
         var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, ct);
 
-        // Group photos by month/year
-        var photoGroups = photos.GroupByMonth();
+        // Group photos by month/year with proper sort direction
+        var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
+        var photoGroups = photos.GroupByMonth(isAscending);
 
         var vm = new PropertyPhotosVm
         {

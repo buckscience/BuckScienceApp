@@ -17,7 +17,7 @@ public class PhotoGroupingTests
             new(4, "url4", new DateTime(2025, 1, 10), new DateTime(2025, 1, 10), 1, "Camera1")
         };
 
-        // Act
+        // Act - Default (descending) order
         var groups = photos.GroupByMonth();
 
         // Assert
@@ -35,6 +35,35 @@ public class PhotoGroupingTests
     }
 
     [Fact]
+    public void PhotoGrouping_ShouldGroupByMonthYear_Ascending()
+    {
+        // Arrange
+        var photos = new List<ListPropertyPhotos.PhotoListItem>
+        {
+            new(1, "url1", new DateTime(2024, 10, 15), new DateTime(2024, 10, 15), 1, "Camera1"),
+            new(2, "url2", new DateTime(2024, 10, 20), new DateTime(2024, 10, 20), 1, "Camera1"),
+            new(3, "url3", new DateTime(2024, 11, 5), new DateTime(2024, 11, 5), 2, "Camera2"),
+            new(4, "url4", new DateTime(2025, 1, 10), new DateTime(2025, 1, 10), 1, "Camera1")
+        };
+
+        // Act - Ascending order
+        var groups = photos.GroupByMonth(true);
+
+        // Assert
+        Assert.Equal(3, groups.Count);
+        
+        // Verify ordering (oldest month first)
+        Assert.Equal("October 2024", groups[0].MonthYear);
+        Assert.Equal("November 2024", groups[1].MonthYear);
+        Assert.Equal("January 2025", groups[2].MonthYear);
+        
+        // Verify counts
+        Assert.Equal(2, groups[0].Photos.Count);
+        Assert.Single(groups[1].Photos);
+        Assert.Single(groups[2].Photos);
+    }
+
+    [Fact]
     public void CameraPhotoGrouping_ShouldGroupByMonthYear()
     {
         // Arrange
@@ -45,7 +74,7 @@ public class PhotoGroupingTests
             new(3, "url3", new DateTime(2024, 11, 5), new DateTime(2024, 11, 5))
         };
 
-        // Act
+        // Act - Default (descending) order
         var groups = photos.GroupByMonth();
 
         // Assert
@@ -58,6 +87,32 @@ public class PhotoGroupingTests
         // Verify counts
         Assert.Single(groups[0].Photos);
         Assert.Equal(2, groups[1].Photos.Count);
+    }
+
+    [Fact]
+    public void CameraPhotoGrouping_ShouldGroupByMonthYear_Ascending()
+    {
+        // Arrange
+        var photos = new List<BuckScience.Application.Photos.ListCameraPhotos.PhotoListItem>
+        {
+            new(1, "url1", new DateTime(2024, 10, 15), new DateTime(2024, 10, 15)),
+            new(2, "url2", new DateTime(2024, 10, 20), new DateTime(2024, 10, 20)),
+            new(3, "url3", new DateTime(2024, 11, 5), new DateTime(2024, 11, 5))
+        };
+
+        // Act - Ascending order
+        var groups = photos.GroupByMonth(true);
+
+        // Assert
+        Assert.Equal(2, groups.Count);
+        
+        // Verify ordering (oldest month first)
+        Assert.Equal("October 2024", groups[0].MonthYear);
+        Assert.Equal("November 2024", groups[1].MonthYear);
+        
+        // Verify counts
+        Assert.Equal(2, groups[0].Photos.Count);
+        Assert.Single(groups[1].Photos);
     }
 
     [Fact]
