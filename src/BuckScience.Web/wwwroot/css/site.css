@@ -475,6 +475,7 @@
 /* Camera Details Styling */
 .camera-details {
     min-height: 100%;
+    max-width: 1200px;
 }
 
 .sidebar-title {
