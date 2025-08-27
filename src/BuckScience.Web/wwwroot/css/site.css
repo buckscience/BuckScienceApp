@@ -471,3 +471,12 @@
 .text-custom-primary {
     color: #527A52 !important;
 }
+
+/* Modal z-index fixes for sidebar */
+.modal {
+    z-index: 2000 !important;
+}
+
+.modal-backdrop {
+    z-index: 1999 !important;
+}
