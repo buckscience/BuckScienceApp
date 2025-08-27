@@ -140,8 +140,8 @@
                     <div class="row g-3">
                         @foreach (var feature in Model.Features)
                         {
-                            <div class="col-md-6">
-                                <div class="card h-100 feature-card" style="cursor: pointer;" onclick="navigateToFeature('@feature.Type')">
+                            <div class="col-md-6 col-lg-4 col-xl-3">
+                                <div class="card h-100 feature-card" style="cursor: pointer; max-width: 280px;" onclick="navigateToFeature('@feature.Type')">
                                     <div class="card-body">
                                         <div class="d-flex align-items-start">
                                             <div class="feature-icon me-3">
