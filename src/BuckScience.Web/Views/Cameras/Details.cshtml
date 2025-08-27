@@ -102,12 +102,12 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">@Model.PhotoCount total photos</span>
                             <div class="dropdown">
-                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-sort me-1"></i> Sort
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="?sort=DateTakenDesc">Date Taken (Newest)</a></li>
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="?sort=DateTakenAsc">Date Taken (Oldest)</a></li>
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="#" data-sort="DateTakenDesc">Date Taken (Newest)</a></li>
+                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="#" data-sort="DateTakenAsc">Date Taken (Oldest)</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -223,6 +223,46 @@
         if (window.updateTogglePosition) {
             // Small delay to ensure content is fully rendered
             setTimeout(window.updateTogglePosition, 150);
+        }
+
+        // Handle sort dropdown clicks to preserve accordion state
+        const sortLinks = document.querySelectorAll('.dropdown-item[data-sort]');
+        sortLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sortValue = this.getAttribute('data-sort');
+                
+                // Create URL with sort parameter and accordion state
+                const url = new URL(window.location);
+                url.searchParams.set('sort', sortValue);
+                url.searchParams.set('openSection', 'photos'); // Mark photos section as open
+                
+                window.location.href = url.toString();
+            });
+        });
+
+        // Check if we should open the photos accordion based on URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const openSection = urlParams.get('openSection');
+        if (openSection === 'photos') {
+            const photosCollapse = document.getElementById('photosCollapse');
+            const photosButton = document.querySelector('[data-bs-target="#photosCollapse"]');
+            
+            if (photosCollapse && photosButton) {
+                // Open the photos section
+                photosCollapse.classList.add('show');
+                photosButton.classList.remove('collapsed');
+                photosButton.setAttribute('aria-expanded', 'true');
+                
+                // Close other sections if they're open
+                const basicInfoCollapse = document.getElementById('basicInfoCollapse');
+                const basicInfoButton = document.querySelector('[data-bs-target="#basicInfoCollapse"]');
+                if (basicInfoCollapse && basicInfoButton) {
+                    basicInfoCollapse.classList.remove('show');
+                    basicInfoButton.classList.add('collapsed');
+                    basicInfoButton.setAttribute('aria-expanded', 'false');
+                }
+            }
         }
     });
 
