@@ -10,6 +10,7 @@ public interface IAppDbContext
     DbSet<Photo> Photos { get; }
     DbSet<PhotoTag> PhotoTags { get; }
     DbSet<Property> Properties { get; }
+    DbSet<PropertyTag> PropertyTags { get; }
     DbSet<Tag> Tags { get; }
     DbSet<Profile> Profiles { get; }
     DbSet<Weather> Weathers { get; }
