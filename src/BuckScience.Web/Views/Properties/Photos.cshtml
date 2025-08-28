@@ -145,19 +145,13 @@ else
                             <h6 class="fw-bold mb-3"><i class="fas fa-camera me-2"></i>Camera Filters</h6>
                             @if (Model.AvailableCameras.Any())
                             {
-                                <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                <label for="cameras" class="form-label fw-semibold">Cameras</label>
+                                <select class="form-select" name="cameras" id="cameras" multiple>
                                     @foreach (var camera in Model.AvailableCameras)
                                     {
-                                        <div class="form-check">
-                                            <input class="form-check-input camera-filter" type="checkbox" value="@camera.Id" id="camera_@camera.Id"
-                                                   @(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true ? "checked" : "") />
-                                            <label class="form-check-label" for="camera_@camera.Id">
-                                                @camera.Name
-                                            </label>
-                                        </div>
+                                        <option value="@camera.Id" selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true)">@camera.Name</option>
                                     }
-                                </div>
-                                <input type="hidden" name="cameras" id="camerasInput" value="@(Model.AppliedFilters?.CameraIds != null ? string.Join(",", Model.AppliedFilters.CameraIds) : "")" />
+                                </select>
                             }
                             else
                             {
@@ -259,7 +253,7 @@ else
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="moonPhaseTexts" class="form-label fw-semibold">Moon Phase</label>
-                                    <select class="form-select" name="moonPhaseTexts" id="moonPhaseTexts" multiple size="3">
+                                    <select class="form-select" name="moonPhaseTexts" id="moonPhaseTexts" multiple>
                                         @foreach (var moonPhase in Model.AvailableMoonPhases)
                                         {
                                             <option value="@moonPhase" selected="@(Model.AppliedFilters?.MoonPhaseTexts?.Contains(moonPhase) == true)">@moonPhase</option>
@@ -268,7 +262,7 @@ else
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="conditions" class="form-label fw-semibold">Weather Conditions</label>
-                                    <select class="form-select" name="conditions" id="conditions" multiple size="3">
+                                    <select class="form-select" name="conditions" id="conditions" multiple>
                                         @foreach (var condition in Model.AvailableConditions)
                                         {
                                             <option value="@condition" selected="@(Model.AppliedFilters?.Conditions?.Contains(condition) == true)">@condition</option>
@@ -277,7 +271,7 @@ else
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="windDirections" class="form-label fw-semibold">Wind Directions</label>
-                                    <select class="form-select" name="windDirections" id="windDirections" multiple size="3">
+                                    <select class="form-select" name="windDirections" id="windDirections" multiple>
                                         @foreach (var direction in Model.WindDirectionOptions)
                                         {
                                             @if (direction.IsAvailable)
@@ -432,32 +426,7 @@ else
             if (photoModal) {
                 document.body.appendChild(photoModal);
             }
-            
-            // Initialize camera filter checkboxes
-            initializeCameraFilters();
         });
-        
-        // Handle camera filter checkboxes
-        function initializeCameraFilters() {
-            const cameraCheckboxes = document.querySelectorAll('.camera-filter');
-            const camerasInput = document.getElementById('camerasInput');
-            
-            cameraCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    updateCamerasInput();
-                });
-            });
-            
-            function updateCamerasInput() {
-                const selectedCameras = Array.from(cameraCheckboxes)
-                    .filter(cb => cb.checked)
-                    .map(cb => cb.value);
-                
-                if (camerasInput) {
-                    camerasInput.value = selectedCameras.join(',');
-                }
-            }
-        }
         
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
