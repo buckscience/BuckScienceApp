@@ -52,7 +52,7 @@ window.App = window.App || {};
             // Update toggle position after content load with improved timing
             setTimeout(() => {
                 if (window.updateTogglePosition) {
-                    window.updateTogglePosition();
+                    updateTogglePositionDebounced(true);
                 }
             }, 100); // Increased from 50ms to 100ms for better reliability
         } catch (err) {
@@ -108,16 +108,17 @@ window.App = window.App || {};
                 // Don't update position when collapsed to let CSS handle it
                 if (!aside.classList.contains('collapsed')) {
                     btn.style.left = sidebarRight + 'px';
-                    btn.style.display = 'flex'; // Ensure button is visible
                 } else {
                     // Reset to let CSS handle collapsed positioning
                     btn.style.left = '';
-                    btn.style.display = 'flex';
                 }
+                
+                // Show the button now that it's positioned correctly
+                btn.classList.add('positioned');
             } catch (error) {
                 console.warn('Error updating toggle position:', error);
-                // Fallback: ensure button is at least visible
-                btn.style.display = 'flex';
+                // Fallback: show button even if positioning failed
+                btn.classList.add('positioned');
             }
         });
     }
@@ -125,9 +126,18 @@ window.App = window.App || {};
     // Debounced version of updateTogglePosition to prevent excessive calls
     let updateTogglePositionDebounced = (() => {
         let timeoutId;
-        return () => {
+        let isInitialized = false;
+        return (forceImmediate = false) => {
             clearTimeout(timeoutId);
-            timeoutId = setTimeout(updateTogglePosition, 16); // ~60fps
+            if (forceImmediate || isInitialized) {
+                timeoutId = setTimeout(updateTogglePosition, 16); // ~60fps
+            } else {
+                // For initial positioning, add a longer delay to ensure layout is stable
+                timeoutId = setTimeout(() => {
+                    updateTogglePosition();
+                    isInitialized = true;
+                }, 200);
+            }
         };
     })();
 
@@ -136,9 +146,11 @@ window.App = window.App || {};
         const aside = document.getElementById('sidebar');
         if (!btn || !aside) return;
 
-        // Update position initially and on window resize
-        updateTogglePosition();
-        window.addEventListener('resize', updateTogglePositionDebounced);
+        // Initial positioning with longer delay for first load
+        updateTogglePositionDebounced();
+        
+        // Update position on window resize (using immediate mode after initialization)
+        window.addEventListener('resize', () => updateTogglePositionDebounced(true));
 
         btn.addEventListener('click', () => {
             aside.classList.toggle('collapsed');
@@ -160,21 +172,21 @@ window.App = window.App || {};
             }
             
             // Update toggle position after animation
-            setTimeout(updateTogglePosition, 300);
+            setTimeout(() => updateTogglePositionDebounced(true), 300);
         });
 
         // Listen for Bootstrap accordion events that might change sidebar content size
-        document.addEventListener('shown.bs.collapse', updateTogglePositionDebounced);
-        document.addEventListener('hidden.bs.collapse', updateTogglePositionDebounced);
+        document.addEventListener('shown.bs.collapse', () => updateTogglePositionDebounced(true));
+        document.addEventListener('hidden.bs.collapse', () => updateTogglePositionDebounced(true));
         
         // Use ResizeObserver to watch for sidebar size changes (modern browsers)
         if (window.ResizeObserver) {
-            const resizeObserver = new ResizeObserver(updateTogglePositionDebounced);
+            const resizeObserver = new ResizeObserver(() => updateTogglePositionDebounced(true));
             resizeObserver.observe(aside);
         }
         
         // Use MutationObserver to watch for content changes that might affect sidebar width
-        const mutationObserver = new MutationObserver(updateTogglePositionDebounced);
+        const mutationObserver = new MutationObserver(() => updateTogglePositionDebounced(true));
         mutationObserver.observe(aside, {
             childList: true,
             subtree: true,

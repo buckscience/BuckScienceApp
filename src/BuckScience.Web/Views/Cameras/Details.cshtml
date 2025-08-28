@@ -220,10 +220,8 @@
 
     // Update sidebar toggle position when the view loads
     document.addEventListener('DOMContentLoaded', function() {
-        if (window.updateTogglePosition) {
-            // Small delay to ensure content is fully rendered
-            setTimeout(window.updateTogglePosition, 150);
-        }
+        // No need to call updateTogglePosition here as it's handled by sidebar.js initialization
+        // The sidebar.js will handle positioning with proper timing
 
         // Check if photos section should be open based on URL parameter
         const urlParams = new URLSearchParams(window.location.search);
@@ -275,9 +273,8 @@
 
     // Also update when sidebar content is loaded via AJAX
     document.addEventListener('sidebar:loaded', function() {
-        if (window.updateTogglePosition) {
-            setTimeout(window.updateTogglePosition, 150);
-        }
+        // No need to call updateTogglePosition here as it's handled by sidebar.js loadSidebar function
+        // The loadSidebar function in sidebar.js will handle positioning with proper timing
     });
 
     // Handle photo modal

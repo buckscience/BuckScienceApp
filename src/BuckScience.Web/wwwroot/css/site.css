@@ -67,9 +67,17 @@
     align-items: center;
     justify-content: center;
     border-radius: 0 20px 20px 0;
-    transition: left 0.3s ease, background 0.2s;
+    transition: left 0.3s ease, background 0.2s, opacity 0.2s;
     cursor: pointer;
     color: white;
+    /* Hide initially until positioned correctly */
+    opacity: 0;
+    visibility: hidden;
+}
+
+.sidebar-toggle.positioned {
+    opacity: 1;
+    visibility: visible;
 }
 
 .sidebar-toggle:hover {
