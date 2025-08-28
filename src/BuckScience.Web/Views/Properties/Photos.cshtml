@@ -1,6 +1,60 @@
 @model BuckScience.Web.ViewModels.Photos.PropertyPhotosVm
 @{
     ViewData["Title"] = $"Photos - {Model.PropertyName}";
+    
+    // Helper function to generate sort URLs that preserve current filters
+    string GetSortUrl(string sortValue)
+    {
+        var query = new List<string> { $"sort={sortValue}" };
+        
+        if (Model.AppliedFilters != null)
+        {
+            if (Model.AppliedFilters.DateTakenFrom.HasValue)
+                query.Add($"dateTakenFrom={Model.AppliedFilters.DateTakenFrom.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateTakenTo.HasValue)
+                query.Add($"dateTakenTo={Model.AppliedFilters.DateTakenTo.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateUploadedFrom.HasValue)
+                query.Add($"dateUploadedFrom={Model.AppliedFilters.DateUploadedFrom.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateUploadedTo.HasValue)
+                query.Add($"dateUploadedTo={Model.AppliedFilters.DateUploadedTo.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.CameraIds?.Count > 0)
+                query.Add($"cameras={string.Join(",", Model.AppliedFilters.CameraIds)}");
+            if (Model.AppliedFilters.TemperatureMin.HasValue)
+                query.Add($"tempMin={Model.AppliedFilters.TemperatureMin}");
+            if (Model.AppliedFilters.TemperatureMax.HasValue)
+                query.Add($"tempMax={Model.AppliedFilters.TemperatureMax}");
+            if (Model.AppliedFilters.WindSpeedMin.HasValue)
+                query.Add($"windSpeedMin={Model.AppliedFilters.WindSpeedMin}");
+            if (Model.AppliedFilters.WindSpeedMax.HasValue)
+                query.Add($"windSpeedMax={Model.AppliedFilters.WindSpeedMax}");
+            if (Model.AppliedFilters.HumidityMin.HasValue)
+                query.Add($"humidityMin={Model.AppliedFilters.HumidityMin}");
+            if (Model.AppliedFilters.HumidityMax.HasValue)
+                query.Add($"humidityMax={Model.AppliedFilters.HumidityMax}");
+            if (Model.AppliedFilters.PressureMin.HasValue)
+                query.Add($"pressureMin={Model.AppliedFilters.PressureMin}");
+            if (Model.AppliedFilters.PressureMax.HasValue)
+                query.Add($"pressureMax={Model.AppliedFilters.PressureMax}");
+            if (Model.AppliedFilters.VisibilityMin.HasValue)
+                query.Add($"visibilityMin={Model.AppliedFilters.VisibilityMin}");
+            if (Model.AppliedFilters.VisibilityMax.HasValue)
+                query.Add($"visibilityMax={Model.AppliedFilters.VisibilityMax}");
+            if (Model.AppliedFilters.CloudCoverMin.HasValue)
+                query.Add($"cloudCoverMin={Model.AppliedFilters.CloudCoverMin}");
+            if (Model.AppliedFilters.CloudCoverMax.HasValue)
+                query.Add($"cloudCoverMax={Model.AppliedFilters.CloudCoverMax}");
+            if (Model.AppliedFilters.MoonPhaseMin.HasValue)
+                query.Add($"moonPhaseMin={Model.AppliedFilters.MoonPhaseMin}");
+            if (Model.AppliedFilters.MoonPhaseMax.HasValue)
+                query.Add($"moonPhaseMax={Model.AppliedFilters.MoonPhaseMax}");
+            if (Model.AppliedFilters.Conditions?.Count > 0)
+                query.Add($"conditions={string.Join(",", Model.AppliedFilters.Conditions)}");
+            if (Model.AppliedFilters.WindDirectionTexts?.Count > 0)
+                query.Add($"windDirections={string.Join(",", Model.AppliedFilters.WindDirectionTexts)}");
+        }
+        
+        return "?" + string.Join("&", query);
+    }
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -32,18 +86,250 @@
 }
 else
 {
-    <!-- Sorting Controls -->
+    <!-- Filters Panel -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="@(Model.HasFiltersApplied ? "true" : "false")" aria-controls="filtersPanel">
+                        <i class="fas fa-filter me-2"></i>Photo Filters
+                        @if (Model.HasFiltersApplied)
+                        {
+                            <span class="badge bg-primary ms-2">Active</span>
+                        }
+                    </button>
+                </h5>
+                @if (Model.HasFiltersApplied)
+                {
+                    <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>Clear All Filters
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="collapse @(Model.HasFiltersApplied ? "show" : "")" id="filtersPanel">
+            <div class="card-body">
+                <form id="photoFiltersForm" method="get">
+                    <input type="hidden" name="sort" value="@Model.CurrentSort" />
+                    
+                    <div class="row">
+                        <!-- Date Filters -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-calendar me-2"></i>Date Filters</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label for="dateTakenFrom" class="form-label">Date Taken From</label>
+                                    <input type="date" class="form-control" id="dateTakenFrom" name="dateTakenFrom" 
+                                           value="@(Model.AppliedFilters?.DateTakenFrom?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                                <div class="col-6">
+                                    <label for="dateTakenTo" class="form-label">Date Taken To</label>
+                                    <input type="date" class="form-control" id="dateTakenTo" name="dateTakenTo" 
+                                           value="@(Model.AppliedFilters?.DateTakenTo?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <label for="dateUploadedFrom" class="form-label">Date Uploaded From</label>
+                                    <input type="date" class="form-control" id="dateUploadedFrom" name="dateUploadedFrom" 
+                                           value="@(Model.AppliedFilters?.DateUploadedFrom?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                                <div class="col-6">
+                                    <label for="dateUploadedTo" class="form-label">Date Uploaded To</label>
+                                    <input type="date" class="form-control" id="dateUploadedTo" name="dateUploadedTo" 
+                                           value="@(Model.AppliedFilters?.DateUploadedTo?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera Filters -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-camera me-2"></i>Camera Filters</h6>
+                            @if (Model.AvailableCameras.Any())
+                            {
+                                <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                                    @foreach (var camera in Model.AvailableCameras)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input camera-filter" type="checkbox" value="@camera.Id" id="camera_@camera.Id"
+                                                   @(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true ? "checked" : "") />
+                                            <label class="form-check-label" for="camera_@camera.Id">
+                                                @camera.Name
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                                <input type="hidden" name="cameras" id="camerasInput" value="@(Model.AppliedFilters?.CameraIds != null ? string.Join(",", Model.AppliedFilters.CameraIds) : "")" />
+                            }
+                            else
+                            {
+                                <p class="text-muted">No cameras available</p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Weather Filters -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-cloud-sun me-2"></i>Weather Filters</h6>
+                            
+                            <!-- Weather Ranges -->
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Temperature (°F)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="tempMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.TemperatureMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="tempMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.TemperatureMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Wind Speed (mph)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="windSpeedMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.WindSpeedMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="windSpeedMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.WindSpeedMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Humidity (%)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="humidityMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.HumidityMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="humidityMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.HumidityMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Pressure (inHg)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="pressureMin" placeholder="Min" step="0.01"
+                                                   value="@Model.AppliedFilters?.PressureMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="pressureMax" placeholder="Max" step="0.01"
+                                                   value="@Model.AppliedFilters?.PressureMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Visibility (miles)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="visibilityMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.VisibilityMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="visibilityMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.VisibilityMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Cloud Cover (%)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="cloudCoverMin" placeholder="Min" step="1" min="0" max="100"
+                                                   value="@Model.AppliedFilters?.CloudCoverMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="cloudCoverMax" placeholder="Max" step="1" min="0" max="100"
+                                                   value="@Model.AppliedFilters?.CloudCoverMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Moon Phase (0-1)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="moonPhaseMin" placeholder="Min" step="0.01" min="0" max="1"
+                                                   value="@Model.AppliedFilters?.MoonPhaseMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="moonPhaseMax" placeholder="Max" step="0.01" min="0" max="1"
+                                                   value="@Model.AppliedFilters?.MoonPhaseMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="conditions" class="form-label fw-semibold">Weather Conditions</label>
+                                    <select class="form-select" name="conditions" id="conditions" multiple size="3">
+                                        @foreach (var condition in Model.AvailableConditions)
+                                        {
+                                            <option value="@condition" selected="@(Model.AppliedFilters?.Conditions?.Contains(condition) == true)">@condition</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="windDirections" class="form-label fw-semibold">Wind Directions</label>
+                                    <select class="form-select" name="windDirections" id="windDirections" multiple size="3">
+                                        @foreach (var direction in Model.AvailableWindDirections)
+                                        {
+                                            <option value="@direction" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction) == true)">@direction</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Apply Filters
+                        </button>
+                        @if (Model.HasFiltersApplied)
+                        {
+                            <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear All Filters
+                            </a>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results and Sorting Controls -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <span class="text-muted">@Model.TotalPhotoCount total photos</span>
+        <div>
+            <span class="text-muted">@Model.TotalPhotoCount total photos</span>
+            @if (Model.HasFiltersApplied)
+            {
+                <span class="text-primary ms-2">
+                    <i class="fas fa-filter me-1"></i>Filtered
+                </span>
+            }
+        </div>
         <div class="dropdown">
             <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-sort me-1"></i> Sort by
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="?sort=DateTakenDesc">Date Taken (Newest First)</a></li>
-                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="?sort=DateTakenAsc">Date Taken (Oldest First)</a></li>
-                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="?sort=DateUploadedDesc">Date Uploaded (Newest First)</a></li>
-                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="?sort=DateUploadedAsc">Date Uploaded (Oldest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="@GetSortUrl("DateTakenDesc")">Date Taken (Newest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="@GetSortUrl("DateTakenAsc")">Date Taken (Oldest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="@GetSortUrl("DateUploadedDesc")">Date Uploaded (Newest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="@GetSortUrl("DateUploadedAsc")">Date Uploaded (Oldest First)</a></li>
             </ul>
         </div>
     </div>
@@ -145,7 +431,32 @@ else
             if (photoModal) {
                 document.body.appendChild(photoModal);
             }
+            
+            // Initialize camera filter checkboxes
+            initializeCameraFilters();
         });
+        
+        // Handle camera filter checkboxes
+        function initializeCameraFilters() {
+            const cameraCheckboxes = document.querySelectorAll('.camera-filter');
+            const camerasInput = document.getElementById('camerasInput');
+            
+            cameraCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateCamerasInput();
+                });
+            });
+            
+            function updateCamerasInput() {
+                const selectedCameras = Array.from(cameraCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                
+                if (camerasInput) {
+                    camerasInput.value = selectedCameras.join(',');
+                }
+            }
+        }
         
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
