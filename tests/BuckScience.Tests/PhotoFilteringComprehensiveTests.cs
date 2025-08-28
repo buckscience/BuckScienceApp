@@ -175,15 +175,14 @@ public class PhotoFilteringComprehensiveTests
         Assert.True(filters3.HasAnyFilters);
         Assert.True(filters3.HasWeatherFilters);
         
-        // Test moon phase boundaries (0.0 to 1.0)
+        // Test moon phase with text values
         var filters4 = new PhotoFilters
         {
-            MoonPhaseMin = 0.0,
-            MoonPhaseMax = 1.0
+            MoonPhaseTexts = new List<string> { "New Moon", "Full Moon" }
         };
         Assert.True(filters4.HasWeatherFilters);
-        Assert.Equal(0.0, filters4.MoonPhaseMin);
-        Assert.Equal(1.0, filters4.MoonPhaseMax);
+        Assert.Contains("New Moon", filters4.MoonPhaseTexts);
+        Assert.Contains("Full Moon", filters4.MoonPhaseTexts);
     }
 
     [Fact]

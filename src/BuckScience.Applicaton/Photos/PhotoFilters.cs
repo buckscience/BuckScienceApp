@@ -49,7 +49,6 @@ public class PhotoFilters
         PressureMin.HasValue || PressureMax.HasValue ||
         VisibilityMin.HasValue || VisibilityMax.HasValue ||
         CloudCoverMin.HasValue || CloudCoverMax.HasValue ||
-        MoonPhaseMin.HasValue || MoonPhaseMax.HasValue ||
         (Conditions?.Count > 0) ||
         (MoonPhaseTexts?.Count > 0) ||
         (PressureTrends?.Count > 0) ||
