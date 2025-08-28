@@ -1,4 +1,5 @@
 using BuckScience.Application.Photos;
+using BuckScience.Web.Helpers;
 
 namespace BuckScience.Web.ViewModels.Photos;
 
@@ -20,6 +21,7 @@ public class PropertyPhotosVm
     public List<string> AvailableMoonPhases { get; set; } = new();
     public List<string> AvailablePressureTrends { get; set; } = new();
     public List<string> AvailableWindDirections { get; set; } = new();
+    public List<WindDirectionOption> WindDirectionOptions { get; set; } = new();
 }
 
 public class CameraOption

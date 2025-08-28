@@ -5,6 +5,7 @@ using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
 using BuckScience.Domain.Enums;
+using BuckScience.Web.Helpers;
 using BuckScience.Web.ViewModels;
 using BuckScience.Web.ViewModels.Photos;
 using BuckScience.Web.ViewModels.Properties;
@@ -309,7 +310,8 @@ public class PropertiesController : Controller
             AvailableConditions = availableOptions.Conditions,
             AvailableMoonPhases = availableOptions.MoonPhases,
             AvailablePressureTrends = availableOptions.PressureTrends,
-            AvailableWindDirections = availableOptions.WindDirections
+            AvailableWindDirections = availableOptions.WindDirections,
+            WindDirectionOptions = WeatherHelpers.GetWindDirectionOptions(availableOptions.WindDirections)
         };
 
         return View(vm);
