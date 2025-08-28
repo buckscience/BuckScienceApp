@@ -230,7 +230,36 @@ public class PropertiesController : Controller
     // PHOTOS: GET /properties/{id}/photos
     [HttpGet]
     [Route("/properties/{id:int}/photos")]
-    public async Task<IActionResult> Photos(int id, [FromQuery] string sort = "DateTakenDesc", CancellationToken ct = default)
+    public async Task<IActionResult> Photos(
+        int id,
+        [FromQuery] string sort = "DateTakenDesc",
+        // Date filters
+        [FromQuery] DateTime? dateTakenFrom = null,
+        [FromQuery] DateTime? dateTakenTo = null,
+        [FromQuery] DateTime? dateUploadedFrom = null,
+        [FromQuery] DateTime? dateUploadedTo = null,
+        // Camera filters
+        [FromQuery] string? cameras = null, // comma-separated camera IDs
+        // Weather filters
+        [FromQuery] double? tempMin = null,
+        [FromQuery] double? tempMax = null,
+        [FromQuery] double? windSpeedMin = null,
+        [FromQuery] double? windSpeedMax = null,
+        [FromQuery] double? humidityMin = null,
+        [FromQuery] double? humidityMax = null,
+        [FromQuery] double? pressureMin = null,
+        [FromQuery] double? pressureMax = null,
+        [FromQuery] double? visibilityMin = null,
+        [FromQuery] double? visibilityMax = null,
+        [FromQuery] double? cloudCoverMin = null,
+        [FromQuery] double? cloudCoverMax = null,
+        [FromQuery] double? moonPhaseMin = null,
+        [FromQuery] double? moonPhaseMax = null,
+        [FromQuery] string? conditions = null, // comma-separated conditions
+        [FromQuery] string? moonPhaseTexts = null, // comma-separated moon phase texts
+        [FromQuery] string? pressureTrends = null, // comma-separated pressure trends
+        [FromQuery] string? windDirections = null, // comma-separated wind directions
+        CancellationToken ct = default)
     {
         if (_currentUser.Id is null) return Forbid();
 
@@ -249,12 +278,24 @@ public class PropertiesController : Controller
             _ => ListPropertyPhotos.SortBy.DateTakenDesc
         };
 
+        // Build filters from query parameters
+        var filters = BuildFilters(
+            dateTakenFrom, dateTakenTo, dateUploadedFrom, dateUploadedTo,
+            cameras, tempMin, tempMax, windSpeedMin, windSpeedMax,
+            humidityMin, humidityMax, pressureMin, pressureMax,
+            visibilityMin, visibilityMax, cloudCoverMin, cloudCoverMax,
+            moonPhaseMin, moonPhaseMax, conditions, moonPhaseTexts,
+            pressureTrends, windDirections);
+
         // Get all photos from all cameras on this property
-        var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, null, ct);
+        var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, filters, ct);
 
         // Group photos by month/year with proper sort direction
         var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
         var photoGroups = photos.GroupByMonth(isAscending);
+
+        // Get available filter options for this property
+        var availableOptions = await GetAvailableFilterOptions(_db, _currentUser.Id.Value, id, ct);
 
         var vm = new PropertyPhotosVm
         {
@@ -262,7 +303,13 @@ public class PropertiesController : Controller
             PropertyName = property.Name,
             PhotoGroups = photoGroups,
             CurrentSort = sort,
-            TotalPhotoCount = photos.Count()
+            TotalPhotoCount = photos.Count(),
+            AppliedFilters = filters,
+            AvailableCameras = availableOptions.Cameras,
+            AvailableConditions = availableOptions.Conditions,
+            AvailableMoonPhases = availableOptions.MoonPhases,
+            AvailablePressureTrends = availableOptions.PressureTrends,
+            AvailableWindDirections = availableOptions.WindDirections
         };
 
         return View(vm);
@@ -305,6 +352,139 @@ public class PropertiesController : Controller
 
         TempData["DeletedId"] = id;
         return RedirectToAction(nameof(Index));
+    }
+
+    private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
+        GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
+    {
+        // Get cameras for this property
+        var cameras = await db.Cameras
+            .Where(c => c.PropertyId == propertyId && c.Property.ApplicationUserId == userId)
+            .Select(c => new CameraOption { Id = c.Id, Name = c.Name })
+            .OrderBy(c => c.Name)
+            .ToListAsync(ct);
+
+        // Get distinct weather conditions from photos with weather data
+        var weatherData = await db.Photos
+            .Include(p => p.Weather)
+            .Where(p => p.Camera.PropertyId == propertyId && 
+                       p.Camera.Property.ApplicationUserId == userId && 
+                       p.Weather != null)
+            .Select(p => p.Weather!)
+            .ToListAsync(ct);
+
+        var conditions = weatherData
+            .Select(w => w.Conditions)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+
+        var moonPhases = weatherData
+            .Select(w => w.MoonPhaseText)
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        var pressureTrends = weatherData
+            .Select(w => w.PressureTrend)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct()
+            .OrderBy(p => p)
+            .ToList();
+
+        var windDirections = weatherData
+            .Select(w => w.WindDirectionText)
+            .Where(w => !string.IsNullOrWhiteSpace(w))
+            .Distinct()
+            .OrderBy(w => w)
+            .ToList();
+
+        return (cameras, conditions, moonPhases, pressureTrends, windDirections);
+    }
+
+    private static PhotoFilters? BuildFilters(
+        DateTime? dateTakenFrom, DateTime? dateTakenTo,
+        DateTime? dateUploadedFrom, DateTime? dateUploadedTo,
+        string? cameras, double? tempMin, double? tempMax,
+        double? windSpeedMin, double? windSpeedMax,
+        double? humidityMin, double? humidityMax,
+        double? pressureMin, double? pressureMax,
+        double? visibilityMin, double? visibilityMax,
+        double? cloudCoverMin, double? cloudCoverMax,
+        double? moonPhaseMin, double? moonPhaseMax,
+        string? conditions, string? moonPhaseTexts,
+        string? pressureTrends, string? windDirections)
+    {
+        var filters = new PhotoFilters
+        {
+            DateTakenFrom = dateTakenFrom,
+            DateTakenTo = dateTakenTo,
+            DateUploadedFrom = dateUploadedFrom,
+            DateUploadedTo = dateUploadedTo,
+            TemperatureMin = tempMin,
+            TemperatureMax = tempMax,
+            WindSpeedMin = windSpeedMin,
+            WindSpeedMax = windSpeedMax,
+            HumidityMin = humidityMin,
+            HumidityMax = humidityMax,
+            PressureMin = pressureMin,
+            PressureMax = pressureMax,
+            VisibilityMin = visibilityMin,
+            VisibilityMax = visibilityMax,
+            CloudCoverMin = cloudCoverMin,
+            CloudCoverMax = cloudCoverMax,
+            MoonPhaseMin = moonPhaseMin,
+            MoonPhaseMax = moonPhaseMax
+        };
+
+        // Parse comma-separated lists
+        if (!string.IsNullOrWhiteSpace(cameras))
+        {
+            var cameraIds = cameras.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s.Trim(), out var id) ? id : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
+            if (cameraIds.Count > 0)
+                filters.CameraIds = cameraIds;
+        }
+
+        if (!string.IsNullOrWhiteSpace(conditions))
+        {
+            filters.Conditions = conditions.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(moonPhaseTexts))
+        {
+            filters.MoonPhaseTexts = moonPhaseTexts.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(pressureTrends))
+        {
+            filters.PressureTrends = pressureTrends.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(windDirections))
+        {
+            filters.WindDirectionTexts = windDirections.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        // Return null if no filters are applied to avoid unnecessary processing
+        return filters.HasAnyFilters ? filters : null;
     }
 
     private void PopulateTimeZones(PropertyCreateVm vm)
