@@ -1,4 +1,6 @@
 using BuckScience.Application.Photos;
+using BuckScience.Web.Helpers;
+using WindDirectionOption = BuckScience.Shared.Helpers.WindDirectionOption;
 
 namespace BuckScience.Web.ViewModels.Photos;
 
@@ -9,6 +11,24 @@ public class PropertyPhotosVm
     public List<PhotoMonthGroup> PhotoGroups { get; set; } = new();
     public string CurrentSort { get; set; } = "DateTakenDesc";
     public int TotalPhotoCount { get; set; }
+    
+    // Filter information
+    public PhotoFilters? AppliedFilters { get; set; }
+    public bool HasFiltersApplied => AppliedFilters?.HasAnyFilters == true;
+    
+    // Available filter options (for UI)
+    public List<CameraOption> AvailableCameras { get; set; } = new();
+    public List<string> AvailableConditions { get; set; } = new();
+    public List<string> AvailableMoonPhases { get; set; } = new();
+    public List<string> AvailablePressureTrends { get; set; } = new();
+    public List<string> AvailableWindDirections { get; set; } = new();
+    public List<WindDirectionOption> WindDirectionOptions { get; set; } = new();
+}
+
+public class CameraOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 public class PhotoMonthGroup

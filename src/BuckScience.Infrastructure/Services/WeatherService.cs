@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using BuckScience.Shared.Configuration;
+using BuckScience.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -66,6 +67,15 @@ public class WeatherService : IWeatherService
                 var hourDateTime = DateOnly.Parse(dayData.Datetime).ToDateTime(TimeOnly.Parse(hour.Datetime));
                 var hourNumber = hourDateTime.Hour;
 
+                // Use helper functions to generate text fields if missing from API
+                var windDirectionText = !string.IsNullOrWhiteSpace(hour.WinddirText) 
+                    ? hour.WinddirText 
+                    : WeatherHelpers.ConvertWindDirectionToText(hour.Winddir);
+                    
+                var moonPhaseText = !string.IsNullOrWhiteSpace(dayData.MoonphaseText) 
+                    ? dayData.MoonphaseText 
+                    : WeatherHelpers.ConvertMoonPhaseToText(dayData.Moonphase);
+
                 var weather = new Weather(
                     roundedCoords.RoundedLatitude,
                     roundedCoords.RoundedLongitude,
@@ -76,7 +86,7 @@ public class WeatherService : IWeatherService
                     hour.Temp,
                     hour.Windspeed,
                     hour.Winddir,
-                    hour.WinddirText,
+                    windDirectionText,
                     hour.Visibility,
                     hour.Pressure,
                     hour.PressureTrend,
@@ -87,7 +97,7 @@ public class WeatherService : IWeatherService
                     dayData.SunsetEpoch,
                     hour.Cloudcover,
                     dayData.Moonphase,
-                    dayData.MoonphaseText
+                    moonPhaseText
                 );
 
                 weatherRecords.Add(weather);
