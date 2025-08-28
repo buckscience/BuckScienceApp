@@ -57,6 +57,9 @@ public class CameraPhotosVm
     public List<CameraPhotoMonthGroup> PhotoGroups { get; set; } = new();
     public string CurrentSort { get; set; } = "DateTakenDesc";
     public int TotalPhotoCount { get; set; }
+    
+    // Tagging support
+    public List<TagInfo> AvailableTags { get; set; } = new();
 }
 
 public class CameraPhotoMonthGroup

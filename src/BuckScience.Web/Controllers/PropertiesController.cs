@@ -4,6 +4,7 @@ using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
+using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Helpers;
 using BuckScience.Web.ViewModels;
@@ -297,6 +298,9 @@ public class PropertiesController : Controller
 
         // Get available filter options for this property
         var availableOptions = await GetAvailableFilterOptions(_db, _currentUser.Id.Value, id, ct);
+        
+        // Get available tags for this property
+        var availableTags = await ManagePhotoTags.GetAvailableTagsForPropertyAsync(id, _db, ct);
 
         var vm = new PropertyPhotosVm
         {
@@ -311,7 +315,8 @@ public class PropertiesController : Controller
             AvailableMoonPhases = availableOptions.MoonPhases,
             AvailablePressureTrends = availableOptions.PressureTrends,
             AvailableWindDirections = availableOptions.WindDirections,
-            WindDirectionOptions = WeatherHelpers.GetWindDirectionOptions(availableOptions.WindDirections)
+            WindDirectionOptions = WeatherHelpers.GetWindDirectionOptions(availableOptions.WindDirections),
+            AvailableTags = availableTags.Select(t => new TagInfo { Id = t.Id, Name = t.Name }).ToList()
         };
 
         return View(vm);
