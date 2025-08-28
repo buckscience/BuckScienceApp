@@ -1,5 +1,6 @@
 using BuckScience.Application.Photos;
 using BuckScience.Web.Helpers;
+using WindDirectionOption = BuckScience.Shared.Helpers.WindDirectionOption;
 
 namespace BuckScience.Web.ViewModels.Photos;
 

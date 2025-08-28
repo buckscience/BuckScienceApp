@@ -1,4 +1,5 @@
 using BuckScience.Web.Helpers;
+using WindDirectionOption = BuckScience.Shared.Helpers.WindDirectionOption;
 using Xunit;
 
 namespace BuckScience.Tests.Web.Helpers;
