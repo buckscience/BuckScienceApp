@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BuckScience.Web.ViewModels;
 
@@ -24,4 +25,7 @@ public sealed class PropertyEditVm
 
     [Range(0, 23)]
     public int NightHour { get; set; } = 20;
+
+    // For timezone dropdown
+    public List<SelectListItem> TimeZones { get; set; } = new();
 }

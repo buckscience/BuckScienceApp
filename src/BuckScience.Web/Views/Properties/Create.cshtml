@@ -63,8 +63,13 @@
     <div class="row g-3 mt-1">
         <div class="col-md-6">
             <label asp-for="TimeZone" class="form-label"></label>
-            <input asp-for="TimeZone" class="form-control" placeholder="e.g., America/Chicago or UTC" />
+            <select asp-for="TimeZone" asp-items="Model.TimeZones" class="form-select">
+                <option value="">Select a timezone...</option>
+            </select>
             <span asp-validation-for="TimeZone" class="text-danger"></span>
+            <small class="form-text text-muted">
+                Timezone is important for accurate weather data matching to photo timestamps.
+            </small>
         </div>
         <div class="col-md-3">
             <label asp-for="DayHour" class="form-label"></label>

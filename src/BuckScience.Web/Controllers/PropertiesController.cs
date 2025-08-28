@@ -10,6 +10,7 @@ using BuckScience.Web.ViewModels.Photos;
 using BuckScience.Web.ViewModels.Properties;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 
@@ -58,7 +59,10 @@ public class PropertiesController : Controller
     public IActionResult Create()
     {
         if (_currentUser.Id is null) return Forbid();
-        return View(new PropertyCreateVm());
+        
+        var vm = new PropertyCreateVm();
+        PopulateTimeZones(vm);
+        return View(vm);
     }
 
     [HttpPost]
@@ -66,7 +70,11 @@ public class PropertiesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PropertyCreateVm vm, CancellationToken ct)
     {
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid) 
+        {
+            PopulateTimeZones(vm);
+            return View(vm);
+        }
         if (_currentUser.Id is null) return Forbid();
 
         var id = await CreateProperty.HandleAsync(
@@ -102,6 +110,7 @@ public class PropertiesController : Controller
             NightHour = prop.NightHour
         };
 
+        PopulateTimeZones(vm);
         return View(vm);
     }
 
@@ -110,7 +119,11 @@ public class PropertiesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(PropertyEditVm vm, CancellationToken ct)
     {
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid) 
+        {
+            PopulateTimeZones(vm);
+            return View(vm);
+        }
         if (_currentUser.Id is null) return Forbid();
 
         // Optional pre-check for faster UX
@@ -292,5 +305,35 @@ public class PropertiesController : Controller
 
         TempData["DeletedId"] = id;
         return RedirectToAction(nameof(Index));
+    }
+
+    private void PopulateTimeZones(PropertyCreateVm vm)
+    {
+        var timeZones = TimeZoneInfo.GetSystemTimeZones()
+            .Select(tz => new SelectListItem
+            {
+                Value = tz.Id,
+                Text = $"({tz.BaseUtcOffset:hh\\:mm}) {tz.DisplayName}",
+                Selected = tz.Id == vm.TimeZone
+            })
+            .OrderBy(x => x.Text)
+            .ToList();
+
+        vm.TimeZones = timeZones;
+    }
+
+    private void PopulateTimeZones(PropertyEditVm vm)
+    {
+        var timeZones = TimeZoneInfo.GetSystemTimeZones()
+            .Select(tz => new SelectListItem
+            {
+                Value = tz.Id,
+                Text = $"({tz.BaseUtcOffset:hh\\:mm}) {tz.DisplayName}",
+                Selected = tz.Id == vm.TimeZone
+            })
+            .OrderBy(x => x.Text)
+            .ToList();
+
+        vm.TimeZones = timeZones;
     }
 }

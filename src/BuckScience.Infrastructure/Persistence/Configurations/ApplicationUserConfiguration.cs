@@ -34,5 +34,18 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.LastName)
             .IsRequired()
             .HasMaxLength(100);
+
+        // Seed the initial admin user
+        builder.HasData(new ApplicationUser
+        {
+            Id = 1,
+            AzureEntraB2CId = "b300176c-0f43-4a4d-afd3-d128f8e635a1",
+            FirstName = "Darrin",
+            LastName = "Brandon",
+            DisplayName = "Darrin B",
+            Email = "darrin@buckscience.com",
+            CreatedDate = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc),
+            TrialStartDate = null
+        });
     }
 }

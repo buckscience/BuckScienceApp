@@ -2,9 +2,12 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Infrastructure.Auth;
 using BuckScience.Infrastructure.Persistence;
+using BuckScience.Infrastructure.Services;
+using BuckScience.Shared.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 
@@ -22,6 +25,16 @@ public static class DependencyInjection
 
         // Map the interface to the concrete context registered above
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // Configuration options
+        services.Configure<WeatherApiSettings>(config.GetSection(WeatherApiSettings.SectionName));
+        services.Configure<WeatherSettings>(config.GetSection(WeatherSettings.SectionName));
+
+        // HTTP client for weather API
+        services.AddHttpClient<WeatherService>();
+
+        // Weather service
+        services.AddScoped<IWeatherService, WeatherService>();
 
         // If you have IUserProvisioningService in Infrastructure:
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();

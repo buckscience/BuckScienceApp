@@ -4,6 +4,7 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,9 +13,11 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250828132655_AddLocationToWeather")]
+    partial class AddLocationToWeather
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime?>("TrialStartDate")
+                    b.Property<DateTime>("TrialStartDate")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -68,18 +71,6 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ApplicationUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            AzureEntraB2CId = "b300176c-0f43-4a4d-afd3-d128f8e635a1",
-                            CreatedDate = new DateTime(2025, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DisplayName = "Darrin B",
-                            Email = "darrin@buckscience.com",
-                            FirstName = "Darrin",
-                            LastName = "Brandon"
-                        });
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Camera", b =>
