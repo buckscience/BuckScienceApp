@@ -225,6 +225,31 @@
             setTimeout(window.updateTogglePosition, 150);
         }
 
+        // Check if photos section should be open based on URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const openSection = urlParams.get('openSection');
+        
+        // Function to open photos accordion properly using Bootstrap API
+        function openPhotosAccordion() {
+            const photosCollapse = document.getElementById('photosCollapse');
+            if (photosCollapse) {
+                const photosCollapseInstance = new bootstrap.Collapse(photosCollapse, { toggle: false });
+                photosCollapseInstance.show();
+            }
+        }
+        
+        // Function to check if photos section is currently open
+        function isPhotosAccordionOpen() {
+            const photosCollapse = document.getElementById('photosCollapse');
+            return photosCollapse && photosCollapse.classList.contains('show');
+        }
+        
+        // Open photos section if URL parameter indicates it should be open
+        if (openSection === 'photos') {
+            // Small delay to ensure Bootstrap is initialized
+            setTimeout(openPhotosAccordion, 100);
+        }
+        
         // Handle sort dropdown clicks to preserve accordion state
         const sortLinks = document.querySelectorAll('.dropdown-item[data-sort]');
         sortLinks.forEach(link => {
@@ -232,38 +257,20 @@
                 e.preventDefault();
                 const sortValue = this.getAttribute('data-sort');
                 
-                // Create URL with sort parameter and accordion state
+                // Create URL with sort parameter
                 const url = new URL(window.location);
                 url.searchParams.set('sort', sortValue);
-                url.searchParams.set('openSection', 'photos'); // Mark photos section as open
+                
+                // Preserve accordion state if photos section is currently open
+                if (isPhotosAccordionOpen()) {
+                    url.searchParams.set('openSection', 'photos');
+                } else {
+                    url.searchParams.delete('openSection');
+                }
                 
                 window.location.href = url.toString();
             });
         });
-
-        // Check if we should open the photos accordion based on URL parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const openSection = urlParams.get('openSection');
-        if (openSection === 'photos') {
-            const photosCollapse = document.getElementById('photosCollapse');
-            const photosButton = document.querySelector('[data-bs-target="#photosCollapse"]');
-            
-            if (photosCollapse && photosButton) {
-                // Open the photos section
-                photosCollapse.classList.add('show');
-                photosButton.classList.remove('collapsed');
-                photosButton.setAttribute('aria-expanded', 'true');
-                
-                // Close other sections if they're open
-                const basicInfoCollapse = document.getElementById('basicInfoCollapse');
-                const basicInfoButton = document.querySelector('[data-bs-target="#basicInfoCollapse"]');
-                if (basicInfoCollapse && basicInfoButton) {
-                    basicInfoCollapse.classList.remove('show');
-                    basicInfoButton.classList.add('collapsed');
-                    basicInfoButton.setAttribute('aria-expanded', 'false');
-                }
-            }
-        }
     });
 
     // Also update when sidebar content is loaded via AJAX
