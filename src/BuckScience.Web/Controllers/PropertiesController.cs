@@ -250,7 +250,7 @@ public class PropertiesController : Controller
         };
 
         // Get all photos from all cameras on this property
-        var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, ct);
+        var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, null, ct);
 
         // Group photos by month/year with proper sort direction
         var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
@@ -262,7 +262,7 @@ public class PropertiesController : Controller
             PropertyName = property.Name,
             PhotoGroups = photoGroups,
             CurrentSort = sort,
-            TotalPhotoCount = photos.Count
+            TotalPhotoCount = photos.Count()
         };
 
         return View(vm);
