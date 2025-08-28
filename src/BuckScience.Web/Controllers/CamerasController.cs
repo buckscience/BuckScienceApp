@@ -2,12 +2,14 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
+using BuckScience.Shared.Configuration;
 using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels.Cameras;
 using BuckScience.Web.ViewModels.Photos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NetTopologySuite.Geometries;
 
 namespace BuckScience.Web.Controllers;
@@ -19,13 +21,26 @@ public class CamerasController : Controller
     private readonly GeometryFactory _geometryFactory;
     private readonly ICurrentUserService _currentUser;
     private readonly IBlobStorageService _blobStorageService;
+    private readonly IWeatherService _weatherService;
+    private readonly IOptions<WeatherSettings> _weatherSettings;
+    private readonly ILogger<CamerasController> _logger;
 
-    public CamerasController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser, IBlobStorageService blobStorageService)
+    public CamerasController(
+        IAppDbContext db, 
+        GeometryFactory geometryFactory, 
+        ICurrentUserService currentUser, 
+        IBlobStorageService blobStorageService,
+        IWeatherService weatherService,
+        IOptions<WeatherSettings> weatherSettings,
+        ILogger<CamerasController> logger)
     {
         _db = db;
         _geometryFactory = geometryFactory;
         _currentUser = currentUser;
         _blobStorageService = blobStorageService;
+        _weatherService = weatherService;
+        _weatherSettings = weatherSettings;
+        _logger = logger;
     }
 
     // LIST: GET /properties/{propertyId}/cameras
@@ -365,6 +380,9 @@ public class CamerasController : Controller
                 _db,
                 _currentUser.Id.Value,
                 _blobStorageService,
+                _weatherService,
+                _weatherSettings,
+                _logger,
                 ct);
 
             // Return JSON response for AJAX handling

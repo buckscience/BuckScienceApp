@@ -7,6 +7,10 @@ namespace BuckScience.Domain.Entities
         protected Weather() { } // EF
 
         public Weather(
+            double latitude,
+            double longitude,
+            DateOnly date,
+            int hour,
             DateTime dateTime,
             int dateTimeEpoch,
             double temperature,
@@ -25,6 +29,10 @@ namespace BuckScience.Domain.Entities
             double moonPhase,
             string? moonPhaseText)
         {
+            Latitude = latitude;
+            Longitude = longitude;
+            Date = date;
+            Hour = hour;
             DateTime = dateTime;
             DateTimeEpoch = dateTimeEpoch;
             Temperature = temperature;
@@ -45,6 +53,12 @@ namespace BuckScience.Domain.Entities
         }
 
         public int Id { get; private set; }
+
+        // Location fields for weather lookup
+        public double Latitude { get; private set; }
+        public double Longitude { get; private set; }
+        public DateOnly Date { get; private set; }
+        public int Hour { get; private set; }
 
         public DateTime DateTime { get; private set; }
         public int DateTimeEpoch { get; private set; }
