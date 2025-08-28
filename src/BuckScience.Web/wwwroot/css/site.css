@@ -423,11 +423,24 @@
     border: none;
     padding: 1rem;
     font-weight: 600;
+    color: #2d3748;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.property-details .accordion-button:hover {
+    background-color: #e9ecef;
+    color: #527A52;
 }
 
 .property-details .accordion-button:not(.collapsed) {
-    background-color: #e9ecef;
+    background-color: #8CAF8C !important;
+    color: #fff !important;
     box-shadow: none;
+}
+
+.property-details .accordion-button:not(.collapsed):hover {
+    background-color: #527A52 !important;
+    color: #fff !important;
 }
 
 .property-details .accordion-button:focus {
