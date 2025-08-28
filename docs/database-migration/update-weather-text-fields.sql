@@ -9,21 +9,21 @@ SET WindDirectionText =
         WHEN WindDirection IS NULL THEN NULL
         ELSE 
             CASE 
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 0 THEN 'N'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 1 THEN 'NNE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 2 THEN 'NE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 3 THEN 'ENE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 4 THEN 'E'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 5 THEN 'ESE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 6 THEN 'SE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 7 THEN 'SSE'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 8 THEN 'S'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 9 THEN 'SSW'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 10 THEN 'SW'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 11 THEN 'WSW'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 12 THEN 'W'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 13 THEN 'WNW'
-                WHEN FLOOR(((WindDirection % 360.0 + 360.0) % 360.0 + 11.25) / 22.5) % 16.0 = 14 THEN 'NW'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 0 THEN 'N'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 1 THEN 'NNE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 2 THEN 'NE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 3 THEN 'ENE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 4 THEN 'E'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 5 THEN 'ESE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 6 THEN 'SE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 7 THEN 'SSE'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 8 THEN 'S'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 9 THEN 'SSW'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 10 THEN 'SW'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 11 THEN 'WSW'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 12 THEN 'W'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 13 THEN 'WNW'
+                WHEN FLOOR(((WindDirection % CAST(360 AS FLOAT) + CAST(360 AS FLOAT)) % CAST(360 AS FLOAT) + CAST(11.25 AS FLOAT)) / CAST(22.5 AS FLOAT)) % CAST(16 AS FLOAT) = 14 THEN 'NW'
                 ELSE 'NNW'
             END
     END
@@ -34,14 +34,14 @@ UPDATE Weather
 SET MoonPhaseText = 
     CASE 
         WHEN MoonPhase IS NULL THEN NULL
-        WHEN MoonPhase >= 0.0 AND MoonPhase < 0.05 THEN 'New Moon'
-        WHEN MoonPhase >= 0.05 AND MoonPhase < 0.2 THEN 'Waxing Crescent'
-        WHEN MoonPhase >= 0.2 AND MoonPhase < 0.3 THEN 'First Quarter'
-        WHEN MoonPhase >= 0.3 AND MoonPhase < 0.45 THEN 'Waxing Gibbous'
-        WHEN MoonPhase >= 0.45 AND MoonPhase < 0.55 THEN 'Full Moon'
-        WHEN MoonPhase >= 0.55 AND MoonPhase < 0.7 THEN 'Waning Gibbous'
-        WHEN MoonPhase >= 0.7 AND MoonPhase < 0.8 THEN 'Last Quarter'
-        WHEN MoonPhase >= 0.8 AND MoonPhase < 0.95 THEN 'Waning Crescent'
+        WHEN MoonPhase >= CAST(0.0 AS FLOAT) AND MoonPhase < CAST(0.05 AS FLOAT) THEN 'New Moon'
+        WHEN MoonPhase >= CAST(0.05 AS FLOAT) AND MoonPhase < CAST(0.2 AS FLOAT) THEN 'Waxing Crescent'
+        WHEN MoonPhase >= CAST(0.2 AS FLOAT) AND MoonPhase < CAST(0.3 AS FLOAT) THEN 'First Quarter'
+        WHEN MoonPhase >= CAST(0.3 AS FLOAT) AND MoonPhase < CAST(0.45 AS FLOAT) THEN 'Waxing Gibbous'
+        WHEN MoonPhase >= CAST(0.45 AS FLOAT) AND MoonPhase < CAST(0.55 AS FLOAT) THEN 'Full Moon'
+        WHEN MoonPhase >= CAST(0.55 AS FLOAT) AND MoonPhase < CAST(0.7 AS FLOAT) THEN 'Waning Gibbous'
+        WHEN MoonPhase >= CAST(0.7 AS FLOAT) AND MoonPhase < CAST(0.8 AS FLOAT) THEN 'Last Quarter'
+        WHEN MoonPhase >= CAST(0.8 AS FLOAT) AND MoonPhase < CAST(0.95 AS FLOAT) THEN 'Waning Crescent'
         ELSE 'New Moon'
     END
 WHERE MoonPhaseText IS NULL OR MoonPhaseText = '';
