@@ -283,43 +283,13 @@ public class CamerasController : Controller
         return View("Upload", vm);
     }
 
-    // PHOTOS: GET /cameras/{id}/photos
+    // PHOTOS: GET /cameras/{id}/photos (redirects to details)
     [SkipSetupCheck]
     [HttpGet("/cameras/{id:int}/photos")]
-    public async Task<IActionResult> Photos([FromRoute] int id, CancellationToken ct)
+    public IActionResult Photos([FromRoute] int id)
     {
-        if (_currentUser.Id is null) return Forbid();
-
-        // Get camera info for header display
-        var camera = await _db.Cameras
-            .AsNoTracking()
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(c => 
-                c.Id == id && 
-                c.Property != null && 
-                c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
-
-        if (camera is null) return NotFound();
-
-        // Get photos for this camera
-        var photos = await ListCameraPhotos.HandleAsync(_db, _currentUser.Id.Value, id, ct);
-
-        var vm = new CameraPhotosVm
-        {
-            CameraId = camera.Id,
-            PropertyId = camera.PropertyId,
-            CameraName = camera.Name,
-            PropertyName = camera.Property?.Name ?? "",
-            Photos = photos.Select(p => new PhotoListItemVm
-            {
-                Id = p.Id,
-                PhotoUrl = p.PhotoUrl,
-                DateTaken = p.DateTaken,
-                DateUploaded = p.DateUploaded
-            }).ToList()
-        };
-
-        return View(vm);
+        // Redirect to the new location at camera details
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     // UPLOAD PHOTO: POST
@@ -409,12 +379,29 @@ public class CamerasController : Controller
 
     // DETAILS: GET /cameras/{id}/details
     [HttpGet("/cameras/{id:int}/details")]
-    public async Task<IActionResult> Details([FromRoute] int id, CancellationToken ct)
+    public async Task<IActionResult> Details([FromRoute] int id, [FromQuery] string sort = "DateTakenDesc", CancellationToken ct = default)
     {
         if (_currentUser.Id is null) return Forbid();
 
         var camera = await GetCameraDetails.HandleAsync(_db, _currentUser.Id.Value, id, ct);
         if (camera is null) return NotFound();
+
+        // Get photos for this camera with sorting
+        var photos = await ListCameraPhotos.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+        
+        // Apply sorting based on query parameter
+        photos = sort switch
+        {
+            "DateTakenAsc" => photos.OrderBy(p => p.DateTaken).ToList(),
+            "DateTakenDesc" => photos.OrderByDescending(p => p.DateTaken).ToList(),
+            "DateUploadedAsc" => photos.OrderBy(p => p.DateUploaded).ToList(),
+            "DateUploadedDesc" => photos.OrderByDescending(p => p.DateUploaded).ToList(),
+            _ => photos.OrderByDescending(p => p.DateTaken).ToList()
+        };
+
+        // Group photos by month/year with proper sort direction
+        var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
+        var photoGroups = photos.GroupByMonth(isAscending);
 
         var vm = new CameraDetailsVm
         {
@@ -428,7 +415,16 @@ public class CamerasController : Controller
             PhotoCount = camera.PhotoCount,
             CreatedDate = camera.CreatedDate,
             PropertyId = camera.PropertyId,
-            PropertyName = camera.PropertyName
+            PropertyName = camera.PropertyName,
+            Photos = photos.Select(p => new PhotoListItemVm
+            {
+                Id = p.Id,
+                PhotoUrl = p.PhotoUrl,
+                DateTaken = p.DateTaken,
+                DateUploaded = p.DateUploaded
+            }).ToList(),
+            PhotoGroups = photoGroups,
+            CurrentSort = sort
         };
 
         return View(vm);

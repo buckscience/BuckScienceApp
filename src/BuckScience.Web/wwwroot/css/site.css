@@ -67,8 +67,21 @@
     align-items: center;
     justify-content: center;
     border-radius: 0 20px 20px 0;
-    transition: left 0.3s ease, background 0.2s;
+    transition: left 0.3s ease, background 0.2s, opacity 0.2s;
     cursor: pointer;
+    color: white;
+    /* Hide initially until positioned correctly */
+    opacity: 0;
+    visibility: hidden;
+}
+
+.sidebar-toggle.positioned {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar-toggle:hover {
+    background: #4a5a5f;
 }
 
 /* When sidebar is collapsed, move toggle button to the navbar edge */
@@ -173,17 +186,47 @@
         color: #fff;
     }
 
-.btn-outline-primary {
-    color: #527A52;
-    border-color: #527A52;
-    background-color: #fff;
+.btn-outline-primary,
+.btn-outline-primary.dropdown-toggle {
+    color: #527A52 !important;
+    border-color: #527A52 !important;
+    background-color: #fff !important;
 }
 
-    .btn-outline-primary:hover {
-        background-color: #527A52;
-        color: #fff;
-        border-color: #527A52;
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus,
+    .btn-outline-primary:active,
+    .btn-outline-primary.dropdown-toggle:hover,
+    .btn-outline-primary.dropdown-toggle:focus,
+    .btn-outline-primary.dropdown-toggle:active,
+    .btn-outline-primary.show {
+        background-color: #527A52 !important;
+        color: #fff !important;
+        border-color: #527A52 !important;
+        box-shadow: 0 0 0 0.2rem rgba(82, 122, 82, 0.25) !important;
     }
+
+/* Dropdown menu item styling to use green theme colors */
+.dropdown-item {
+    color: #527A52 !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.dropdown-item.active {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+}
 
 /* Cancel/Secondary Button Styles */
 .btn-custom-cancel,
@@ -388,11 +431,24 @@
     border: none;
     padding: 1rem;
     font-weight: 600;
+    color: #2d3748;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.property-details .accordion-button:hover {
+    background-color: #e9ecef;
+    color: #527A52;
 }
 
 .property-details .accordion-button:not(.collapsed) {
-    background-color: #e9ecef;
+    background-color: #8CAF8C !important;
+    color: #fff !important;
     box-shadow: none;
+}
+
+.property-details .accordion-button:not(.collapsed):hover {
+    background-color: #527A52 !important;
+    color: #fff !important;
 }
 
 .property-details .accordion-button:focus {
@@ -475,6 +531,72 @@
 /* Camera Details Styling */
 .camera-details {
     min-height: 100%;
+    max-width: 1200px;
+    min-width: 600px;
+}
+
+/* Camera Details Accordion Styling to match green theme */
+.camera-details .accordion-item {
+    border: 1px solid #e1e4e8;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+}
+
+.camera-details .accordion-button {
+    background-color: #f8f9fa;
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.camera-details .accordion-button:hover {
+    background-color: #e9ecef;
+    color: #527A52;
+}
+
+.camera-details .accordion-button:not(.collapsed) {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+    box-shadow: none;
+}
+
+.camera-details .accordion-button:not(.collapsed):hover {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.camera-details .accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* Photo grid improvements for single image */
+.photo-grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* When there's only one photo, make it larger */
+.photo-grid-container .photo-item:only-child {
+    max-width: 375px;
+    width: 100%;
+}
+
+/* For multiple photos, use responsive sizing */
+.photo-grid-container .photo-item {
+    flex: 1 1 300px;
+    max-width: 350px;
+    min-width: 250px;
+}
+
+/* Override Bootstrap grid for photo cards when using custom photo grid */
+.photo-grid-container .photo-item .card-img-top {
+    height: 250px;
+    object-fit: cover;
+    cursor: pointer;
 }
 
 .sidebar-title {

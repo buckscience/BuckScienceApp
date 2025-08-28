@@ -1,11 +1,30 @@
+using BuckScience.Application.Photos;
+
 namespace BuckScience.Web.ViewModels.Photos;
 
-public class PhotoListItemVm
+public class PropertyPhotosVm
+{
+    public int PropertyId { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public List<PhotoMonthGroup> PhotoGroups { get; set; } = new();
+    public string CurrentSort { get; set; } = "DateTakenDesc";
+    public int TotalPhotoCount { get; set; }
+}
+
+public class PhotoMonthGroup
+{
+    public string MonthYear { get; set; } = string.Empty; // e.g., "October 2024"
+    public List<PropertyPhotoListItemVm> Photos { get; set; } = new();
+}
+
+public class PropertyPhotoListItemVm
 {
     public int Id { get; set; }
     public string PhotoUrl { get; set; } = string.Empty;
     public DateTime DateTaken { get; set; }
     public DateTime DateUploaded { get; set; }
+    public int CameraId { get; set; }
+    public string CameraName { get; set; } = string.Empty;
     
     /// <summary>
     /// Gets the properly encoded photo URL for display, handling spaces and special characters
@@ -47,27 +66,9 @@ public class PhotoListItemVm
     }
 }
 
-public class CameraPhotosVm
+public static class PhotoGroupingExtensions
 {
-    public int CameraId { get; set; }
-    public int PropertyId { get; set; }
-    public string CameraName { get; set; } = string.Empty;
-    public string PropertyName { get; set; } = string.Empty;
-    public List<PhotoListItemVm> Photos { get; set; } = new();
-    public List<CameraPhotoMonthGroup> PhotoGroups { get; set; } = new();
-    public string CurrentSort { get; set; } = "DateTakenDesc";
-    public int TotalPhotoCount { get; set; }
-}
-
-public class CameraPhotoMonthGroup
-{
-    public string MonthYear { get; set; } = string.Empty; // e.g., "October 2024"
-    public List<PhotoListItemVm> Photos { get; set; } = new();
-}
-
-public static class CameraPhotoGroupingExtensions
-{
-    public static List<CameraPhotoMonthGroup> GroupByMonth(this List<Application.Photos.ListCameraPhotos.PhotoListItem> photos, bool isAscending = false)
+    public static List<PhotoMonthGroup> GroupByMonth(this List<ListPropertyPhotos.PhotoListItem> photos, bool isAscending = false)
     {
         var groups = photos.GroupBy(p => new { p.DateTaken.Year, p.DateTaken.Month });
         
@@ -77,15 +78,17 @@ public static class CameraPhotoGroupingExtensions
             : groups.OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month);
         
         return orderedGroups
-            .Select(g => new CameraPhotoMonthGroup
+            .Select(g => new PhotoMonthGroup
             {
                 MonthYear = $"{System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(g.Key.Month)} {g.Key.Year}",
-                Photos = g.Select(p => new PhotoListItemVm
+                Photos = g.Select(p => new PropertyPhotoListItemVm
                 {
                     Id = p.Id,
                     PhotoUrl = p.PhotoUrl,
                     DateTaken = p.DateTaken,
-                    DateUploaded = p.DateUploaded
+                    DateUploaded = p.DateUploaded,
+                    CameraId = p.CameraId,
+                    CameraName = p.CameraName
                 }).ToList()
             })
             .ToList();
