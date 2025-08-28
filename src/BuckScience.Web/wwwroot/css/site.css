@@ -527,6 +527,43 @@
     min-width: 600px;
 }
 
+/* Camera Details Accordion Styling to match green theme */
+.camera-details .accordion-item {
+    border: 1px solid #e1e4e8;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+}
+
+.camera-details .accordion-button {
+    background-color: #f8f9fa;
+    border: none;
+    padding: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.camera-details .accordion-button:hover {
+    background-color: #e9ecef;
+    color: #527A52;
+}
+
+.camera-details .accordion-button:not(.collapsed) {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+    box-shadow: none;
+}
+
+.camera-details .accordion-button:not(.collapsed):hover {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.camera-details .accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
 /* Photo grid improvements for single image */
 .photo-grid-container {
     display: flex;
