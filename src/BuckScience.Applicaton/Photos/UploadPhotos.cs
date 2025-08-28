@@ -45,7 +45,9 @@ public static class UploadPhotos
             throw new KeyNotFoundException("Camera not found or not owned by user.");
 
         var photoIds = new List<int>();
+        var photosForWeatherProcessing = new List<(Photo photo, (double Latitude, double Longitude)? location, DateTime dateTaken)>();
 
+        // First pass: Create photos and upload files without weather processing
         foreach (var file in cmd.Files)
         {
             if (file.Length > 0)
@@ -72,38 +74,24 @@ public static class UploadPhotos
                 
                 // Update the photo with the blob URL
                 photo.SetPhotoUrl(blobUrl);
-
-                // Handle weather lookup and assignment
+                
+                // Prepare for batch weather processing
                 if (exifLocation.HasValue || weatherSettings.Value.FallbackToCameraLocation)
                 {
-                    try
-                    {
-                        var location = exifLocation ?? (camera.Latitude, camera.Longitude);
-                        var weatherId = await FindOrCreateWeatherDataAsync(
-                            location.Latitude, 
-                            location.Longitude, 
-                            dateTaken, 
-                            weatherService, 
-                            weatherSettings.Value,
-                            logger,
-                            ct);
-                        
-                        if (weatherId.HasValue)
-                        {
-                            photo.SetWeather(weatherId.Value);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to assign weather data to photo {PhotoId}", photo.Id);
-                        // Continue processing without weather data
-                    }
+                    var location = exifLocation ?? (camera.Latitude, camera.Longitude);
+                    photosForWeatherProcessing.Add((photo, location, dateTaken));
                 }
 
                 await db.SaveChangesAsync(ct);
-                
                 photoIds.Add(photo.Id);
             }
+        }
+
+        // Second pass: Batch process weather data by grouping photos by location and date
+        if (photosForWeatherProcessing.Any())
+        {
+            await ProcessWeatherDataInBatches(photosForWeatherProcessing, weatherService, weatherSettings.Value, logger, ct);
+            await db.SaveChangesAsync(ct);
         }
 
         return photoIds;
@@ -194,6 +182,85 @@ public static class UploadPhotos
         }
 
         return null;
+    }
+
+    private static async Task ProcessWeatherDataInBatches(
+        List<(Photo photo, (double Latitude, double Longitude)? location, DateTime dateTaken)> photosForWeatherProcessing,
+        IWeatherService weatherService,
+        WeatherSettings settings,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        // Group photos by rounded location and date for batch processing
+        var photoGroups = photosForWeatherProcessing
+            .Where(p => p.location.HasValue)
+            .GroupBy(p => 
+            {
+                var (roundedLat, roundedLon) = weatherService.RoundCoordinates(
+                    p.location!.Value.Latitude, 
+                    p.location!.Value.Longitude, 
+                    settings.LocationRoundingPrecision);
+                var date = DateOnly.FromDateTime(p.dateTaken);
+                return new { Latitude = roundedLat, Longitude = roundedLon, Date = date };
+            })
+            .ToList();
+
+        logger.LogInformation("Processing weather data for {GroupCount} location/date groups from {PhotoCount} photos", 
+            photoGroups.Count, photosForWeatherProcessing.Count);
+
+        foreach (var group in photoGroups)
+        {
+            try
+            {
+                var groupKey = group.Key;
+                var photosInGroup = group.ToList();
+                
+                logger.LogInformation("Processing weather for {PhotoCount} photos at {Latitude}, {Longitude} on {Date}", 
+                    photosInGroup.Count, groupKey.Latitude, groupKey.Longitude, groupKey.Date);
+
+                // Check if any weather data exists for this location/date
+                var hasExistingWeather = await weatherService.HasWeatherDataForLocationAndDateAsync(
+                    groupKey.Latitude, groupKey.Longitude, groupKey.Date, cancellationToken);
+
+                List<Weather> weatherRecords;
+                if (!hasExistingWeather)
+                {
+                    // Fetch weather data for the entire day (single API call for all photos in this group)
+                    weatherRecords = await weatherService.FetchDayWeatherDataAsync(
+                        groupKey.Latitude, groupKey.Longitude, groupKey.Date, cancellationToken);
+                }
+                else
+                {
+                    // Weather data already exists, just retrieve it
+                    weatherRecords = await weatherService.GetWeatherDataForLocationAndDateAsync(
+                        groupKey.Latitude, groupKey.Longitude, groupKey.Date, cancellationToken);
+                }
+
+                // Assign weather records to photos based on their hour
+                foreach (var (photo, _, dateTaken) in photosInGroup)
+                {
+                    var hour = dateTaken.Hour;
+                    var weatherRecord = weatherRecords.FirstOrDefault(w => w.Hour == hour);
+                    
+                    if (weatherRecord != null)
+                    {
+                        photo.SetWeather(weatherRecord.Id);
+                        logger.LogDebug("Assigned weather ID {WeatherId} to photo {PhotoId} for hour {Hour}", 
+                            weatherRecord.Id, photo.Id, hour);
+                    }
+                    else
+                    {
+                        logger.LogWarning("No weather data found for photo {PhotoId} at hour {Hour}", photo.Id, hour);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to process weather data for location {Latitude}, {Longitude} on {Date}. Photos in this group will not have weather data.", 
+                    group.Key.Latitude, group.Key.Longitude, group.Key.Date);
+                // Continue processing other groups even if one fails
+            }
+        }
     }
 
     private static async Task<int?> FindOrCreateWeatherDataAsync(

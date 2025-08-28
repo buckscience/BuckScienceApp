@@ -130,6 +130,27 @@ public class WeatherService : IWeatherService
         );
     }
 
+    public async Task<bool> HasWeatherDataForLocationAndDateAsync(double latitude, double longitude, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Weathers
+            .AnyAsync(w => 
+                w.Latitude == latitude && 
+                w.Longitude == longitude && 
+                w.Date == date, 
+                cancellationToken);
+    }
+
+    public async Task<List<Weather>> GetWeatherDataForLocationAndDateAsync(double latitude, double longitude, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Weathers
+            .Where(w => 
+                w.Latitude == latitude && 
+                w.Longitude == longitude && 
+                w.Date == date)
+            .OrderBy(w => w.Hour)
+            .ToListAsync(cancellationToken);
+    }
+
     // DTOs for VisualCrossing API response
     private class VisualCrossingResponse
     {

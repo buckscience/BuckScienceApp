@@ -33,4 +33,24 @@ public interface IWeatherService
     /// <param name="precision">Decimal places for rounding</param>
     /// <returns>Rounded coordinates</returns>
     (double RoundedLatitude, double RoundedLongitude) RoundCoordinates(double latitude, double longitude, int precision);
+
+    /// <summary>
+    /// Checks if weather data exists for a specific location and date
+    /// </summary>
+    /// <param name="latitude">Rounded latitude</param>
+    /// <param name="longitude">Rounded longitude</param>
+    /// <param name="date">Date</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if weather data exists for any hour of the day</returns>
+    Task<bool> HasWeatherDataForLocationAndDateAsync(double latitude, double longitude, DateOnly date, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all weather data for a specific location and date (all 24 hours)
+    /// </summary>
+    /// <param name="latitude">Rounded latitude</param>
+    /// <param name="longitude">Rounded longitude</param>
+    /// <param name="date">Date</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of hourly weather records for the day</returns>
+    Task<List<Weather>> GetWeatherDataForLocationAndDateAsync(double latitude, double longitude, DateOnly date, CancellationToken cancellationToken = default);
 }
