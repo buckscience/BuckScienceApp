@@ -98,6 +98,14 @@ else
 
 @section Scripts {
     <script>
+        // Move modal to body to ensure it appears above sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoModal = document.getElementById('photoModal');
+            if (photoModal) {
+                document.body.appendChild(photoModal);
+            }
+        });
+        
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
         if (photoModal) {

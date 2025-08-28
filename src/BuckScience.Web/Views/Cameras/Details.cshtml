@@ -277,6 +277,14 @@
         // The loadSidebar function in sidebar.js will handle positioning with proper timing
     });
 
+    // Move modal to body to ensure it appears above sidebar
+    document.addEventListener('DOMContentLoaded', function() {
+        const photoModal = document.getElementById('photoModal');
+        if (photoModal) {
+            document.body.appendChild(photoModal);
+        }
+    });
+
     // Handle photo modal
     const photoModal = document.getElementById('photoModal');
     if (photoModal) {
