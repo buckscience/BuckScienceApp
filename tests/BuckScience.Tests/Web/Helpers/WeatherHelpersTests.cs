@@ -126,6 +126,101 @@ public class WeatherHelpersTests
         Assert.Equal(0.25, WeatherHelpers.ConvertMoonPhaseTextToNumeric("First Quarter"));
     }
 
+    [Theory]
+    [InlineData(0.0, "N")]
+    [InlineData(11.24, "N")]  // Just before boundary
+    [InlineData(11.25, "NNE")] // Just at boundary  
+    [InlineData(22.5, "NNE")]
+    [InlineData(33.74, "NNE")] // Just before next boundary
+    [InlineData(33.75, "NE")]  // Just at next boundary
+    [InlineData(45.0, "NE")]
+    [InlineData(67.5, "ENE")]
+    [InlineData(90.0, "E")]
+    [InlineData(135.0, "SE")]
+    [InlineData(180.0, "S")]
+    [InlineData(225.0, "SW")]
+    [InlineData(270.0, "W")]
+    [InlineData(315.0, "NW")]
+    [InlineData(337.5, "NNW")]
+    [InlineData(348.74, "NNW")] // Just before N boundary
+    [InlineData(348.75, "N")]  // Just at N boundary
+    [InlineData(360.0, "N")]
+    [InlineData(361.0, "N")] // Test wraparound
+    [InlineData(-10.0, "N")] // Test negative wraparound (350 degrees = N)
+    public void ConvertWindDirectionToText_VariousAngles_ReturnsCorrectDirection(double degrees, string expected)
+    {
+        // Act
+        var result = WeatherHelpers.ConvertWindDirectionToText(degrees);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("N", 0.0)]
+    [InlineData("NNE", 22.5)]
+    [InlineData("NE", 45.0)]
+    [InlineData("ENE", 67.5)]
+    [InlineData("E", 90.0)]
+    [InlineData("ESE", 112.5)]
+    [InlineData("SE", 135.0)]
+    [InlineData("SSE", 157.5)]
+    [InlineData("S", 180.0)]
+    [InlineData("SSW", 202.5)]
+    [InlineData("SW", 225.0)]
+    [InlineData("WSW", 247.5)]
+    [InlineData("W", 270.0)]
+    [InlineData("WNW", 292.5)]
+    [InlineData("NW", 315.0)]
+    [InlineData("NNW", 337.5)]
+    public void ConvertWindDirectionTextToNumeric_ValidDirections_ReturnsCorrectDegrees(string direction, double expected)
+    {
+        // Act
+        var result = WeatherHelpers.ConvertWindDirectionTextToNumeric(direction);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Invalid")]
+    [InlineData("North")]
+    [InlineData("Northeast")]
+    public void ConvertWindDirectionTextToNumeric_InvalidText_ReturnsNull(string direction)
+    {
+        // Act
+        var result = WeatherHelpers.ConvertWindDirectionTextToNumeric(direction);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ConvertWindDirectionTextToNumeric_CaseInsensitive_Works()
+    {
+        // Act & Assert
+        Assert.Equal(0.0, WeatherHelpers.ConvertWindDirectionTextToNumeric("n"));
+        Assert.Equal(90.0, WeatherHelpers.ConvertWindDirectionTextToNumeric("E"));
+        Assert.Equal(225.0, WeatherHelpers.ConvertWindDirectionTextToNumeric("sw"));
+    }
+
+    [Fact]
+    public void ConvertWindDirectionToText_RoundTrip_MaintainsAccuracy()
+    {
+        // Test that converting from text to numeric and back to text works correctly
+        foreach (var direction in WeatherHelpers.StandardWindDirections)
+        {
+            // Act
+            var numeric = WeatherHelpers.ConvertWindDirectionTextToNumeric(direction);
+            var backToText = WeatherHelpers.ConvertWindDirectionToText(numeric!.Value);
+
+            // Assert
+            Assert.Equal(direction, backToText);
+        }
+    }
+
     [Fact]
     public void WindDirectionOption_Properties_Work()
     {
