@@ -43,16 +43,21 @@ public static class ListPropertyPhotos
         // Get all photos from all cameras on this property using explicit join to avoid LINQ translation errors
         var baseQuery = db.Photos
             .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+            .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
             .Where(x => x.Camera.PropertyId == propertyId)
-            .Where(x => x.Camera.Property.ApplicationUserId == userId);
+            .Where(x => x.Property.ApplicationUserId == userId)
+            .Select(x => new { x.Photo, x.Camera }); // Project back to the original structure
 
         // Apply filters if provided - but we need to handle this differently with the join
         if (filters?.HasAnyFilters == true)
         {
-            // Convert back to Photo query for filtering, then rejoin for final selection
+            // Convert back to Photo query for filtering using explicit joins
             var photosQuery = db.Photos
-                .Where(p => p.Camera.PropertyId == propertyId)
-                .Where(p => p.Camera.Property.ApplicationUserId == userId);
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+                .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
+                .Where(x => x.Camera.PropertyId == propertyId)
+                .Where(x => x.Property.ApplicationUserId == userId)
+                .Select(x => x.Photo);
 
             if (filters.HasWeatherFilters)
             {

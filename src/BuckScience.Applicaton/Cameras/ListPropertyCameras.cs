@@ -24,21 +24,23 @@ public static class ListPropertyCameras
         int propertyId,
         CancellationToken ct)
     {
-        // ownership enforced via property join
+        // ownership enforced via property join using explicit joins to avoid LINQ translation errors
         return await db.Cameras
             .AsNoTracking()
-            .Where(c => c.PropertyId == propertyId && c.Property.ApplicationUserId == userId)
-            .OrderBy(c => c.Name)
-            .Select(c => new Result(
-                c.Id,
-                c.Name,
-                c.Brand,
-                c.Model,
-                c.Latitude,
-                c.Longitude,
-                c.IsActive,
-                c.Photos.Count(),
-                c.CreatedDate))
+            .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
+            .GroupJoin(db.Photos, x => x.Camera.Id, photo => photo.CameraId, (x, photos) => new { x.Camera, x.Property, PhotoCount = photos.Count() })
+            .OrderBy(x => x.Camera.Name)
+            .Select(x => new Result(
+                x.Camera.Id,
+                x.Camera.Name,
+                x.Camera.Brand,
+                x.Camera.Model,
+                x.Camera.Latitude,
+                x.Camera.Longitude,
+                x.Camera.IsActive,
+                x.PhotoCount,
+                x.Camera.CreatedDate))
             .ToListAsync(ct);
     }
 }
