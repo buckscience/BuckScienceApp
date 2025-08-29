@@ -76,18 +76,13 @@ public static class ManagePhotoTags
         IAppDbContext db,
         CancellationToken ct = default)
     {
-        // Get tag IDs that are associated with the property first
-        var tagIds = await db.PropertyTags
-            .Where(pt => pt.PropertyId == propertyId)
-            .Select(pt => pt.TagId)
-            .ToListAsync(ct);
-
-        // Then get the tag details
-        return await db.Tags
-            .Where(t => tagIds.Contains(t.Id))
-            .Select(t => new TagInfo(t.Id, t.TagName))
-            .OrderBy(t => t.Name)
-            .ToListAsync(ct);
+        // Use explicit join to avoid any EF translation issues
+        return await (from pt in db.PropertyTags
+                     join t in db.Tags on pt.TagId equals t.Id
+                     where pt.PropertyId == propertyId
+                     select new TagInfo(t.Id, t.TagName))
+                     .OrderBy(ti => ti.Name)
+                     .ToListAsync(ct);
     }
 
     public sealed record TagInfo(int Id, string Name);
