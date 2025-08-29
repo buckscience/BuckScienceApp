@@ -1,4 +1,5 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Application.Tags;
 using BuckScience.Domain.Entities;
 using NetTopologySuite.Geometries;
 
@@ -30,6 +31,10 @@ public static class CreateProperty
 
         db.Properties.Add(prop);
         await db.SaveChangesAsync(ct);
+
+        // Assign default tags to the newly created property
+        await AssignDefaultTagsToProperty.HandleAsync(prop.Id, db, ct);
+
         return prop.Id;
     }
 }

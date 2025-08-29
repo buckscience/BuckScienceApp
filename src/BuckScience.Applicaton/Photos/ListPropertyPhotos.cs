@@ -40,42 +40,55 @@ public static class ListPropertyPhotos
         if (property is null)
             throw new KeyNotFoundException("Property not found or not owned by user.");
 
-        // Get all photos from all cameras on this property
-        var query = db.Photos
-            .Include(p => p.Camera)
-            .Where(p => p.Camera.PropertyId == propertyId)
-            .Where(p => p.Camera.Property.ApplicationUserId == userId);
+        // Get all photos from all cameras on this property using explicit join to avoid LINQ translation errors
+        var baseQuery = db.Photos
+            .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+            .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
+            .Where(x => x.Camera.PropertyId == propertyId)
+            .Where(x => x.Property.ApplicationUserId == userId)
+            .Select(x => new { x.Photo, x.Camera }); // Project back to the original structure
 
-        // Include Weather if weather filters are applied
-        if (filters?.HasWeatherFilters == true)
-        {
-            query = query.Include(p => p.Weather);
-        }
-
-        // Apply filters if provided
+        // Apply filters if provided - but we need to handle this differently with the join
         if (filters?.HasAnyFilters == true)
         {
-            query = ApplyFilters(query, filters);
+            // Convert back to Photo query for filtering using explicit joins
+            var photosQuery = db.Photos
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+                .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
+                .Where(x => x.Camera.PropertyId == propertyId)
+                .Where(x => x.Property.ApplicationUserId == userId)
+                .Select(x => x.Photo);
+
+            if (filters.HasWeatherFilters)
+            {
+                photosQuery = photosQuery.Include(p => p.Weather);
+            }
+
+            photosQuery = ApplyFilters(photosQuery, filters);
+
+            // Now join with cameras for the final selection
+            baseQuery = photosQuery
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c });
         }
 
         // Apply sorting
-        query = sortBy switch
+        var sortedQuery = sortBy switch
         {
-            SortBy.DateTakenAsc => query.OrderBy(p => p.DateTaken),
-            SortBy.DateTakenDesc => query.OrderByDescending(p => p.DateTaken),
-            SortBy.DateUploadedAsc => query.OrderBy(p => p.DateUploaded),
-            SortBy.DateUploadedDesc => query.OrderByDescending(p => p.DateUploaded),
-            _ => query.OrderByDescending(p => p.DateTaken)
+            SortBy.DateTakenAsc => baseQuery.OrderBy(x => x.Photo.DateTaken),
+            SortBy.DateTakenDesc => baseQuery.OrderByDescending(x => x.Photo.DateTaken),
+            SortBy.DateUploadedAsc => baseQuery.OrderBy(x => x.Photo.DateUploaded),
+            SortBy.DateUploadedDesc => baseQuery.OrderByDescending(x => x.Photo.DateUploaded),
+            _ => baseQuery.OrderByDescending(x => x.Photo.DateTaken)
         };
 
-        var photos = await query
-            .Select(p => new PhotoListItem(
-                p.Id,
-                p.PhotoUrl,
-                p.DateTaken,
-                p.DateUploaded,
-                p.CameraId,
-                p.Camera.Name
+        var photos = await sortedQuery
+            .Select(x => new PhotoListItem(
+                x.Photo.Id,
+                x.Photo.PhotoUrl,
+                x.Photo.DateTaken,
+                x.Photo.DateUploaded,
+                x.Photo.CameraId,
+                x.Camera.Name
             ))
             .ToListAsync(ct);
 
@@ -97,9 +110,12 @@ public static class ListPropertyPhotos
         if (filters.DateUploadedTo.HasValue)
             query = query.Where(p => p.DateUploaded <= filters.DateUploadedTo.Value);
 
-        // Camera filters
+        // Camera filters - using explicit join to avoid Contains translation errors
         if (filters.CameraIds?.Count > 0)
-            query = query.Where(p => filters.CameraIds.Contains(p.CameraId));
+        {
+            var filteredCameraIds = filters.CameraIds.AsQueryable();
+            query = query.Join(filteredCameraIds, p => p.CameraId, id => id, (p, id) => p);
+        }
 
         // Weather filters - only apply if photo has weather data
         if (filters.HasWeatherFilters)
@@ -146,18 +162,34 @@ public static class ListPropertyPhotos
             if (filters.MoonPhaseMax.HasValue)
                 query = query.Where(p => p.Weather != null && p.Weather.MoonPhase <= filters.MoonPhaseMax.Value);
 
-            // Categorical weather filters
+            // Categorical weather filters - using explicit joins to avoid Contains translation errors
             if (filters.Conditions?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.Conditions.Contains(p.Weather.Conditions));
+            {
+                var filteredConditions = filters.Conditions.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredConditions, p => p.Weather!.Conditions, c => c, (p, c) => p);
+            }
                 
             if (filters.MoonPhaseTexts?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.MoonPhaseTexts.Contains(p.Weather.MoonPhaseText));
+            {
+                var filteredMoonPhases = filters.MoonPhaseTexts.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredMoonPhases, p => p.Weather!.MoonPhaseText, m => m, (p, m) => p);
+            }
                 
             if (filters.PressureTrends?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.PressureTrends.Contains(p.Weather.PressureTrend));
+            {
+                var filteredPressureTrends = filters.PressureTrends.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredPressureTrends, p => p.Weather!.PressureTrend, pt => pt, (p, pt) => p);
+            }
                 
             if (filters.WindDirectionTexts?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.WindDirectionTexts.Contains(p.Weather.WindDirectionText));
+            {
+                var filteredWindDirections = filters.WindDirectionTexts.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredWindDirections, p => p.Weather!.WindDirectionText, wd => wd, (p, wd) => p);
+            }
         }
 
         return query;

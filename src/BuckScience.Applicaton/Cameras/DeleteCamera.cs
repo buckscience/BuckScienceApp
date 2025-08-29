@@ -12,12 +12,14 @@ public static class DeleteCamera
         IAppDbContext db,
         CancellationToken ct)
     {
+        // Use explicit join to avoid LINQ translation errors with navigation properties
         var camera = await db.Cameras
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(c =>
-                c.Id == id &&
-                c.PropertyId == propertyId &&
-                c.Property.ApplicationUserId == userId, ct);
+            .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.Id == id && 
+                       x.Camera.PropertyId == propertyId && 
+                       x.Property.ApplicationUserId == userId)
+            .Select(x => x.Camera)
+            .FirstOrDefaultAsync(ct);
 
         if (camera is null)
             return false;

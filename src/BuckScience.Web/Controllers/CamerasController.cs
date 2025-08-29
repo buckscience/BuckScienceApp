@@ -2,6 +2,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
+using BuckScience.Application.Tags;
 using BuckScience.Shared.Configuration;
 using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels.Cameras;
@@ -142,28 +143,29 @@ public class CamerasController : Controller
     {
         if (_currentUser.Id is null) return Forbid();
 
-        var cam = await _db.Cameras.AsNoTracking()
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(c =>
-                c.Id == id &&
-                c.PropertyId == propertyId &&
-                c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+        // Use explicit join to avoid LINQ translation errors with navigation properties
+        var result = await _db.Cameras.AsNoTracking()
+            .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.Id == id &&
+                       x.Camera.PropertyId == propertyId &&
+                       x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .FirstOrDefaultAsync(ct);
 
-        if (cam is null) return NotFound();
+        if (result is null) return NotFound();
 
         ViewBag.PropertyId = propertyId;
-        ViewBag.PropertyName = cam.Property.Name;
+        ViewBag.PropertyName = result.Property.Name;
 
         var vm = new CameraEditVm
         {
             PropertyId = propertyId,
-            Id = cam.Id,
-            Name = cam.Name,
-            Brand = cam.Brand,
-            Model = cam.Model,
-            Latitude = cam.Latitude,
-            Longitude = cam.Longitude,
-            IsActive = cam.IsActive
+            Id = result.Camera.Id,
+            Name = result.Camera.Name,
+            Brand = result.Camera.Brand,
+            Model = result.Camera.Model,
+            Latitude = result.Camera.Latitude,
+            Longitude = result.Camera.Longitude,
+            IsActive = result.Camera.IsActive
         };
 
         return View(vm);
@@ -185,13 +187,12 @@ public class CamerasController : Controller
         if (vm.PropertyId != propertyId || vm.Id != id)
             return BadRequest("Route and model identifiers mismatch.");
 
-        // Optional pre-check for faster UX
+        // Optional pre-check for faster UX using explicit join
         var owned = await _db.Cameras.AsNoTracking()
-            .Include(c => c.Property)
-            .AnyAsync(c =>
-                c.Id == id &&
-                c.PropertyId == propertyId &&
-                c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+            .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .AnyAsync(x => x.Camera.Id == id &&
+                          x.Camera.PropertyId == propertyId &&
+                          x.Property.ApplicationUserId == _currentUser.Id.Value, ct);
         if (!owned) return NotFound();
 
         var ok = await UpdateCamera.HandleAsync(
@@ -222,26 +223,27 @@ public class CamerasController : Controller
     {
         if (_currentUser.Id is null) return Forbid();
 
-        var cam = await _db.Cameras.AsNoTracking()
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(c =>
-                c.Id == id &&
-                c.PropertyId == propertyId &&
-                c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+        // Use explicit join to avoid LINQ translation errors with navigation properties
+        var result = await _db.Cameras.AsNoTracking()
+            .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.Id == id &&
+                       x.Camera.PropertyId == propertyId &&
+                       x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .FirstOrDefaultAsync(ct);
 
-        if (cam is null) return NotFound();
+        if (result is null) return NotFound();
 
         var vm = new CameraDeleteVm
         {
             PropertyId = propertyId,
-            Id = cam.Id,
-            Name = cam.Name,
-            Brand = cam.Brand,
-            Model = cam.Model,
-            Latitude = cam.Latitude,
-            Longitude = cam.Longitude,
-            IsActive = cam.IsActive,
-            PropertyName = cam.Property.Name
+            Id = result.Camera.Id,
+            Name = result.Camera.Name,
+            Brand = result.Camera.Brand,
+            Model = result.Camera.Model,
+            Latitude = result.Camera.Latitude,
+            Longitude = result.Camera.Longitude,
+            IsActive = result.Camera.IsActive,
+            PropertyName = result.Property.Name
         };
 
         ViewBag.PropertyId = propertyId;
@@ -271,28 +273,24 @@ public class CamerasController : Controller
         if (_currentUser.Id is null) return Forbid();
 
         // NOTE: Adjust the owner field name to your schema:
-        // If your Property entity uses ApplicationUserId (as your snippet shows), keep it.
-        // If it uses OwnerUserId (common in your other controllers), swap accordingly.
-        var cam = await _db.Cameras
+        // Use explicit join to avoid LINQ translation errors with navigation properties
+        var result = await _db.Cameras
             .AsNoTracking()
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(
-                c => c.Id == id
-                     && c.Property != null
-                     && c.Property.ApplicationUserId == _currentUser.Id.Value, // or: c.Property.OwnerUserId == _currentUser.Id.Value
-                ct);
+            .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .FirstOrDefaultAsync(ct);
 
-        if (cam is null) return NotFound();
+        if (result is null) return NotFound();
 
-        ViewBag.PropertyId = cam.PropertyId;
-        ViewBag.CameraId = cam.Id;
-        ViewBag.CameraName = cam.Name;
-        ViewBag.PropertyName = cam.Property?.Name;
+        ViewBag.PropertyId = result.Camera.PropertyId;
+        ViewBag.CameraId = result.Camera.Id;
+        ViewBag.CameraName = result.Camera.Name;
+        ViewBag.PropertyName = result.Property.Name;
 
         var vm = new PhotoUploadVm
         {
-            PropertyId = cam.PropertyId,
-            CameraId = cam.Id
+            PropertyId = result.Camera.PropertyId,
+            CameraId = result.Camera.Id
         };
 
         return View("Upload", vm);
@@ -321,19 +319,19 @@ public class CamerasController : Controller
 
         if (!ModelState.IsValid)
         {
-            // Reload view data for error display
-            var cam = await _db.Cameras
+            // Reload view data for error display using explicit join
+            var result = await _db.Cameras
                 .AsNoTracking()
-                .Include(c => c.Property)
-                .FirstOrDefaultAsync(
-                    c => c.Id == id && c.Property != null && c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+                .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+                .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+                .FirstOrDefaultAsync(ct);
 
-            if (cam is null) return NotFound();
+            if (result is null) return NotFound();
 
-            ViewBag.PropertyId = cam.PropertyId;
-            ViewBag.CameraId = cam.Id;
-            ViewBag.CameraName = cam.Name;
-            ViewBag.PropertyName = cam.Property?.Name;
+            ViewBag.PropertyId = result.Camera.PropertyId;
+            ViewBag.CameraId = result.Camera.Id;
+            ViewBag.CameraName = result.Camera.Name;
+            ViewBag.PropertyName = result.Property.Name;
 
             return View("Upload", vm);
         }
@@ -342,19 +340,19 @@ public class CamerasController : Controller
         {
             ModelState.AddModelError("Files", "Please select at least one file to upload.");
             
-            // Reload view data for error display
-            var cam = await _db.Cameras
+            // Reload view data for error display using explicit join
+            var result = await _db.Cameras
                 .AsNoTracking()
-                .Include(c => c.Property)
-                .FirstOrDefaultAsync(
-                    c => c.Id == id && c.Property != null && c.Property.ApplicationUserId == _currentUser.Id.Value, ct);
+                .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+                .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+                .FirstOrDefaultAsync(ct);
 
-            if (cam is null) return NotFound();
+            if (result is null) return NotFound();
 
-            ViewBag.PropertyId = cam.PropertyId;
-            ViewBag.CameraId = cam.Id;
-            ViewBag.CameraName = cam.Name;
-            ViewBag.PropertyName = cam.Property?.Name;
+            ViewBag.PropertyId = result.Camera.PropertyId;
+            ViewBag.CameraId = result.Camera.Id;
+            ViewBag.CameraName = result.Camera.Name;
+            ViewBag.PropertyName = result.Property.Name;
 
             return View("Upload", vm);
         }
@@ -421,6 +419,9 @@ public class CamerasController : Controller
         var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
         var photoGroups = photos.GroupByMonth(isAscending);
 
+        // Get available tags for this property (camera's property)
+        var availableTags = await ManagePhotoTags.GetAvailableTagsForPropertyAsync(camera.PropertyId, _db, ct);
+
         var vm = new CameraDetailsVm
         {
             Id = camera.Id,
@@ -442,7 +443,8 @@ public class CamerasController : Controller
                 DateUploaded = p.DateUploaded
             }).ToList(),
             PhotoGroups = photoGroups,
-            CurrentSort = sort
+            CurrentSort = sort,
+            AvailableTags = availableTags.Select(t => new ViewModels.Photos.TagInfo { Id = t.Id, Name = t.Name }).ToList()
         };
 
         return View(vm);

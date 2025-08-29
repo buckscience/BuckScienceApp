@@ -23,6 +23,9 @@ public class PropertyPhotosVm
     public List<string> AvailablePressureTrends { get; set; } = new();
     public List<string> AvailableWindDirections { get; set; } = new();
     public List<WindDirectionOption> WindDirectionOptions { get; set; } = new();
+    
+    // Tagging support
+    public List<TagInfo> AvailableTags { get; set; } = new();
 }
 
 public class CameraOption
@@ -45,6 +48,7 @@ public class PropertyPhotoListItemVm
     public DateTime DateUploaded { get; set; }
     public int CameraId { get; set; }
     public string CameraName { get; set; } = string.Empty;
+    public List<TagInfo> Tags { get; set; } = new();
     
     /// <summary>
     /// Gets the properly encoded photo URL for display, handling spaces and special characters
@@ -113,4 +117,10 @@ public static class PhotoGroupingExtensions
             })
             .ToList();
     }
+}
+
+public class TagInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

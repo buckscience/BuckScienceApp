@@ -30,9 +30,12 @@
                                  style="height: 200px; object-fit: cover; cursor: pointer;"
                                  data-bs-toggle="modal" 
                                  data-bs-target="#photoModal"
+                                 data-photo-id="@photo.Id"
                                  data-photo-url="@photo.EncodedPhotoUrl"
                                  data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
                                  data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
+                                 data-camera-name="@Model.CameraName"
+                                 loading="lazy"
                                  onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
                             <div class="position-absolute top-0 end-0 m-2">
                                 <span class="badge bg-dark bg-opacity-75">
@@ -76,15 +79,21 @@ else
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 70vh;" />
-                <div class="row">
-                    <div class="col-6">
+                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 60vh;" />
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <small class="text-muted">
+                            <strong>Camera:</strong><br>
+                            <span id="modalCameraName"></span>
+                        </small>
+                    </div>
+                    <div class="col-4">
                         <small class="text-muted">
                             <strong>Date Taken:</strong><br>
                             <span id="modalDateTaken"></span>
                         </small>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <small class="text-muted">
                             <strong>Date Uploaded:</strong><br>
                             <span id="modalDateUploaded"></span>
@@ -111,9 +120,11 @@ else
         if (photoModal) {
             photoModal.addEventListener('show.bs.modal', function (event) {
                 const button = event.relatedTarget;
+                const photoId = button.getAttribute('data-photo-id');
                 const photoUrl = button.getAttribute('data-photo-url');
                 const dateTaken = button.getAttribute('data-date-taken');
                 const dateUploaded = button.getAttribute('data-date-uploaded');
+                const cameraName = button.getAttribute('data-camera-name');
                 
                 console.log('Loading photo URL:', photoUrl); // Debug logging
                 
@@ -128,9 +139,11 @@ else
                 
                 const modalDateTaken = document.getElementById('modalDateTaken');
                 const modalDateUploaded = document.getElementById('modalDateUploaded');
+                const modalCameraName = document.getElementById('modalCameraName');
                 
                 if (modalDateTaken) modalDateTaken.textContent = dateTaken;
                 if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
+                if (modalCameraName) modalCameraName.textContent = cameraName;
             });
             
             // Clean up modal when hidden

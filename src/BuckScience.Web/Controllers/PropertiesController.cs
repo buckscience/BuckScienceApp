@@ -4,6 +4,7 @@ using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
+using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Helpers;
 using BuckScience.Web.ViewModels;
@@ -297,6 +298,9 @@ public class PropertiesController : Controller
 
         // Get available filter options for this property
         var availableOptions = await GetAvailableFilterOptions(_db, _currentUser.Id.Value, id, ct);
+        
+        // Get available tags for this property
+        var availableTags = await ManagePhotoTags.GetAvailableTagsForPropertyAsync(id, _db, ct);
 
         var vm = new PropertyPhotosVm
         {
@@ -311,7 +315,8 @@ public class PropertiesController : Controller
             AvailableMoonPhases = availableOptions.MoonPhases,
             AvailablePressureTrends = availableOptions.PressureTrends,
             AvailableWindDirections = availableOptions.WindDirections,
-            WindDirectionOptions = WeatherHelpers.GetWindDirectionOptions(availableOptions.WindDirections)
+            WindDirectionOptions = WeatherHelpers.GetWindDirectionOptions(availableOptions.WindDirections),
+            AvailableTags = availableTags.Select(t => new TagInfo { Id = t.Id, Name = t.Name }).ToList()
         };
 
         return View(vm);
@@ -359,20 +364,22 @@ public class PropertiesController : Controller
     private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
-        // Get cameras for this property
+        // Get cameras for this property using explicit join
         var cameras = await db.Cameras
-            .Where(c => c.PropertyId == propertyId && c.Property.ApplicationUserId == userId)
-            .Select(c => new CameraOption { Id = c.Id, Name = c.Name })
+            .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
+            .Select(x => new CameraOption { Id = x.Camera.Id, Name = x.Camera.Name })
             .OrderBy(c => c.Name)
             .ToListAsync(ct);
 
-        // Get distinct weather conditions from photos with weather data
+        // Get distinct weather conditions from photos with weather data using explicit joins
         var weatherData = await db.Photos
-            .Include(p => p.Weather)
-            .Where(p => p.Camera.PropertyId == propertyId && 
-                       p.Camera.Property.ApplicationUserId == userId && 
-                       p.Weather != null)
-            .Select(p => p.Weather!)
+            .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+            .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
+            .Join(db.Weathers, x => x.Photo.WeatherId, w => w.Id, (x, w) => new { x.Photo, x.Camera, x.Property, Weather = w })
+            .Where(x => x.Camera.PropertyId == propertyId && 
+                       x.Property.ApplicationUserId == userId)
+            .Select(x => x.Weather)
             .ToListAsync(ct);
 
         var conditions = weatherData

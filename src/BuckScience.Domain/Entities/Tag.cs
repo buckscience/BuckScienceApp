@@ -25,5 +25,10 @@ namespace BuckScience.Domain.Entities
             if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("Tag name is required.", nameof(newName));
             TagName = newName.Trim();
         }
+
+        public void SetAsDefaultTag(bool isDefault = true)
+        {
+            isDefaultTag = isDefault;
+        }
     }
 }

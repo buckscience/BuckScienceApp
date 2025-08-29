@@ -55,18 +55,16 @@
     }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1>Photos from @Model.PropertyName</h1>
-        <p class="text-muted">All photos from all cameras on this property</p>
-    </div>
-    <div>
+<div style="max-width: 1200px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">Photos from @Model.PropertyName</h2>
         <a href="/properties/@Model.PropertyId/cameras" 
-           class="btn btn-outline-secondary me-2">
+           class="btn btn-custom-cancel btn-sm">
             <i class="fas fa-camera me-1"></i>Manage Cameras
         </a>
     </div>
-</div>
+    <hr class="sidebar-title-separator" />
+    <p class="text-muted mb-4">All photos from all cameras on this property</p>
 
 @if (Model.TotalPhotoCount == 0)
 {
@@ -84,16 +82,16 @@
 }
 else
 {
-    <!-- Filters Panel -->
-    <div class="card mb-4">
-        <div class="card-header">
+    <!-- Photo Management Container -->
+    <div class="card mb-4" style="background-color: #f0f7f0; border: 1px solid #8CAF8C;">
+        <div class="card-header" style="background-color: #D7E3B2; border-bottom: 1px solid #8CAF8C;">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="@(Model.HasFiltersApplied ? "true" : "false")" aria-controls="filtersPanel">
+                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="@(Model.HasFiltersApplied ? "true" : "false")" aria-controls="filtersPanel" style="color: #527A52;">
                         <i class="fas fa-filter me-2"></i>Photo Filters
                         @if (Model.HasFiltersApplied)
                         {
-                            <span class="badge bg-primary ms-2">Active</span>
+                            <span class="badge bg-success ms-2">Active</span>
                         }
                         <small class="text-muted ms-2">for @Model.PropertyName</small>
                     </button>
@@ -298,7 +296,7 @@ else
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-custom-primary">
                             <i class="fas fa-search me-1"></i>Apply Filters
                         </button>
                         @if (Model.HasFiltersApplied)
@@ -309,6 +307,53 @@ else
                         }
                     </div>
                 </form>
+
+                <hr class="my-4" style="border-color: #8CAF8C;">
+
+                <!-- Bulk Tagging Controls -->
+                <div class="mb-3" id="taggingControls" style="display: none;">
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="mb-0" style="color: #527A52;"><i class="fas fa-tags me-2"></i>Tag Selected Photos (<span id="selectedCount">0</span> selected)</h6>
+                    </div>
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label for="tagSelect" class="form-label">Select Tag</label>
+                            <select class="form-select" id="tagSelect">
+                                <option value="">Choose a tag...</option>
+                                @foreach (var tag in Model.AvailableTags)
+                                {
+                                    <option value="@tag.Id">@tag.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="newTagInput" class="form-label">Or Add New Tag</label>
+                            <input type="text" class="form-control" id="newTagInput" placeholder="Enter new tag name" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-custom-primary w-100" id="addTagBtn">
+                                <i class="fas fa-plus me-1"></i>Add Tag
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-secondary" id="selectAllBtn">
+                            <i class="fas fa-check-square me-1"></i>Select All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="clearSelectionBtn">
+                            <i class="fas fa-square me-1"></i>Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Photo Tagging Instructions -->
+                <div class="alert border-0 mb-0" style="background-color: #D7E3B2; color: #527A52;">
+                    <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-2"></i>Photo Tagging</h6>
+                    <small class="mb-0">
+                        <strong>Bulk Tagging:</strong> Check multiple photos and use the tagging panel above to tag them all at once.<br>
+                        <strong>Individual Tagging:</strong> Click any photo to open details and add/remove tags individually.
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -319,7 +364,7 @@ else
             <span class="text-muted">@Model.TotalPhotoCount total photos</span>
             @if (Model.HasFiltersApplied)
             {
-                <span class="text-primary ms-2">
+                <span class="text-success ms-2">
                     <i class="fas fa-filter me-1"></i>Filtered
                 </span>
             }
@@ -338,12 +383,12 @@ else
     </div>
 
     <!-- Photos grouped by month/year -->
-    <div class="photo-gallery-container mx-auto" style="max-width: 1400px;">
+    <div class="photo-gallery-container mx-auto">
         @foreach (var group in Model.PhotoGroups)
         {
             <div class="mb-5">
                 <h2 class="mb-4 text-dark border-bottom pb-2">
-                    <i class="fas fa-calendar-alt me-2"></i>@group.MonthYear
+                    @group.MonthYear
                 </h2>
                 <div class="row">
                     @foreach (var photo in group.Photos)
@@ -351,12 +396,15 @@ else
                         <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
                             <div class="card h-100">
                                 <div class="position-relative">
+                                    <input type="checkbox" class="photo-select position-absolute top-0 start-0 m-2" 
+                                           value="@photo.Id" style="z-index: 10;" />
                                     <img src="@photo.EncodedPhotoUrl" 
                                          class="card-img-top" 
                                          alt="Photo from @photo.CameraName" 
                                          style="height: 250px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="modal" 
                                          data-bs-target="#photoModal"
+                                         data-photo-id="@photo.Id"
                                          data-photo-url="@photo.EncodedPhotoUrl"
                                          data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
                                          data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
@@ -369,11 +417,12 @@ else
                                 <div class="card-body p-3">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
-                                            <small class="text-muted">
-                                                <div><i class="fas fa-camera me-1"></i><strong>Camera:</strong> @photo.CameraName</div>
-                                                <div><i class="fas fa-clock me-1"></i><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
-                                                <div><i class="fas fa-upload me-1"></i><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
-                                            </small>
+                                            <div class="photo-tags-container" data-photo-id="@photo.Id">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-tags me-1"></i>
+                                                    <span class="tags-content">Loading tags...</span>
+                                                </small>
+                                            </div>
                                         </div>
                                         <div class="ms-2">
                                             <a href="/cameras/@photo.CameraId/details" class="btn btn-outline-primary btn-sm" title="View Camera Details">
@@ -390,6 +439,7 @@ else
         }
     </div>
 }
+</div>
 
 <!-- Photo Modal -->
 <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
@@ -400,8 +450,8 @@ else
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 70vh;" />
-                <div class="row">
+                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 60vh;" />
+                <div class="row mb-3">
                     <div class="col-4">
                         <small class="text-muted">
                             <strong>Camera:</strong><br>
@@ -421,6 +471,35 @@ else
                         </small>
                     </div>
                 </div>
+                
+                <!-- Photo Tags Section -->
+                <div class="text-start">
+                    <h6><i class="fas fa-tags me-2"></i>Tags</h6>
+                    <div id="photoTags" class="mb-3">
+                        <span class="text-muted">Loading tags...</span>
+                    </div>
+                    
+                    <!-- Add Tag Section -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <select class="form-select" id="modalTagSelect">
+                                <option value="">Choose a tag...</option>
+                                @foreach (var tag in Model.AvailableTags)
+                                {
+                                    <option value="@tag.Id">@tag.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="modalNewTagInput" placeholder="New tag name" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="modalAddTagBtn">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -428,25 +507,294 @@ else
 
 @section Scripts {
     <script>
+        let currentPhotoId = null;
+        
         // Move modal to body to ensure it appears above sidebar
         document.addEventListener('DOMContentLoaded', function() {
             const photoModal = document.getElementById('photoModal');
             if (photoModal) {
                 document.body.appendChild(photoModal);
             }
+            
+            initializeTagging();
         });
+        
+        // Initialize tagging functionality
+        function initializeTagging() {
+            // Load tags for all photos
+            loadAllPhotoTags();
+            
+            // Bulk selection handlers
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('photo-select')) {
+                    updateBulkControls();
+                }
+            });
+            
+            // Bulk action buttons
+            document.getElementById('selectAllBtn')?.addEventListener('click', selectAllPhotos);
+            document.getElementById('clearSelectionBtn')?.addEventListener('click', clearSelection);
+            document.getElementById('addTagBtn')?.addEventListener('click', addTagToBulk);
+            document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
+        }
+        
+        // Load tags for all photos on the page
+        async function loadAllPhotoTags() {
+            const photoContainers = document.querySelectorAll('.photo-tags-container');
+            
+            for (const container of photoContainers) {
+                const photoId = container.getAttribute('data-photo-id');
+                if (photoId) {
+                    await loadPhotoTagsForCard(parseInt(photoId), container);
+                }
+            }
+        }
+        
+        // Load tags for a specific photo card
+        async function loadPhotoTagsForCard(photoId, container) {
+            try {
+                const response = await fetch(`/api/tags/photos/${photoId}`);
+                if (response.ok) {
+                    const tags = await response.json();
+                    displayPhotoTagsInCard(tags, container);
+                } else {
+                    const tagsContent = container.querySelector('.tags-content');
+                    if (tagsContent) {
+                        tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading tags for photo:', photoId, error);
+                const tagsContent = container.querySelector('.tags-content');
+                if (tagsContent) {
+                    tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                }
+            }
+        }
+        
+        // Display photo tags in the card footer
+        function displayPhotoTagsInCard(tags, container) {
+            const tagsContent = container.querySelector('.tags-content');
+            if (!tagsContent) return;
+            
+            if (tags.length === 0) {
+                tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                return;
+            }
+            
+            const tagElements = tags.map(tag => 
+                `<span class="badge bg-secondary me-1 mb-1">${tag.name}</span>`
+            ).join('');
+            
+            tagsContent.innerHTML = tagElements;
+        }
+        
+        // Update bulk controls visibility and count
+        function updateBulkControls() {
+            const selectedCheckboxes = document.querySelectorAll('.photo-select:checked');
+            const count = selectedCheckboxes.length;
+            const controls = document.getElementById('taggingControls');
+            const countSpan = document.getElementById('selectedCount');
+            
+            if (controls && countSpan) {
+                if (count > 0) {
+                    controls.style.display = 'block';
+                    countSpan.textContent = count;
+                } else {
+                    controls.style.display = 'none';
+                }
+            }
+        }
+        
+        // Select all photos
+        function selectAllPhotos() {
+            const checkboxes = document.querySelectorAll('.photo-select');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateBulkControls();
+        }
+        
+        // Clear selection
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.photo-select');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateBulkControls();
+        }
+        
+        // Add tag to bulk selected photos
+        async function addTagToBulk() {
+            const selectedCheckboxes = document.querySelectorAll('.photo-select:checked');
+            const photoIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            
+            if (photoIds.length === 0) {
+                alert('Please select photos to tag.');
+                return;
+            }
+            
+            const tagSelect = document.getElementById('tagSelect');
+            const newTagInput = document.getElementById('newTagInput');
+            
+            let tagName = '';
+            if (newTagInput.value.trim()) {
+                tagName = newTagInput.value.trim();
+            } else if (tagSelect.value) {
+                tagName = tagSelect.options[tagSelect.selectedIndex].text;
+            }
+            
+            if (!tagName) {
+                alert('Please select a tag or enter a new tag name.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tags/photos/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: photoIds,
+                        tagName: tagName
+                    })
+                });
+                
+                if (response.ok) {
+                    clearSelection();
+                    newTagInput.value = '';
+                    tagSelect.value = '';
+                    // Refresh the page to show updated tags
+                    location.reload();
+                } else {
+                    alert('Error adding tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error adding tag:', error);
+                alert('Error adding tag. Please try again.');
+            }
+        }
+        
+        // Add tag to single photo
+        async function addTagToSinglePhoto() {
+            if (!currentPhotoId) return;
+            
+            const tagSelect = document.getElementById('modalTagSelect');
+            const newTagInput = document.getElementById('modalNewTagInput');
+            
+            let tagName = '';
+            if (newTagInput.value.trim()) {
+                tagName = newTagInput.value.trim();
+            } else if (tagSelect.value) {
+                tagName = tagSelect.options[tagSelect.selectedIndex].text;
+            }
+            
+            if (!tagName) {
+                alert('Please select a tag or enter a new tag name.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tags/photos/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: [currentPhotoId],
+                        tagName: tagName
+                    })
+                });
+                
+                if (response.ok) {
+                    newTagInput.value = '';
+                    tagSelect.value = '';
+                    loadPhotoTags(currentPhotoId);
+                } else {
+                    alert('Error adding tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error adding tag:', error);
+                alert('Error adding tag. Please try again.');
+            }
+        }
+        
+        // Load tags for a specific photo
+        async function loadPhotoTags(photoId) {
+            try {
+                const response = await fetch(`/api/tags/photos/${photoId}`);
+                if (response.ok) {
+                    const tags = await response.json();
+                    displayPhotoTags(tags);
+                } else {
+                    document.getElementById('photoTags').innerHTML = '<span class="text-muted">Unable to load tags</span>';
+                }
+            } catch (error) {
+                console.error('Error loading tags:', error);
+                document.getElementById('photoTags').innerHTML = '<span class="text-muted">Error loading tags</span>';
+            }
+        }
+        
+        // Display photo tags
+        function displayPhotoTags(tags) {
+            const container = document.getElementById('photoTags');
+            if (tags.length === 0) {
+                container.innerHTML = '<span class="text-muted">No tags yet</span>';
+                return;
+            }
+            
+            const tagElements = tags.map(tag => 
+                `<span class="badge bg-secondary me-1 mb-1">
+                    ${tag.name}
+                    <button type="button" class="btn-close btn-close-white ms-1" 
+                            onclick="removeTag(${tag.id})" 
+                            style="font-size: 0.75em;"
+                            title="Remove tag"></button>
+                </span>`
+            ).join('');
+            
+            container.innerHTML = tagElements;
+        }
+        
+        // Remove tag from current photo
+        async function removeTag(tagId) {
+            if (!currentPhotoId) return;
+            
+            try {
+                const response = await fetch('/api/tags/photos/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: [currentPhotoId],
+                        tagId: tagId
+                    })
+                });
+                
+                if (response.ok) {
+                    loadPhotoTags(currentPhotoId);
+                } else {
+                    alert('Error removing tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error removing tag:', error);
+                alert('Error removing tag. Please try again.');
+            }
+        }
         
         // Handle photo modal
         const photoModal = document.getElementById('photoModal');
         if (photoModal) {
             photoModal.addEventListener('show.bs.modal', function (event) {
                 const button = event.relatedTarget;
+                const photoId = button.getAttribute('data-photo-id');
                 const photoUrl = button.getAttribute('data-photo-url');
                 const dateTaken = button.getAttribute('data-date-taken');
                 const dateUploaded = button.getAttribute('data-date-uploaded');
                 const cameraName = button.getAttribute('data-camera-name');
                 
-                console.log('Loading photo URL:', photoUrl); // Debug logging
+                currentPhotoId = parseInt(photoId);
                 
                 const modalPhotoImg = document.getElementById('modalPhoto');
                 if (modalPhotoImg) {
@@ -464,6 +812,9 @@ else
                 if (modalDateTaken) modalDateTaken.textContent = dateTaken;
                 if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
                 if (modalCameraName) modalCameraName.textContent = cameraName;
+                
+                // Load tags for this photo
+                loadPhotoTags(currentPhotoId);
             });
             
             // Clean up modal when hidden
@@ -472,17 +823,8 @@ else
                 if (modalPhotoImg) {
                     modalPhotoImg.src = '';
                 }
+                currentPhotoId = null;
             });
         }
-        
-        // Debug: Log all photo URLs on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const photoImages = document.querySelectorAll('img[data-photo-url]');
-            console.log('Found', photoImages.length, 'photo images');
-            photoImages.forEach((img, index) => {
-                const url = img.getAttribute('data-photo-url');
-                console.log(`Photo ${index + 1} URL:`, url);
-            });
-        });
     </script>
 }

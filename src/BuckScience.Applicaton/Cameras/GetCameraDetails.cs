@@ -25,23 +25,24 @@ public static class GetCameraDetails
         int cameraId,
         CancellationToken ct)
     {
-        // Verify camera ownership through property and get camera details
+        // Verify camera ownership through property and get camera details using explicit joins
         var camera = await db.Cameras
             .AsNoTracking()
-            .Include(c => c.Property)
-            .Where(c => c.Id == cameraId && c.Property.ApplicationUserId == userId)
-            .Select(c => new Result(
-                c.Id,
-                c.Name,
-                c.Brand,
-                c.Model,
-                c.Latitude,
-                c.Longitude,
-                c.IsActive,
-                c.Photos.Count(),
-                c.CreatedDate,
-                c.PropertyId,
-                c.Property.Name))
+            .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .GroupJoin(db.Photos, x => x.Camera.Id, photo => photo.CameraId, (x, photos) => new { x.Camera, x.Property, PhotoCount = photos.Count() })
+            .Where(x => x.Camera.Id == cameraId && x.Property.ApplicationUserId == userId)
+            .Select(x => new Result(
+                x.Camera.Id,
+                x.Camera.Name,
+                x.Camera.Brand,
+                x.Camera.Model,
+                x.Camera.Latitude,
+                x.Camera.Longitude,
+                x.Camera.IsActive,
+                x.PhotoCount,
+                x.Camera.CreatedDate,
+                x.Camera.PropertyId,
+                x.Property.Name))
             .FirstOrDefaultAsync(ct);
 
         return camera;
