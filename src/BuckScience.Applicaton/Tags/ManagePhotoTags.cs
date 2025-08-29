@@ -67,7 +67,7 @@ public static class ManagePhotoTags
     {
         return await db.PhotoTags
             .Where(pt => pt.PhotoId == photoId)
-            .Select(pt => new TagInfo(pt.Tag.Id, pt.Tag.TagName))
+            .Join(db.Tags, pt => pt.TagId, t => t.Id, (pt, t) => new TagInfo(t.Id, t.TagName))
             .ToListAsync(ct);
     }
 
@@ -76,10 +76,10 @@ public static class ManagePhotoTags
         IAppDbContext db,
         CancellationToken ct = default)
     {
-        // Get all tags that are associated with the property
+        // Get all tags that are associated with the property using explicit join
         return await db.PropertyTags
             .Where(pt => pt.PropertyId == propertyId)
-            .Select(pt => new TagInfo(pt.Tag.Id, pt.Tag.TagName))
+            .Join(db.Tags, pt => pt.TagId, t => t.Id, (pt, t) => new TagInfo(t.Id, t.TagName))
             .OrderBy(t => t.Name)
             .ToListAsync(ct);
     }
