@@ -307,23 +307,28 @@
         // The loadSidebar function in sidebar.js will handle positioning with proper timing
     });
 
+    let currentPhotoId = null;
+
     // Move modal to body to ensure it appears above sidebar
     document.addEventListener('DOMContentLoaded', function() {
         const photoModal = document.getElementById('photoModal');
-        if (photoModal) {
+        if (photoModal && !photoModal.hasAttribute('data-moved-to-body')) {
             document.body.appendChild(photoModal);
+            photoModal.setAttribute('data-moved-to-body', 'true');
         }
         
         // Initialize tagging functionality
         initializeTagging();
     });
 
-    let currentPhotoId = null;
-
     // Initialize tagging functionality
     function initializeTagging() {
-        // Add tag button handler
-        document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
+        // Add tag button handler - ensure we don't double-bind
+        const addTagBtn = document.getElementById('modalAddTagBtn');
+        if (addTagBtn && !addTagBtn.hasAttribute('data-handler-attached')) {
+            addTagBtn.addEventListener('click', addTagToSinglePhoto);
+            addTagBtn.setAttribute('data-handler-attached', 'true');
+        }
     }
 
     // Add tag to single photo
@@ -438,7 +443,7 @@
 
     // Handle photo modal
     const photoModal = document.getElementById('photoModal');
-    if (photoModal) {
+    if (photoModal && !photoModal.hasAttribute('data-event-handlers-attached')) {
         photoModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const photoId = button.getAttribute('data-photo-id');
@@ -477,5 +482,8 @@
             }
             currentPhotoId = null;
         });
+        
+        // Mark that event handlers have been attached to prevent double-binding
+        photoModal.setAttribute('data-event-handlers-attached', 'true');
     }
 </script>
