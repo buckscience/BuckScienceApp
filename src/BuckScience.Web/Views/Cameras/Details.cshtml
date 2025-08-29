@@ -309,14 +309,8 @@
 
     let currentPhotoId = null;
     
-    // Initialize tagging functionality
+    // Initialize tagging functionality  
     document.addEventListener('DOMContentLoaded', function() {
-        // Move modal to body to ensure it appears above sidebar and prevents backdrop issues
-        const photoModal = document.getElementById('photoModal');
-        if (photoModal) {
-            document.body.appendChild(photoModal);
-        }
-        
         document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
     });
 
