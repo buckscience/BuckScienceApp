@@ -2,6 +2,7 @@
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
+using BuckScience.Application.Tags;
 using BuckScience.Shared.Configuration;
 using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels.Cameras;
@@ -418,6 +419,9 @@ public class CamerasController : Controller
         var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
         var photoGroups = photos.GroupByMonth(isAscending);
 
+        // Get available tags for this property (camera's property)
+        var availableTags = await ManagePhotoTags.GetAvailableTagsForPropertyAsync(camera.PropertyId, _db, ct);
+
         var vm = new CameraDetailsVm
         {
             Id = camera.Id,
@@ -439,7 +443,8 @@ public class CamerasController : Controller
                 DateUploaded = p.DateUploaded
             }).ToList(),
             PhotoGroups = photoGroups,
-            CurrentSort = sort
+            CurrentSort = sort,
+            AvailableTags = availableTags.Select(t => new ViewModels.Photos.TagInfo { Id = t.Id, Name = t.Name }).ToList()
         };
 
         return View(vm);
