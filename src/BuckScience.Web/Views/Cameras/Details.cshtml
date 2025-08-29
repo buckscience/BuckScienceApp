@@ -308,27 +308,20 @@
     });
 
     let currentPhotoId = null;
-
+    
     // Move modal to body to ensure it appears above sidebar
     document.addEventListener('DOMContentLoaded', function() {
         const photoModal = document.getElementById('photoModal');
-        if (photoModal && !photoModal.hasAttribute('data-moved-to-body')) {
+        if (photoModal) {
             document.body.appendChild(photoModal);
-            photoModal.setAttribute('data-moved-to-body', 'true');
         }
         
-        // Initialize tagging functionality
         initializeTagging();
     });
-
+    
     // Initialize tagging functionality
     function initializeTagging() {
-        // Add tag button handler - ensure we don't double-bind
-        const addTagBtn = document.getElementById('modalAddTagBtn');
-        if (addTagBtn && !addTagBtn.hasAttribute('data-handler-attached')) {
-            addTagBtn.addEventListener('click', addTagToSinglePhoto);
-            addTagBtn.setAttribute('data-handler-attached', 'true');
-        }
+        document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
     }
 
     // Add tag to single photo
@@ -443,7 +436,7 @@
 
     // Handle photo modal
     const photoModal = document.getElementById('photoModal');
-    if (photoModal && !photoModal.hasAttribute('data-event-handlers-attached')) {
+    if (photoModal) {
         photoModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const photoId = button.getAttribute('data-photo-id');
@@ -452,8 +445,6 @@
             const dateUploaded = button.getAttribute('data-date-uploaded');
             
             currentPhotoId = parseInt(photoId);
-            
-            console.log('Loading photo URL:', photoUrl); // Debug logging
             
             const modalPhotoImg = document.getElementById('modalPhoto');
             if (modalPhotoImg) {
@@ -482,8 +473,5 @@
             }
             currentPhotoId = null;
         });
-        
-        // Mark that event handlers have been attached to prevent double-binding
-        photoModal.setAttribute('data-event-handlers-attached', 'true');
     }
 </script>
