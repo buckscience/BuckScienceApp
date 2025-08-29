@@ -375,13 +375,31 @@ else
         </div>
     </div>
 
+    <!-- Photo Tagging Instructions -->
+    <div class="alert alert-info border-0 mb-4" style="background-color: #e7f3ff;">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-2"></i>Photo Tagging</h6>
+                <small class="mb-0">
+                    <strong>Bulk Tagging:</strong> Check multiple photos and use the tagging panel above to tag them all at once.<br>
+                    <strong>Individual Tagging:</strong> Click any photo to open details and add/remove tags individually.
+                </small>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <small class="text-muted">
+                    <i class="fas fa-tags me-1"></i>Available tags include: deer, turkey, bear, buck, doe, predator
+                </small>
+            </div>
+        </div>
+    </div>
+
     <!-- Photos grouped by month/year -->
-    <div class="photo-gallery-container mx-auto" style="max-width: 1400px;">
+    <div class="photo-gallery-container mx-auto" style="max-width: 1200px; min-width: 320px;">
         @foreach (var group in Model.PhotoGroups)
         {
             <div class="mb-5">
                 <h2 class="mb-4 text-dark border-bottom pb-2">
-                    <i class="fas fa-calendar-alt me-2"></i>@group.MonthYear
+                    @group.MonthYear
                 </h2>
                 <div class="row">
                     @foreach (var photo in group.Photos)
