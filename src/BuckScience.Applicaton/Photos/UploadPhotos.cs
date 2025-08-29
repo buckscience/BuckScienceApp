@@ -34,12 +34,13 @@ public static class UploadPhotos
         ILogger logger,
         CancellationToken ct)
     {
-        // Verify camera ownership through property
+        // Verify camera ownership through property using explicit join
         var camera = await db.Cameras
-            .Include(c => c.Property)
-            .FirstOrDefaultAsync(c => 
-                c.Id == cmd.CameraId && 
-                c.Property.ApplicationUserId == userId, ct);
+            .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
+            .Where(x => x.Camera.Id == cmd.CameraId && 
+                       x.Property.ApplicationUserId == userId)
+            .Select(x => x.Camera)
+            .FirstOrDefaultAsync(ct);
 
         if (camera is null)
             throw new KeyNotFoundException("Camera not found or not owned by user.");

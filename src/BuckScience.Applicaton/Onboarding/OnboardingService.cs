@@ -43,7 +43,8 @@ public sealed class OnboardingService : IOnboardingService
 
         var hasPhotoOnPrimary = await _db.Photos
             .AsNoTracking()
-            .AnyAsync(ph => ph.Camera.PropertyId == primaryId, ct);
+            .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+            .AnyAsync(x => x.Camera.PropertyId == primaryId, ct);
 
         if (!hasPhotoOnPrimary)
             return (OnboardingState.NeedsPhotoOnPrimaryProperty, primaryId, firstCameraId);

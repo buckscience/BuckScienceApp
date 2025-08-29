@@ -24,14 +24,15 @@ public static class ListPropertyProfiles
         // ownership enforced via property join using explicit joins to avoid LINQ translation errors
         return await db.Profiles
             .AsNoTracking()
-            .Where(p => p.PropertyId == propertyId && p.Property.ApplicationUserId == userId)
-            .Join(db.Tags, p => p.TagId, t => t.Id, (p, t) => new { p, t })
-            .OrderBy(x => x.p.Name)
+            .Join(db.Properties, p => p.PropertyId, prop => prop.Id, (p, prop) => new { Profile = p, Property = prop })
+            .Where(x => x.Profile.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
+            .Join(db.Tags, x => x.Profile.TagId, t => t.Id, (x, t) => new { x.Profile, x.Property, Tag = t })
+            .OrderBy(x => x.Profile.Name)
             .Select(x => new Result(
-                x.p.Id,
-                x.p.Name,
-                x.p.ProfileStatus,
-                x.t.TagName,
+                x.Profile.Id,
+                x.Profile.Name,
+                x.Profile.ProfileStatus,
+                x.Tag.TagName,
                 DateTime.UtcNow)) // Using UtcNow as placeholder since Profile doesn't have CreatedDate
             .ToListAsync(ct);
     }
