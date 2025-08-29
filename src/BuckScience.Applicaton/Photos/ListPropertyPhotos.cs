@@ -40,42 +40,50 @@ public static class ListPropertyPhotos
         if (property is null)
             throw new KeyNotFoundException("Property not found or not owned by user.");
 
-        // Get all photos from all cameras on this property
-        var query = db.Photos
-            .Include(p => p.Camera)
-            .Where(p => p.Camera.PropertyId == propertyId)
-            .Where(p => p.Camera.Property.ApplicationUserId == userId);
+        // Get all photos from all cameras on this property using explicit join to avoid LINQ translation errors
+        var baseQuery = db.Photos
+            .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c })
+            .Where(x => x.Camera.PropertyId == propertyId)
+            .Where(x => x.Camera.Property.ApplicationUserId == userId);
 
-        // Include Weather if weather filters are applied
-        if (filters?.HasWeatherFilters == true)
-        {
-            query = query.Include(p => p.Weather);
-        }
-
-        // Apply filters if provided
+        // Apply filters if provided - but we need to handle this differently with the join
         if (filters?.HasAnyFilters == true)
         {
-            query = ApplyFilters(query, filters);
+            // Convert back to Photo query for filtering, then rejoin for final selection
+            var photosQuery = db.Photos
+                .Where(p => p.Camera.PropertyId == propertyId)
+                .Where(p => p.Camera.Property.ApplicationUserId == userId);
+
+            if (filters.HasWeatherFilters)
+            {
+                photosQuery = photosQuery.Include(p => p.Weather);
+            }
+
+            photosQuery = ApplyFilters(photosQuery, filters);
+
+            // Now join with cameras for the final selection
+            baseQuery = photosQuery
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c });
         }
 
         // Apply sorting
-        query = sortBy switch
+        var sortedQuery = sortBy switch
         {
-            SortBy.DateTakenAsc => query.OrderBy(p => p.DateTaken),
-            SortBy.DateTakenDesc => query.OrderByDescending(p => p.DateTaken),
-            SortBy.DateUploadedAsc => query.OrderBy(p => p.DateUploaded),
-            SortBy.DateUploadedDesc => query.OrderByDescending(p => p.DateUploaded),
-            _ => query.OrderByDescending(p => p.DateTaken)
+            SortBy.DateTakenAsc => baseQuery.OrderBy(x => x.Photo.DateTaken),
+            SortBy.DateTakenDesc => baseQuery.OrderByDescending(x => x.Photo.DateTaken),
+            SortBy.DateUploadedAsc => baseQuery.OrderBy(x => x.Photo.DateUploaded),
+            SortBy.DateUploadedDesc => baseQuery.OrderByDescending(x => x.Photo.DateUploaded),
+            _ => baseQuery.OrderByDescending(x => x.Photo.DateTaken)
         };
 
-        var photos = await query
-            .Select(p => new PhotoListItem(
-                p.Id,
-                p.PhotoUrl,
-                p.DateTaken,
-                p.DateUploaded,
-                p.CameraId,
-                p.Camera.Name
+        var photos = await sortedQuery
+            .Select(x => new PhotoListItem(
+                x.Photo.Id,
+                x.Photo.PhotoUrl,
+                x.Photo.DateTaken,
+                x.Photo.DateUploaded,
+                x.Photo.CameraId,
+                x.Camera.Name
             ))
             .ToListAsync(ct);
 
