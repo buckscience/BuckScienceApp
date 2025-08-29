@@ -55,7 +55,7 @@
     }
 }
 
-<div class="property-details">
+<div style="max-width: 1200px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="sidebar-title">Photos from @Model.PropertyName</h2>
         <a href="/properties/@Model.PropertyId/cameras" 
@@ -383,7 +383,7 @@ else
     </div>
 
     <!-- Photos grouped by month/year -->
-    <div class="photo-gallery-container mx-auto" style="max-width: 1200px;">
+    <div class="photo-gallery-container mx-auto">
         @foreach (var group in Model.PhotoGroups)
         {
             <div class="mb-5">

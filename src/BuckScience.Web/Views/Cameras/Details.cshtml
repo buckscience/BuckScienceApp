@@ -309,20 +309,10 @@
 
     let currentPhotoId = null;
     
-    // Move modal to body to ensure it appears above sidebar
-    document.addEventListener('DOMContentLoaded', function() {
-        const photoModal = document.getElementById('photoModal');
-        if (photoModal) {
-            document.body.appendChild(photoModal);
-        }
-        
-        initializeTagging();
-    });
-    
     // Initialize tagging functionality
-    function initializeTagging() {
+    document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
-    }
+    });
 
     // Add tag to single photo
     async function addTagToSinglePhoto() {
@@ -433,7 +423,7 @@
             alert('Error removing tag. Please try again.');
         }
     }
-
+    
     // Handle photo modal
     const photoModal = document.getElementById('photoModal');
     if (photoModal) {
