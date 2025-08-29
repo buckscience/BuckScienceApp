@@ -55,18 +55,16 @@
     }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1>Photos from @Model.PropertyName</h1>
-        <p class="text-muted">All photos from all cameras on this property</p>
-    </div>
-    <div>
+<div class="property-details">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">Photos from @Model.PropertyName</h2>
         <a href="/properties/@Model.PropertyId/cameras" 
-           class="btn btn-outline-secondary me-2">
+           class="btn btn-custom-cancel btn-sm">
             <i class="fas fa-camera me-1"></i>Manage Cameras
         </a>
     </div>
-</div>
+    <hr class="sidebar-title-separator" />
+    <p class="text-muted mb-4">All photos from all cameras on this property</p>
 
 @if (Model.TotalPhotoCount == 0)
 {
@@ -394,7 +392,7 @@ else
     </div>
 
     <!-- Photos grouped by month/year -->
-    <div class="photo-gallery-container mx-auto" style="max-width: 1200px; min-width: 320px;">
+    <div class="photo-gallery-container mx-auto">
         @foreach (var group in Model.PhotoGroups)
         {
             <div class="mb-5">
@@ -450,6 +448,7 @@ else
         }
     </div>
 }
+</div>
 
 <!-- Photo Modal -->
 <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
