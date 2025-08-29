@@ -82,16 +82,16 @@
 }
 else
 {
-    <!-- Filters Panel -->
-    <div class="card mb-4">
-        <div class="card-header">
+    <!-- Photo Management Container -->
+    <div class="card mb-4" style="background-color: #f0f7f0; border: 1px solid #8CAF8C;">
+        <div class="card-header" style="background-color: #D7E3B2; border-bottom: 1px solid #8CAF8C;">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="@(Model.HasFiltersApplied ? "true" : "false")" aria-controls="filtersPanel">
+                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="@(Model.HasFiltersApplied ? "true" : "false")" aria-controls="filtersPanel" style="color: #527A52;">
                         <i class="fas fa-filter me-2"></i>Photo Filters
                         @if (Model.HasFiltersApplied)
                         {
-                            <span class="badge bg-primary ms-2">Active</span>
+                            <span class="badge bg-success ms-2">Active</span>
                         }
                         <small class="text-muted ms-2">for @Model.PropertyName</small>
                     </button>
@@ -296,7 +296,7 @@ else
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-custom-primary">
                             <i class="fas fa-search me-1"></i>Apply Filters
                         </button>
                         @if (Model.HasFiltersApplied)
@@ -307,6 +307,53 @@ else
                         }
                     </div>
                 </form>
+
+                <hr class="my-4" style="border-color: #8CAF8C;">
+
+                <!-- Bulk Tagging Controls -->
+                <div class="mb-3" id="taggingControls" style="display: none;">
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="mb-0" style="color: #527A52;"><i class="fas fa-tags me-2"></i>Tag Selected Photos (<span id="selectedCount">0</span> selected)</h6>
+                    </div>
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label for="tagSelect" class="form-label">Select Tag</label>
+                            <select class="form-select" id="tagSelect">
+                                <option value="">Choose a tag...</option>
+                                @foreach (var tag in Model.AvailableTags)
+                                {
+                                    <option value="@tag.Id">@tag.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="newTagInput" class="form-label">Or Add New Tag</label>
+                            <input type="text" class="form-control" id="newTagInput" placeholder="Enter new tag name" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-custom-primary w-100" id="addTagBtn">
+                                <i class="fas fa-plus me-1"></i>Add Tag
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-secondary" id="selectAllBtn">
+                            <i class="fas fa-check-square me-1"></i>Select All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="clearSelectionBtn">
+                            <i class="fas fa-square me-1"></i>Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Photo Tagging Instructions -->
+                <div class="alert border-0 mb-0" style="background-color: #D7E3B2; color: #527A52;">
+                    <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-2"></i>Photo Tagging</h6>
+                    <small class="mb-0">
+                        <strong>Bulk Tagging:</strong> Check multiple photos and use the tagging panel above to tag them all at once.<br>
+                        <strong>Individual Tagging:</strong> Click any photo to open details and add/remove tags individually.
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -317,7 +364,7 @@ else
             <span class="text-muted">@Model.TotalPhotoCount total photos</span>
             @if (Model.HasFiltersApplied)
             {
-                <span class="text-primary ms-2">
+                <span class="text-success ms-2">
                     <i class="fas fa-filter me-1"></i>Filtered
                 </span>
             }
@@ -332,62 +379,6 @@ else
                 <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="@GetSortUrl("DateUploadedDesc")">Date Uploaded (Newest First)</a></li>
                 <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="@GetSortUrl("DateUploadedAsc")">Date Uploaded (Oldest First)</a></li>
             </ul>
-        </div>
-    </div>
-
-    <!-- Bulk Tagging Controls -->
-    <div class="card mb-4" id="taggingControls" style="display: none;">
-        <div class="card-header">
-            <h6 class="mb-0"><i class="fas fa-tags me-2"></i>Tag Selected Photos (<span id="selectedCount">0</span> selected)</h6>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-end">
-                <div class="col-md-6">
-                    <label for="tagSelect" class="form-label">Select Tag</label>
-                    <select class="form-select" id="tagSelect">
-                        <option value="">Choose a tag...</option>
-                        @foreach (var tag in Model.AvailableTags)
-                        {
-                            <option value="@tag.Id">@tag.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="newTagInput" class="form-label">Or Add New Tag</label>
-                    <input type="text" class="form-control" id="newTagInput" placeholder="Enter new tag name" />
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-primary w-100" id="addTagBtn">
-                        <i class="fas fa-plus me-1"></i>Add Tag
-                    </button>
-                </div>
-            </div>
-            <div class="mt-3">
-                <button type="button" class="btn btn-outline-secondary" id="selectAllBtn">
-                    <i class="fas fa-check-square me-1"></i>Select All
-                </button>
-                <button type="button" class="btn btn-outline-secondary" id="clearSelectionBtn">
-                    <i class="fas fa-square me-1"></i>Clear Selection
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Photo Tagging Instructions -->
-    <div class="alert alert-info border-0 mb-4" style="background-color: #e7f3ff;">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-2"></i>Photo Tagging</h6>
-                <small class="mb-0">
-                    <strong>Bulk Tagging:</strong> Check multiple photos and use the tagging panel above to tag them all at once.<br>
-                    <strong>Individual Tagging:</strong> Click any photo to open details and add/remove tags individually.
-                </small>
-            </div>
-            <div class="col-md-4 text-md-end">
-                <small class="text-muted">
-                    <i class="fas fa-tags me-1"></i>Available tags include: deer, turkey, bear, buck, doe, predator
-                </small>
-            </div>
         </div>
     </div>
 
