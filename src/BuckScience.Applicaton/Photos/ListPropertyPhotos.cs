@@ -110,9 +110,12 @@ public static class ListPropertyPhotos
         if (filters.DateUploadedTo.HasValue)
             query = query.Where(p => p.DateUploaded <= filters.DateUploadedTo.Value);
 
-        // Camera filters
+        // Camera filters - using explicit join to avoid Contains translation errors
         if (filters.CameraIds?.Count > 0)
-            query = query.Where(p => filters.CameraIds.Contains(p.CameraId));
+        {
+            var filteredCameraIds = filters.CameraIds.AsQueryable();
+            query = query.Join(filteredCameraIds, p => p.CameraId, id => id, (p, id) => p);
+        }
 
         // Weather filters - only apply if photo has weather data
         if (filters.HasWeatherFilters)
@@ -159,18 +162,34 @@ public static class ListPropertyPhotos
             if (filters.MoonPhaseMax.HasValue)
                 query = query.Where(p => p.Weather != null && p.Weather.MoonPhase <= filters.MoonPhaseMax.Value);
 
-            // Categorical weather filters
+            // Categorical weather filters - using explicit joins to avoid Contains translation errors
             if (filters.Conditions?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.Conditions.Contains(p.Weather.Conditions));
+            {
+                var filteredConditions = filters.Conditions.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredConditions, p => p.Weather!.Conditions, c => c, (p, c) => p);
+            }
                 
             if (filters.MoonPhaseTexts?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.MoonPhaseTexts.Contains(p.Weather.MoonPhaseText));
+            {
+                var filteredMoonPhases = filters.MoonPhaseTexts.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredMoonPhases, p => p.Weather!.MoonPhaseText, m => m, (p, m) => p);
+            }
                 
             if (filters.PressureTrends?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.PressureTrends.Contains(p.Weather.PressureTrend));
+            {
+                var filteredPressureTrends = filters.PressureTrends.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredPressureTrends, p => p.Weather!.PressureTrend, pt => pt, (p, pt) => p);
+            }
                 
             if (filters.WindDirectionTexts?.Count > 0)
-                query = query.Where(p => p.Weather != null && filters.WindDirectionTexts.Contains(p.Weather.WindDirectionText));
+            {
+                var filteredWindDirections = filters.WindDirectionTexts.AsQueryable();
+                query = query.Where(p => p.Weather != null)
+                           .Join(filteredWindDirections, p => p.Weather!.WindDirectionText, wd => wd, (p, wd) => p);
+            }
         }
 
         return query;
