@@ -20,13 +20,18 @@ public static class ManagePhotoTags
         // Get or create the tag
         var tag = await GetOrCreateTag.HandleAsync(cmd.TagName, db, ct);
 
-        // Get existing photo tags to avoid duplicates
-        var existingPhotoTagPairs = await db.PhotoTags
-            .Where(pt => cmd.PhotoIds.Contains(pt.PhotoId) && pt.TagId == tag.Id)
-            .Select(pt => new { pt.PhotoId, pt.TagId })
-            .ToListAsync(ct);
-
-        var existingPhotoIds = existingPhotoTagPairs.Select(pt => pt.PhotoId).ToHashSet();
+        // Get existing photo tags to avoid duplicates - use individual queries to ensure EF compatibility
+        var existingPhotoIds = new HashSet<int>();
+        
+        foreach (var photoId in cmd.PhotoIds)
+        {
+            var exists = await db.PhotoTags
+                .AnyAsync(pt => pt.PhotoId == photoId && pt.TagId == tag.Id, ct);
+            if (exists)
+            {
+                existingPhotoIds.Add(photoId);
+            }
+        }
 
         // Create photo tags for photos that don't already have this tag
         var photosToTag = cmd.PhotoIds.Where(photoId => !existingPhotoIds.Contains(photoId));
@@ -48,10 +53,16 @@ public static class ManagePhotoTags
         if (!cmd.PhotoIds.Any())
             throw new ArgumentException("At least one photo ID is required.", nameof(cmd.PhotoIds));
 
-        // Find and remove existing photo tags
-        var photoTagsToRemove = await db.PhotoTags
-            .Where(pt => cmd.PhotoIds.Contains(pt.PhotoId) && pt.TagId == cmd.TagId)
-            .ToListAsync(ct);
+        // Find and remove existing photo tags - use individual queries to ensure EF compatibility  
+        var photoTagsToRemove = new List<PhotoTag>();
+        
+        foreach (var photoId in cmd.PhotoIds)
+        {
+            var photoTags = await db.PhotoTags
+                .Where(pt => pt.PhotoId == photoId && pt.TagId == cmd.TagId)
+                .ToListAsync(ct);
+            photoTagsToRemove.AddRange(photoTags);
+        }
 
         if (photoTagsToRemove.Any())
         {
