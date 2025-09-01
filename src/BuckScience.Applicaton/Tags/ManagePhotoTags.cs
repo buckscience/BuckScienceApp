@@ -22,7 +22,7 @@ public static class ManagePhotoTags
 
         // Get existing photo tags to avoid duplicates - use individual queries to ensure EF compatibility
         var existingPhotoIds = new HashSet<int>();
-        
+
         foreach (var photoId in cmd.PhotoIds)
         {
             var exists = await db.PhotoTags
@@ -55,7 +55,7 @@ public static class ManagePhotoTags
 
         // Find and remove existing photo tags - use individual queries to ensure EF compatibility  
         var photoTagsToRemove = new List<PhotoTag>();
-        
+
         foreach (var photoId in cmd.PhotoIds)
         {
             var photoTags = await db.PhotoTags
@@ -87,13 +87,22 @@ public static class ManagePhotoTags
         IAppDbContext db,
         CancellationToken ct = default)
     {
-        // Use explicit join to avoid any EF translation issues
-        return await (from pt in db.PropertyTags
-                     join t in db.Tags on pt.TagId equals t.Id
-                     where pt.PropertyId == propertyId
-                     select new TagInfo(t.Id, t.TagName))
-                     .OrderBy(ti => ti.Name)
-                     .ToListAsync(ct);
+        var tagData = await (
+            from pt in db.PropertyTags
+            join t in db.Tags on pt.TagId equals t.Id
+            where pt.PropertyId == propertyId
+            select new
+            {
+                t.Id,
+                t.TagName
+            }
+        )
+        .OrderBy(x => x.TagName) // Sorting is done in SQL
+        .ToListAsync(ct);         // Query runs in the database
+
+        // Now construct TagInfo instances in memory
+        return tagData.Select(x => new TagInfo(x.Id, x.TagName)).ToList();
+
     }
 
     public sealed record TagInfo(int Id, string Name);
