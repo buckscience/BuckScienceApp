@@ -80,7 +80,7 @@
             <div id="photosCollapse" class="accordion-collapse collapse" aria-labelledby="photosHeading" data-bs-parent="#cameraDetailsAccordion">
                 <div class="accordion-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted">Photos from this camera</span>
+                        <span class="text-muted">View and manage photos from this camera</span>
                         <div>
                             <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary btn-sm me-2">
                                 <i class="fas fa-upload me-1"></i> Upload Photos
@@ -93,58 +93,21 @@
                         <div class="text-center py-4">
                             <i class="fas fa-images fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No photos uploaded to this camera yet.</p>
-                            <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary">Upload First Photos</a>
+                            <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary mb-2">Upload First Photos</a>
                         </div>
                     }
                     else
                     {
-                        <!-- Sorting Controls -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted">@Model.PhotoCount total photos</span>
-                            <div class="dropdown">
-                                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-sort me-1"></i> Sort
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="#" data-sort="DateTakenDesc">Date Taken (Newest)</a></li>
-                                    <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="#" data-sort="DateTakenAsc">Date Taken (Oldest)</a></li>
-                                </ul>
-                            </div>
+                        <div class="text-center py-3">
+                            <p class="text-muted mb-3">@Model.PhotoCount photos from this camera</p>
                         </div>
-
-                        <!-- Photos grouped by month/year -->
-                        @foreach (var group in Model.PhotoGroups)
-                        {
-                            <h5 class="mt-4 mb-3 text-dark">@group.MonthYear</h5>
-                            <div class="photo-grid-container">
-                                @foreach (var photo in group.Photos)
-                                {
-                                    <div class="photo-item mb-3">
-                                        <div class="card h-100">
-                                            <div class="position-relative">
-                                                <img src="@photo.EncodedPhotoUrl" 
-                                                     class="card-img-top" 
-                                                     alt="Photo" 
-                                                     data-bs-toggle="modal" 
-                                                     data-bs-target="#photoModal"
-                                                     data-photo-id="@photo.Id"
-                                                     data-photo-url="@photo.EncodedPhotoUrl"
-                                                     data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
-                                                     data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
-                                                     loading="lazy" />
-                                            </div>
-                                            <div class="card-body p-2">
-                                                <small class="text-muted">
-                                                    <div><strong>Taken:</strong> @photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")</div>
-                                                    <div><strong>Uploaded:</strong> @photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")</div>
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
                     }
+                    
+                    <div class="d-grid">
+                        <a href="/properties/@Model.PropertyId/photos?cameras=@Model.Id" class="btn btn-outline-primary">
+                            <i class="fas fa-images me-2"></i>View All Photos from @Model.Name
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -181,63 +144,7 @@
     </div>
 </div>
 
-<!-- Photo Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="photoModalLabel">Photo Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 70vh;" />
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <small class="text-muted">
-                            <strong>Date Taken:</strong><br>
-                            <span id="modalDateTaken"></span>
-                        </small>
-                    </div>
-                    <div class="col-6">
-                        <small class="text-muted">
-                            <strong>Date Uploaded:</strong><br>
-                            <span id="modalDateUploaded"></span>
-                        </small>
-                    </div>
-                </div>
-                
-                <!-- Photo Tags Section -->
-                <div class="text-start">
-                    <h6><i class="fas fa-tags me-2"></i>Tags</h6>
-                    <div id="photoTags" class="mb-3">
-                        <span class="text-muted">Loading tags...</span>
-                    </div>
-                    
-                    <!-- Add Tag Section -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <select class="form-select" id="modalTagSelect">
-                                <option value="">Choose a tag...</option>
-                                @foreach (var tag in Model.AvailableTags)
-                                {
-                                    <option value="@tag.Id">@tag.Name</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="modalNewTagInput" placeholder="New tag name" />
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-primary btn-sm w-100" id="modalAddTagBtn">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <script>
     function navigateBackToProperty(propertyId) {
@@ -252,59 +159,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         // No need to call updateTogglePosition here as it's handled by sidebar.js initialization
         // The sidebar.js will handle positioning with proper timing
-
-        // Check if photos section should be open based on URL parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const openSection = urlParams.get('openSection');
-        
-        // Function to open photos accordion properly using Bootstrap API
-        function openPhotosAccordion() {
-            const photosCollapse = document.getElementById('photosCollapse');
-            if (photosCollapse) {
-                const photosCollapseInstance = new bootstrap.Collapse(photosCollapse, { toggle: false });
-                photosCollapseInstance.show();
-            }
-        }
-        
-        // Function to check if photos section is currently open
-        function isPhotosAccordionOpen() {
-            const photosCollapse = document.getElementById('photosCollapse');
-            return photosCollapse && photosCollapse.classList.contains('show');
-        }
-        
-        // Open photos section if URL parameter indicates it should be open
-        if (openSection === 'photos') {
-            // Small delay to ensure Bootstrap is initialized
-            setTimeout(openPhotosAccordion, 100);
-        }
-        
-        // Move modal to body to ensure it appears above sidebar
-        const photoModal = document.getElementById('photoModal');
-        if (photoModal) {
-            document.body.appendChild(photoModal);
-        }
-        
-        // Handle sort dropdown clicks to preserve accordion state
-        const sortLinks = document.querySelectorAll('.dropdown-item[data-sort]');
-        sortLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const sortValue = this.getAttribute('data-sort');
-                
-                // Create URL with sort parameter
-                const url = new URL(window.location);
-                url.searchParams.set('sort', sortValue);
-                
-                // Preserve accordion state if photos section is currently open
-                if (isPhotosAccordionOpen()) {
-                    url.searchParams.set('openSection', 'photos');
-                } else {
-                    url.searchParams.delete('openSection');
-                }
-                
-                window.location.href = url.toString();
-            });
-        });
     });
 
     // Also update when sidebar content is loaded via AJAX
@@ -312,162 +166,4 @@
         // No need to call updateTogglePosition here as it's handled by sidebar.js loadSidebar function
         // The loadSidebar function in sidebar.js will handle positioning with proper timing
     });
-
-    let currentPhotoId = null;
-    
-    // Initialize tagging functionality  
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
-    });
-
-    // Add tag to single photo
-    async function addTagToSinglePhoto() {
-        if (!currentPhotoId) return;
-        
-        const tagSelect = document.getElementById('modalTagSelect');
-        const newTagInput = document.getElementById('modalNewTagInput');
-        
-        let tagName = '';
-        if (newTagInput.value.trim()) {
-            tagName = newTagInput.value.trim();
-        } else if (tagSelect.value) {
-            tagName = tagSelect.options[tagSelect.selectedIndex].text;
-        }
-        
-        if (!tagName) {
-            alert('Please select a tag or enter a new tag name.');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/api/tags/photos/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({
-                    photoIds: [currentPhotoId],
-                    tagName: tagName
-                })
-            });
-            
-            if (response.ok) {
-                newTagInput.value = '';
-                tagSelect.value = '';
-                loadPhotoTags(currentPhotoId);
-            } else {
-                alert('Error adding tag. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error adding tag:', error);
-            alert('Error adding tag. Please try again.');
-        }
-    }
-
-    // Load tags for a specific photo
-    async function loadPhotoTags(photoId) {
-        try {
-            const response = await fetch(`/api/tags/photos/${photoId}`);
-            if (response.ok) {
-                const tags = await response.json();
-                displayPhotoTags(tags);
-            } else {
-                document.getElementById('photoTags').innerHTML = '<span class="text-muted">Unable to load tags</span>';
-            }
-        } catch (error) {
-            console.error('Error loading tags:', error);
-            document.getElementById('photoTags').innerHTML = '<span class="text-muted">Error loading tags</span>';
-        }
-    }
-
-    // Display photo tags
-    function displayPhotoTags(tags) {
-        const container = document.getElementById('photoTags');
-        if (tags.length === 0) {
-            container.innerHTML = '<span class="text-muted">No tags yet</span>';
-            return;
-        }
-        
-        const tagElements = tags.map(tag => 
-            `<span class="badge bg-secondary me-1 mb-1">
-                ${tag.name}
-                <button type="button" class="btn-close btn-close-white ms-1" 
-                        onclick="removeTag(${tag.id})" 
-                        style="font-size: 0.75em;"
-                        title="Remove tag"></button>
-            </span>`
-        ).join('');
-        
-        container.innerHTML = tagElements;
-    }
-
-    // Remove tag from current photo
-    async function removeTag(tagId) {
-        if (!currentPhotoId) return;
-        
-        try {
-            const response = await fetch('/api/tags/photos/remove', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({
-                    photoIds: [currentPhotoId],
-                    tagId: tagId
-                })
-            });
-            
-            if (response.ok) {
-                loadPhotoTags(currentPhotoId);
-            } else {
-                alert('Error removing tag. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error removing tag:', error);
-            alert('Error removing tag. Please try again.');
-        }
-    }
-    
-    // Handle photo modal
-    const photoModal = document.getElementById('photoModal');
-    if (photoModal) {
-        photoModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const photoId = button.getAttribute('data-photo-id');
-            const photoUrl = button.getAttribute('data-photo-url');
-            const dateTaken = button.getAttribute('data-date-taken');
-            const dateUploaded = button.getAttribute('data-date-uploaded');
-            
-            currentPhotoId = parseInt(photoId);
-            
-            const modalPhotoImg = document.getElementById('modalPhoto');
-            if (modalPhotoImg) {
-                modalPhotoImg.src = photoUrl;
-                modalPhotoImg.onerror = function() {
-                    console.error('Failed to load photo:', photoUrl);
-                    this.alt = 'Failed to load photo';
-                };
-            }
-            
-            const modalDateTaken = document.getElementById('modalDateTaken');
-            const modalDateUploaded = document.getElementById('modalDateUploaded');
-            
-            if (modalDateTaken) modalDateTaken.textContent = dateTaken;
-            if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
-            
-            // Load tags for this photo
-            loadPhotoTags(currentPhotoId);
-        });
-        
-        // Clean up modal when hidden
-        photoModal.addEventListener('hidden.bs.modal', function (event) {
-            const modalPhotoImg = document.getElementById('modalPhoto');
-            if (modalPhotoImg) {
-                modalPhotoImg.src = '';
-            }
-            currentPhotoId = null;
-        });
-    }
 </script>

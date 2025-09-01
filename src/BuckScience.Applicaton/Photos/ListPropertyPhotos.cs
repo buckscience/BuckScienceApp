@@ -110,11 +110,10 @@ public static class ListPropertyPhotos
         if (filters.DateUploadedTo.HasValue)
             query = query.Where(p => p.DateUploaded <= filters.DateUploadedTo.Value);
 
-        // Camera filters - using explicit join to avoid Contains translation errors
+        // Camera filters - use Contains for simple integer list filtering
         if (filters.CameraIds?.Count > 0)
         {
-            var filteredCameraIds = filters.CameraIds.AsQueryable();
-            query = query.Join(filteredCameraIds, p => p.CameraId, id => id, (p, id) => p);
+            query = query.Where(p => filters.CameraIds.Contains(p.CameraId));
         }
 
         // Weather filters - only apply if photo has weather data
