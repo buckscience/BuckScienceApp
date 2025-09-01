@@ -278,6 +278,12 @@
             setTimeout(openPhotosAccordion, 100);
         }
         
+        // Move modal to body to ensure it appears above sidebar
+        const photoModal = document.getElementById('photoModal');
+        if (photoModal) {
+            document.body.appendChild(photoModal);
+        }
+        
         // Handle sort dropdown clicks to preserve accordion state
         const sortLinks = document.querySelectorAll('.dropdown-item[data-sort]');
         sortLinks.forEach(link => {
