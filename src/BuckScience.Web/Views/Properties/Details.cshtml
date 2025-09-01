@@ -83,6 +83,9 @@
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
                     <i class="fas fa-crosshairs me-2"></i>
                     Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
+                    <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm ms-auto me-3" onclick="event.stopPropagation();">
+                        <i class="fas fa-plus me-1"></i>Add Profile
+                    </a>
                 </button>
             </h2>
             <div id="profilesCollapse" class="accordion-collapse collapse" aria-labelledby="profilesHeading" data-bs-parent="#propertyDetailsAccordion">
@@ -94,6 +97,20 @@
                             {
                                 <div class="col-md-6">
                                     <div class="card h-100 profile-card" style="cursor: pointer;" onclick="navigateToProfile(@profile.Id)">
+                                        @if (!string.IsNullOrEmpty(profile.CoverPhotoUrl))
+                                        {
+                                            <div class="position-relative">
+                                                <img src="@profile.CoverPhotoUrl" 
+                                                     class="card-img-top" 
+                                                     alt="Cover photo for @profile.Name"
+                                                     style="height: 150px; object-fit: cover;" />
+                                                <div class="position-absolute top-0 end-0 m-2">
+                                                    <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
+                                                        @profile.ProfileStatus
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        }
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
@@ -103,11 +120,14 @@
                                                         @profile.TagName
                                                     </p>
                                                 </div>
-                                                <div class="text-end">
-                                                    <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
-                                                        @profile.ProfileStatus
-                                                    </span>
-                                                </div>
+                                                @if (string.IsNullOrEmpty(profile.CoverPhotoUrl))
+                                                {
+                                                    <div class="text-end">
+                                                        <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
+                                                            @profile.ProfileStatus
+                                                        </span>
+                                                    </div>
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -120,7 +140,7 @@
                         <div class="text-center py-4">
                             <i class="fas fa-user-circle fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No profiles configured for this property yet.</p>
-                            <a href="#" class="btn btn-custom-primary">Add Profile</a>
+                            <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary">Add Profile</a>
                         </div>
                     }
                 </div>
@@ -188,8 +208,11 @@
         }
 
         function navigateToProfile(profileId) {
-            // Placeholder for profile navigation
-            console.log('Navigate to profile:', profileId);
+            if (window.App && window.App.loadSidebar) {
+                window.App.loadSidebar(`/profiles/${profileId}`, { push: true });
+            } else {
+                window.location.href = `/profiles/${profileId}`;
+            }
         }
 
         function navigateToFeature(featureType) {

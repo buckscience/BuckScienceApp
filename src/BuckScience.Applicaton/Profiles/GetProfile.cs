@@ -4,38 +4,42 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BuckScience.Application.Profiles;
 
-public static class ListPropertyProfiles
+public static class GetProfile
 {
     public sealed record Result(
         int Id,
         string Name,
         ProfileStatus ProfileStatus,
+        int PropertyId,
+        string PropertyName,
+        int TagId,
         string TagName,
-        DateTime CreatedDate,
         string? CoverPhotoUrl
     );
 
-    // List profiles for a single property owned by userId
-    public static async Task<IReadOnlyList<Result>> HandleAsync(
+    public static async Task<Result?> HandleAsync(
+        int profileId,
         IAppDbContext db,
         int userId,
-        int propertyId,
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
-        // ownership enforced via property join using explicit joins to avoid LINQ translation errors
-        return await db.Profiles
-            .AsNoTracking()
+        // Get profile with related data and validate ownership through property
+        var result = await db.Profiles
             .Join(db.Properties, p => p.PropertyId, prop => prop.Id, (p, prop) => new { Profile = p, Property = prop })
-            .Where(x => x.Profile.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
+            .Where(x => x.Profile.Id == profileId && x.Property.ApplicationUserId == userId)
             .Join(db.Tags, x => x.Profile.TagId, t => t.Id, (x, t) => new { x.Profile, x.Property, Tag = t })
-            .OrderBy(x => x.Profile.Name)
             .Select(x => new Result(
                 x.Profile.Id,
                 x.Profile.Name,
                 x.Profile.ProfileStatus,
+                x.Profile.PropertyId,
+                x.Property.Name,
+                x.Profile.TagId,
                 x.Tag.TagName,
-                DateTime.UtcNow, // Using UtcNow as placeholder since Profile doesn't have CreatedDate
-                x.Profile.CoverPhotoUrl))
-            .ToListAsync(ct);
+                x.Profile.CoverPhotoUrl
+            ))
+            .FirstOrDefaultAsync(ct);
+
+        return result;
     }
 }

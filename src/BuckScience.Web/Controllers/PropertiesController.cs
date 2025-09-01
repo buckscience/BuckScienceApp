@@ -155,7 +155,7 @@ public class PropertiesController : Controller
 
     // DETAILS
     [HttpGet]
-    [Route("/properties/{id:int}/details")]
+    [Route("/properties/{id:int}/details", Name = "PropertyDetails")]
     public async Task<IActionResult> Details(int id, CancellationToken ct)
     {
         if (_currentUser.Id is null) return Forbid();
