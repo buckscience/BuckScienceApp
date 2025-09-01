@@ -395,32 +395,12 @@ public class CamerasController : Controller
 
     // DETAILS: GET /cameras/{id}/details
     [HttpGet("/cameras/{id:int}/details")]
-    public async Task<IActionResult> Details([FromRoute] int id, [FromQuery] string sort = "DateTakenDesc", CancellationToken ct = default)
+    public async Task<IActionResult> Details([FromRoute] int id, CancellationToken ct = default)
     {
         if (_currentUser.Id is null) return Forbid();
 
         var camera = await GetCameraDetails.HandleAsync(_db, _currentUser.Id.Value, id, ct);
         if (camera is null) return NotFound();
-
-        // Get photos for this camera with sorting
-        var photos = await ListCameraPhotos.HandleAsync(_db, _currentUser.Id.Value, id, ct);
-        
-        // Apply sorting based on query parameter
-        photos = sort switch
-        {
-            "DateTakenAsc" => photos.OrderBy(p => p.DateTaken).ToList(),
-            "DateTakenDesc" => photos.OrderByDescending(p => p.DateTaken).ToList(),
-            "DateUploadedAsc" => photos.OrderBy(p => p.DateUploaded).ToList(),
-            "DateUploadedDesc" => photos.OrderByDescending(p => p.DateUploaded).ToList(),
-            _ => photos.OrderByDescending(p => p.DateTaken).ToList()
-        };
-
-        // Group photos by month/year with proper sort direction
-        var isAscending = sort == "DateTakenAsc" || sort == "DateUploadedAsc";
-        var photoGroups = photos.GroupByMonth(isAscending);
-
-        // Get available tags for this property (camera's property)
-        var availableTags = await ManagePhotoTags.GetAvailableTagsForPropertyAsync(camera.PropertyId, _db, ct);
 
         var vm = new CameraDetailsVm
         {
@@ -434,17 +414,7 @@ public class CamerasController : Controller
             PhotoCount = camera.PhotoCount,
             CreatedDate = camera.CreatedDate,
             PropertyId = camera.PropertyId,
-            PropertyName = camera.PropertyName,
-            Photos = photos.Select(p => new PhotoListItemVm
-            {
-                Id = p.Id,
-                PhotoUrl = p.PhotoUrl,
-                DateTaken = p.DateTaken,
-                DateUploaded = p.DateUploaded
-            }).ToList(),
-            PhotoGroups = photoGroups,
-            CurrentSort = sort,
-            AvailableTags = availableTags.Select(t => new ViewModels.Photos.TagInfo { Id = t.Id, Name = t.Name }).ToList()
+            PropertyName = camera.PropertyName
         };
 
         return View(vm);
