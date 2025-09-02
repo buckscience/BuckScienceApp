@@ -88,6 +88,58 @@ public static class ManagePhotoTags
         {
             db.PhotoTags.RemoveRange(photoTagsToRemove);
             await db.SaveChangesAsync(ct);
+
+            // Get property IDs for the photos that had tags removed (through camera relationship)
+            var propertyIds = await db.Photos
+                .Where(p => cmd.PhotoIds.Contains(p.Id))
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => c.PropertyId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            // Check each property to see if the tag is still in use on that property
+            var propertyTagsToRemove = new List<PropertyTag>();
+            
+            foreach (var propertyId in propertyIds)
+            {
+                // Check if any photos on this property still use this tag
+                var tagStillUsedOnProperty = await db.Photos
+                    .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p.Id, c.PropertyId })
+                    .Where(pc => pc.PropertyId == propertyId)
+                    .Join(db.PhotoTags, pc => pc.Id, pt => pt.PhotoId, (pc, pt) => pt.TagId)
+                    .AnyAsync(tagId => tagId == cmd.TagId, ct);
+
+                if (!tagStillUsedOnProperty)
+                {
+                    // Remove PropertyTag entry for this property-tag combination
+                    var propertyTagsForProperty = await db.PropertyTags
+                        .Where(pt => pt.PropertyId == propertyId && pt.TagId == cmd.TagId)
+                        .ToListAsync(ct);
+                    propertyTagsToRemove.AddRange(propertyTagsForProperty);
+                }
+            }
+
+            if (propertyTagsToRemove.Any())
+            {
+                db.PropertyTags.RemoveRange(propertyTagsToRemove);
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Check if the tag is still used anywhere in the system
+            var tagStillUsedAnywhere = await db.PhotoTags
+                .AnyAsync(pt => pt.TagId == cmd.TagId, ct) ||
+                await db.PropertyTags
+                .AnyAsync(pt => pt.TagId == cmd.TagId, ct);
+
+            if (!tagStillUsedAnywhere)
+            {
+                // Check if it's a default tag before removing
+                var tag = await db.Tags.FirstOrDefaultAsync(t => t.Id == cmd.TagId, ct);
+                if (tag != null && !tag.isDefaultTag)
+                {
+                    db.Tags.Remove(tag);
+                    await db.SaveChangesAsync(ct);
+                }
+            }
         }
     }
 
