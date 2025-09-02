@@ -117,9 +117,11 @@ public class TaggingIntegrationTests
         var photo1Tags = await ManagePhotoTags.GetPhotoTagsAsync(photo1.Id, context);
 
         // Assert
-        // Should have the default tag available for property (only deer was added to property tags)
-        Assert.Single(availableTags);
+        // Should have both the default tag and the custom tag available for property 
+        // (deer was added during property creation, large_buck was added when photos were tagged)
+        Assert.Equal(2, availableTags.Count);
         Assert.Contains(availableTags, t => t.Name == "deer");
+        Assert.Contains(availableTags, t => t.Name == "large_buck");
 
         // Photo 1 should have both tags
         Assert.Equal(2, photo1Tags.Count);

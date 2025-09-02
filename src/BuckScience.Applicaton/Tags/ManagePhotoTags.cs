@@ -42,6 +42,26 @@ public static class ManagePhotoTags
             db.PhotoTags.Add(photoTag);
         }
 
+        // Get property IDs for the photos being tagged (through camera relationship)
+        var propertyIds = await db.Photos
+            .Where(p => cmd.PhotoIds.Contains(p.Id))
+            .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => c.PropertyId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        // Create property tags for any property-tag combinations that don't already exist
+        foreach (var propertyId in propertyIds)
+        {
+            var propertyTagExists = await db.PropertyTags
+                .AnyAsync(pt => pt.PropertyId == propertyId && pt.TagId == tag.Id, ct);
+            
+            if (!propertyTagExists)
+            {
+                var propertyTag = new PropertyTag(propertyId, tag.Id);
+                db.PropertyTags.Add(propertyTag);
+            }
+        }
+
         await db.SaveChangesAsync(ct);
     }
 
