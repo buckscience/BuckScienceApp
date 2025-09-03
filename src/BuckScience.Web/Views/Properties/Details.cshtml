@@ -165,7 +165,7 @@
                                                         }
                                                     </div>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusFeature(@feature.Id)">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
@@ -281,9 +281,12 @@
             }
         }
 
-        function focusFeature(featureId) {
-            console.log('Focus feature:', featureId);
-            // TODO: Zoom to feature on map
+        function focusPropertyFeature(featureId) {
+            if (window.App && window.App.focusPropertyFeature) {
+                window.App.focusPropertyFeature(featureId);
+            } else {
+                console.log('Focus feature function not available:', featureId);
+            }
         }
 
         function editFeature(featureId) {
@@ -331,7 +334,7 @@
         // Make functions available globally for onclick handlers
         window.startDrawingFeature = startDrawingFeature;
         window.cancelDrawing = cancelDrawing;
-        window.focusFeature = focusFeature;
+        window.focusPropertyFeature = focusPropertyFeature;
         window.editFeature = editFeature;
         window.deleteFeature = deleteFeature;
     </script>

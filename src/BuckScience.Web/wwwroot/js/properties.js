@@ -333,85 +333,195 @@ window.App = window.App || {};
 
         console.log('Loading features for property:', propertyId);
         
+        // Show loading indicator
+        showFeatureLoadingIndicator(true);
+        
         fetch(`/properties/${propertyId}/features`)
             .then(response => {
-                console.log('Features API response status:', response.status);
+                console.log('Features API response status:', response.status, response.statusText);
                 if (!response.ok) {
-                    throw new Error(`Features API failed with status: ${response.status}`);
+                    return response.text().then(errorText => {
+                        console.error('Features API error response:', errorText);
+                        throw new Error(`Features API failed with status: ${response.status} - ${errorText}`);
+                    });
                 }
                 return response.json();
             })
             .then(features => {
-                console.log('Loaded features:', features);
+                console.log('Loaded features from API:', features);
+                showFeatureLoadingIndicator(false);
+                
+                if (!Array.isArray(features)) {
+                    console.error('Features response is not an array:', features);
+                    throw new Error('Invalid features response format');
+                }
+                
                 displayFeaturesOnMap(features);
             })
             .catch(error => {
                 console.error('Error loading property features:', error);
-                // Don't show alert for debugging, just log the error
+                showFeatureLoadingIndicator(false);
+                
+                // Show user-friendly error message
+                showFeatureError('Failed to load property features: ' + error.message);
             });
+    }
+
+    function showFeatureLoadingIndicator(show) {
+        let indicator = document.getElementById('feature-loading-indicator');
+        
+        if (show) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'feature-loading-indicator';
+                indicator.className = 'alert alert-info position-fixed';
+                indicator.style.cssText = 'top: 20px; left: 20px; z-index: 1000; max-width: 250px;';
+                indicator.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading features...';
+                document.body.appendChild(indicator);
+            }
+        } else {
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    }
+
+    function showFeatureError(message) {
+        // Remove any existing error
+        const existingError = document.getElementById('feature-error-indicator');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'feature-error-indicator';
+        errorDiv.className = 'alert alert-danger position-fixed';
+        errorDiv.style.cssText = 'top: 20px; left: 20px; z-index: 1000; max-width: 300px;';
+        errorDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>Feature Error</strong><br>
+                    <small>${message}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-sm" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+        document.body.appendChild(errorDiv);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (errorDiv.parentElement) {
+                errorDiv.remove();
+            }
+        }, 10000);
     }
 
     function displayFeaturesOnMap(features) {
         const m = map();
         if (!m) {
             console.error('Map not available for displaying features');
+            showFeatureError('Map not available for displaying features');
             return;
         }
 
-        console.log('Displaying features on map:', features);
+        console.log('Displaying features on map. Total features received:', features?.length || 0);
 
         // Remove existing feature layers and source
         const featureLayerIds = ['property-features-fill', 'property-features-line', 'property-features-points'];
         featureLayerIds.forEach(layerId => {
             if (m.getLayer(layerId)) {
                 console.log('Removing existing layer:', layerId);
-                m.removeLayer(layerId);
+                try {
+                    m.removeLayer(layerId);
+                } catch (e) {
+                    console.warn('Error removing layer:', layerId, e);
+                }
             }
         });
 
         if (m.getSource('property-features')) {
             console.log('Removing existing features source');
-            m.removeSource('property-features');
+            try {
+                m.removeSource('property-features');
+            } catch (e) {
+                console.warn('Error removing source:', e);
+            }
         }
 
-        if (!features || features.length === 0) {
+        if (!features || !Array.isArray(features) || features.length === 0) {
             console.log('No features to display');
             return;
         }
 
+        console.log('Processing', features.length, 'features for map display');
+
         // Convert features to GeoJSON
-        const geojsonFeatures = features.map(feature => {
-            const wkt = feature.geometryWkt;
-            console.log('Processing feature WKT:', wkt);
+        const geojsonFeatures = [];
+        const failedFeatures = [];
+
+        features.forEach((feature, index) => {
+            console.log(`Processing feature ${index + 1}/${features.length}:`, feature);
             
-            // Simple WKT parsing - in production, use a proper WKT parser
+            if (!feature || typeof feature !== 'object') {
+                console.warn('Invalid feature object at index', index, feature);
+                failedFeatures.push({ index, reason: 'Invalid feature object', feature });
+                return;
+            }
+
+            const wkt = feature.geometryWkt;
+            if (!wkt) {
+                console.warn('Feature missing geometryWkt at index', index, feature);
+                failedFeatures.push({ index, reason: 'Missing geometryWkt', feature });
+                return;
+            }
+
+            console.log(`Processing feature ${index + 1} WKT:`, wkt);
+            
             let geometry;
             try {
                 geometry = parseSimpleWKT(wkt);
-                console.log('Parsed geometry:', geometry);
+                console.log(`Parsed geometry for feature ${index + 1}:`, geometry);
             } catch (e) {
-                console.warn('Could not parse WKT:', wkt, e);
-                return null;
+                console.warn(`Could not parse WKT for feature ${index + 1}:`, wkt, e);
+                failedFeatures.push({ index, reason: 'WKT parsing failed: ' + e.message, feature, wkt });
+                return;
             }
 
-            return {
+            if (!geometry || !geometry.type || !geometry.coordinates) {
+                console.warn(`Invalid geometry result for feature ${index + 1}:`, geometry);
+                failedFeatures.push({ index, reason: 'Invalid geometry result', feature, geometry });
+                return;
+            }
+
+            const geoJsonFeature = {
                 type: 'Feature',
                 properties: {
                     id: feature.id,
                     classificationType: feature.classificationType,
-                    notes: feature.notes,
+                    notes: feature.notes || '',
                     createdAt: feature.createdAt,
                     name: getFeatureName(feature.classificationType),
                     color: getFeatureColor(feature.classificationType)
                 },
                 geometry: geometry
             };
-        }).filter(f => f !== null);
 
-        console.log('Converted to GeoJSON features:', geojsonFeatures);
+            geojsonFeatures.push(geoJsonFeature);
+            console.log(`Successfully processed feature ${index + 1}:`, geoJsonFeature);
+        });
+
+        console.log(`Conversion complete. Successfully processed: ${geojsonFeatures.length}, Failed: ${failedFeatures.length}`);
+        
+        if (failedFeatures.length > 0) {
+            console.warn('Failed to process some features:', failedFeatures);
+            showFeatureError(`Warning: ${failedFeatures.length} feature(s) could not be displayed. Check console for details.`);
+        }
 
         if (geojsonFeatures.length === 0) {
-            console.warn('No valid features after WKT parsing');
+            console.warn('No valid features after processing');
+            if (failedFeatures.length > 0) {
+                showFeatureError('No features could be displayed. All features failed to parse. Check console for details.');
+            }
             return;
         }
 
@@ -420,69 +530,94 @@ window.App = window.App || {};
             features: geojsonFeatures
         };
 
-        console.log('Adding features source to map');
+        console.log('Adding features source to map with', geojsonFeatures.length, 'features');
         
-        // Add source
-        m.addSource('property-features', {
-            type: 'geojson',
-            data: geojson
-        });
-
-        // Add layers for different geometry types
-        console.log('Adding feature layers');
-        
-        m.addLayer({
-            id: 'property-features-fill',
-            type: 'fill',
-            source: 'property-features',
-            filter: ['==', ['geometry-type'], 'Polygon'],
-            paint: {
-                'fill-color': ['get', 'color'],
-                'fill-opacity': 0.3
-            }
-        });
-
-        m.addLayer({
-            id: 'property-features-line',
-            type: 'line',
-            source: 'property-features',
-            filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-            paint: {
-                'line-color': ['get', 'color'],
-                'line-width': 3
-            }
-        });
-
-        m.addLayer({
-            id: 'property-features-points',
-            type: 'circle',
-            source: 'property-features',
-            filter: ['==', ['geometry-type'], 'Point'],
-            paint: {
-                'circle-color': ['get', 'color'],
-                'circle-radius': 8,
-                'circle-stroke-color': '#ffffff',
-                'circle-stroke-width': 2
-            }
-        });
-
-        // Remove any existing click handlers to prevent duplicates
-        featureLayerIds.forEach(layerId => {
-            m.off('click', layerId);
-        });
-
-        // Add click handlers
-        featureLayerIds.forEach(layerId => {
-            m.on('click', layerId, (e) => {
-                const feature = e.features[0];
-                showFeaturePopup(feature, e.lngLat);
+        try {
+            // Add source
+            m.addSource('property-features', {
+                type: 'geojson',
+                data: geojson
             });
-        });
 
-        console.log('Features successfully added to map');
+            console.log('Features source added successfully');
 
-        // Update bounds to include features if this is the initial load
-        updateBoundsWithFeatures(geojsonFeatures);
+            // Add layers for different geometry types
+            console.log('Adding feature layers');
+            
+            // Polygon fill layer
+            m.addLayer({
+                id: 'property-features-fill',
+                type: 'fill',
+                source: 'property-features',
+                filter: ['==', ['geometry-type'], 'Polygon'],
+                paint: {
+                    'fill-color': ['get', 'color'],
+                    'fill-opacity': 0.3
+                }
+            });
+
+            // Line layer (for LineStrings and Polygon outlines)
+            m.addLayer({
+                id: 'property-features-line',
+                type: 'line',
+                source: 'property-features',
+                filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+                paint: {
+                    'line-color': ['get', 'color'],
+                    'line-width': 3
+                }
+            });
+
+            // Point layer
+            m.addLayer({
+                id: 'property-features-points',
+                type: 'circle',
+                source: 'property-features',
+                filter: ['==', ['geometry-type'], 'Point'],
+                paint: {
+                    'circle-color': ['get', 'color'],
+                    'circle-radius': 8,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 2
+                }
+            });
+
+            console.log('All feature layers added successfully');
+
+            // Remove any existing click handlers to prevent duplicates
+            featureLayerIds.forEach(layerId => {
+                m.off('click', layerId);
+            });
+
+            // Add click handlers
+            featureLayerIds.forEach(layerId => {
+                m.on('click', layerId, (e) => {
+                    if (e.features && e.features.length > 0) {
+                        const feature = e.features[0];
+                        showFeaturePopup(feature, e.lngLat);
+                    }
+                });
+                
+                // Change cursor on hover
+                m.on('mouseenter', layerId, () => {
+                    m.getCanvas().style.cursor = 'pointer';
+                });
+                
+                m.on('mouseleave', layerId, () => {
+                    m.getCanvas().style.cursor = '';
+                });
+            });
+
+            console.log('Feature interaction handlers added successfully');
+            console.log('Features successfully added to map');
+
+            // Update bounds to include features if this is the initial load
+            updateBoundsWithFeatures(geojsonFeatures);
+            
+        } catch (error) {
+            console.error('Error adding features to map:', error);
+            showFeatureError('Failed to display features on map: ' + error.message);
+        }
     }
 
     function updateBoundsWithFeatures(geojsonFeatures) {
@@ -719,8 +854,72 @@ window.App = window.App || {};
     }
 
     window.App.editPropertyFeature = function(featureId) {
-        // TODO: Implement feature editing
         console.log('Edit feature:', featureId);
+        // TODO: Implement feature editing
+        alert('Feature editing is not yet implemented. This will allow you to modify the feature geometry and properties.');
+    };
+
+    // Implement the focus feature functionality (the "eyeball" button)
+    window.App.focusPropertyFeature = function(featureId) {
+        console.log('Focusing on feature:', featureId);
+        
+        const m = map();
+        if (!m) {
+            console.error('Map not available for focusing feature');
+            return;
+        }
+        
+        // Get the features source
+        const source = m.getSource('property-features');
+        if (!source) {
+            console.error('Property features source not found on map');
+            alert('Features not loaded on map. Please refresh and try again.');
+            return;
+        }
+        
+        // Get the feature data
+        const sourceData = source._data;
+        if (!sourceData || !sourceData.features) {
+            console.error('No feature data available');
+            alert('No feature data available. Please refresh and try again.');
+            return;
+        }
+        
+        // Find the feature with the specified ID
+        const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
+        if (!targetFeature) {
+            console.error('Feature not found:', featureId);
+            alert('Feature not found on map. Please refresh and try again.');
+            return;
+        }
+        
+        console.log('Found target feature:', targetFeature);
+        
+        // Calculate bounds for the feature
+        let bounds = new mapboxgl.LngLatBounds();
+        
+        if (targetFeature.geometry.type === 'Point') {
+            const coords = targetFeature.geometry.coordinates;
+            bounds.extend(coords);
+            // For points, create a small buffer around the point
+            const buffer = 0.001; // Approximately 100 meters
+            bounds.extend([coords[0] - buffer, coords[1] - buffer]);
+            bounds.extend([coords[0] + buffer, coords[1] + buffer]);
+        } else if (targetFeature.geometry.type === 'LineString') {
+            targetFeature.geometry.coordinates.forEach(coord => bounds.extend(coord));
+        } else if (targetFeature.geometry.type === 'Polygon') {
+            targetFeature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
+        }
+        
+        // Fit map to feature bounds
+        m.fitBounds(bounds, {
+            padding: 50,
+            maxZoom: 18,
+            duration: 1500
+        });
+        
+        // Optional: Temporarily highlight the feature
+        highlightFeature(targetFeature, featureId);
     };
 
     window.App.deletePropertyFeature = function(featureId) {
@@ -756,13 +955,22 @@ window.App = window.App || {};
     function refreshPropertyDetailsView(propertyId) {
         console.log('Refreshing property details view for property:', propertyId);
         
+        if (!propertyId) {
+            console.error('Property ID is required for refreshing property details');
+            return;
+        }
+        
         // Use the sidebar loader to refresh the property details view
         if (window.App && window.App.loadSidebar) {
             const propertyDetailsUrl = `/properties/${propertyId}/details`;
             console.log('Loading sidebar with URL:', propertyDetailsUrl);
             
+            // Show a loading indicator
+            showRefreshIndicator(true);
+            
             window.App.loadSidebar(propertyDetailsUrl, { push: false }).then(() => {
                 console.log('Property details view refreshed successfully');
+                showRefreshIndicator(false);
                 
                 // After the view is reloaded, expand the features accordion to show the changes
                 setTimeout(() => {
@@ -770,22 +978,33 @@ window.App = window.App || {};
                     if (featuresAccordion && !featuresAccordion.classList.contains('show')) {
                         console.log('Expanding features accordion');
                         // Use Bootstrap's collapse API to show the features section
-                        const bsCollapse = new bootstrap.Collapse(featuresAccordion, {
-                            show: true
-                        });
+                        try {
+                            const bsCollapse = new bootstrap.Collapse(featuresAccordion, {
+                                show: true
+                            });
+                        } catch (e) {
+                            console.warn('Could not expand features accordion:', e);
+                        }
                     }
                     
                     // Re-initialize property features for the refreshed view
                     if (window.App && window.App.initializePropertyFeatures) {
-                        console.log('Re-initializing property features');
+                        console.log('Re-initializing property features after refresh');
                         window.App.initializePropertyFeatures(propertyId);
                     }
-                }, 200); // Small delay to ensure DOM is updated
+                }, 300); // Increased delay to ensure DOM is fully updated
             }).catch(error => {
                 console.error('Error refreshing property details view:', error);
+                showRefreshIndicator(false);
+                
+                // Show user-friendly error message
+                showFeatureError('Failed to refresh property details: ' + error.message);
+                
                 // Fallback: just reload features if sidebar loader fails
                 console.log('Falling back to reloading features only');
-                loadPropertyFeatures(propertyId);
+                setTimeout(() => {
+                    loadPropertyFeatures(propertyId);
+                }, 1000);
             });
         } else {
             console.warn('Sidebar loader not available, falling back to reloading features');
@@ -794,70 +1013,163 @@ window.App = window.App || {};
         }
     }
 
+    function showRefreshIndicator(show) {
+        let indicator = document.getElementById('refresh-indicator');
+        
+        if (show) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'refresh-indicator';
+                indicator.className = 'alert alert-info position-fixed';
+                indicator.style.cssText = 'top: 70px; left: 20px; z-index: 1000; max-width: 250px;';
+                indicator.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i>Refreshing view...';
+                document.body.appendChild(indicator);
+            }
+        } else {
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    }
+
     // Helper functions
     function parseSimpleWKT(wkt) {
-        // Basic WKT parsing - this is simplified and should use a proper library in production
+        // Enhanced WKT parsing with better error handling and debugging
         if (!wkt || typeof wkt !== 'string') {
+            console.error('Invalid WKT input:', wkt);
             throw new Error('Invalid WKT: must be a non-empty string');
         }
         
-        wkt = wkt.trim();
+        wkt = wkt.trim().toUpperCase();
         console.log('Parsing WKT:', wkt);
         
-        if (wkt.startsWith('POINT(')) {
-            const match = wkt.match(/POINT\s*\(\s*([^)]+)\s*\)/i);
-            if (!match) throw new Error('Invalid POINT WKT format');
-            
-            const coords = match[1].trim().split(/\s+/);
-            if (coords.length < 2) throw new Error('POINT must have at least 2 coordinates');
-            
-            return {
-                type: 'Point',
-                coordinates: [parseFloat(coords[0]), parseFloat(coords[1])]
-            };
-        } else if (wkt.startsWith('LINESTRING(')) {
-            const match = wkt.match(/LINESTRING\s*\(\s*([^)]+)\s*\)/i);
-            if (!match) throw new Error('Invalid LINESTRING WKT format');
-            
-            const coordString = match[1].trim();
-            const coordinates = coordString.split(',').map(pair => {
-                const coords = pair.trim().split(/\s+/);
-                if (coords.length < 2) throw new Error('Each coordinate pair must have at least 2 values');
-                return [parseFloat(coords[0]), parseFloat(coords[1])];
-            });
-            
-            if (coordinates.length < 2) throw new Error('LINESTRING must have at least 2 coordinate pairs');
-            
-            return {
-                type: 'LineString',
-                coordinates: coordinates
-            };
-        } else if (wkt.startsWith('POLYGON(')) {
-            const match = wkt.match(/POLYGON\s*\(\s*\(\s*([^)]+)\s*\)\s*\)/i);
-            if (!match) throw new Error('Invalid POLYGON WKT format');
-            
-            const coordString = match[1].trim();
-            const coordinates = coordString.split(',').map(pair => {
-                const coords = pair.trim().split(/\s+/);
-                if (coords.length < 2) throw new Error('Each coordinate pair must have at least 2 values');
-                return [parseFloat(coords[0]), parseFloat(coords[1])];
-            });
-            
-            if (coordinates.length < 3) throw new Error('POLYGON must have at least 3 coordinate pairs');
-            
-            // Ensure polygon is closed (first and last points are the same)
-            const first = coordinates[0];
-            const last = coordinates[coordinates.length - 1];
-            if (first[0] !== last[0] || first[1] !== last[1]) {
-                coordinates.push([first[0], first[1]]);
+        try {
+            if (wkt.startsWith('POINT(')) {
+                const match = wkt.match(/POINT\s*\(\s*([^)]+)\s*\)/);
+                if (!match) {
+                    console.error('POINT regex failed for:', wkt);
+                    throw new Error('Invalid POINT WKT format');
+                }
+                
+                const coordString = match[1].trim();
+                console.log('POINT coordinate string:', coordString);
+                
+                const coords = coordString.split(/\s+/);
+                if (coords.length < 2) {
+                    console.error('POINT insufficient coordinates:', coords);
+                    throw new Error('POINT must have at least 2 coordinates');
+                }
+                
+                const lng = parseFloat(coords[0]);
+                const lat = parseFloat(coords[1]);
+                
+                if (isNaN(lng) || isNaN(lat)) {
+                    console.error('POINT invalid coordinate values:', coords);
+                    throw new Error('POINT coordinates must be valid numbers');
+                }
+                
+                console.log('Parsed POINT:', [lng, lat]);
+                return {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                };
+                
+            } else if (wkt.startsWith('LINESTRING(')) {
+                const match = wkt.match(/LINESTRING\s*\(\s*([^)]+)\s*\)/);
+                if (!match) {
+                    console.error('LINESTRING regex failed for:', wkt);
+                    throw new Error('Invalid LINESTRING WKT format');
+                }
+                
+                const coordString = match[1].trim();
+                console.log('LINESTRING coordinate string:', coordString);
+                
+                const coordinates = coordString.split(',').map(pair => {
+                    const coords = pair.trim().split(/\s+/);
+                    if (coords.length < 2) {
+                        console.error('LINESTRING invalid coordinate pair:', pair);
+                        throw new Error('Each coordinate pair must have at least 2 values');
+                    }
+                    const lng = parseFloat(coords[0]);
+                    const lat = parseFloat(coords[1]);
+                    if (isNaN(lng) || isNaN(lat)) {
+                        console.error('LINESTRING invalid coordinate values:', coords);
+                        throw new Error('Coordinate values must be valid numbers');
+                    }
+                    return [lng, lat];
+                });
+                
+                if (coordinates.length < 2) {
+                    console.error('LINESTRING insufficient coordinate pairs:', coordinates.length);
+                    throw new Error('LINESTRING must have at least 2 coordinate pairs');
+                }
+                
+                console.log('Parsed LINESTRING:', coordinates);
+                return {
+                    type: 'LineString',
+                    coordinates: coordinates
+                };
+                
+            } else if (wkt.startsWith('POLYGON(')) {
+                // Improved regex to handle nested parentheses properly
+                const match = wkt.match(/POLYGON\s*\(\s*\(([^)]+(?:\)[^)]*)*)\)\s*\)/);
+                if (!match) {
+                    console.error('POLYGON regex failed for:', wkt);
+                    // Try simpler fallback regex
+                    const fallbackMatch = wkt.match(/POLYGON\s*\(\s*\(([^)]+)\)\s*\)/);
+                    if (!fallbackMatch) {
+                        throw new Error('Invalid POLYGON WKT format');
+                    }
+                    console.log('Using fallback POLYGON parsing');
+                    var coordString = fallbackMatch[1].trim();
+                } else {
+                    var coordString = match[1].trim();
+                }
+                
+                console.log('POLYGON coordinate string:', coordString);
+                
+                const coordinates = coordString.split(',').map(pair => {
+                    const coords = pair.trim().split(/\s+/);
+                    if (coords.length < 2) {
+                        console.error('POLYGON invalid coordinate pair:', pair);
+                        throw new Error('Each coordinate pair must have at least 2 values');
+                    }
+                    const lng = parseFloat(coords[0]);
+                    const lat = parseFloat(coords[1]);
+                    if (isNaN(lng) || isNaN(lat)) {
+                        console.error('POLYGON invalid coordinate values:', coords);
+                        throw new Error('Coordinate values must be valid numbers');
+                    }
+                    return [lng, lat];
+                });
+                
+                if (coordinates.length < 3) {
+                    console.error('POLYGON insufficient coordinate pairs:', coordinates.length);
+                    throw new Error('POLYGON must have at least 3 coordinate pairs');
+                }
+                
+                // Ensure polygon is closed (first and last points are the same)
+                const first = coordinates[0];
+                const last = coordinates[coordinates.length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                    console.log('Closing POLYGON by adding first point to end');
+                    coordinates.push([first[0], first[1]]);
+                }
+                
+                console.log('Parsed POLYGON:', coordinates);
+                return {
+                    type: 'Polygon',
+                    coordinates: [coordinates]
+                };
             }
             
-            return {
-                type: 'Polygon',
-                coordinates: [coordinates]
-            };
+            console.error('Unsupported WKT format:', wkt);
+            throw new Error('Unsupported WKT format: ' + wkt.substring(0, 50) + '...');
+            
+        } catch (error) {
+            console.error('Error parsing WKT:', wkt, error);
+            throw error;
         }
-        throw new Error('Unsupported WKT format: ' + wkt);
     }
 
     function geometryToWKT(geometry) {
@@ -899,6 +1211,68 @@ window.App = window.App || {};
         return colors[classificationType] || '#999999';
     }
 
+    // Function to temporarily highlight a feature
+    function highlightFeature(targetFeature, featureId) {
+        const m = map();
+        if (!m) return;
+        
+        console.log('Highlighting feature:', featureId);
+        
+        // Remove any existing highlight
+        if (m.getLayer('feature-highlight')) {
+            m.removeLayer('feature-highlight');
+        }
+        if (m.getSource('feature-highlight')) {
+            m.removeSource('feature-highlight');
+        }
+        
+        // Create highlight source
+        m.addSource('feature-highlight', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [targetFeature]
+            }
+        });
+        
+        // Add highlight layer based on geometry type
+        if (targetFeature.geometry.type === 'Point') {
+            m.addLayer({
+                id: 'feature-highlight',
+                type: 'circle',
+                source: 'feature-highlight',
+                paint: {
+                    'circle-color': '#ff0000',
+                    'circle-radius': 12,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 3,
+                    'circle-opacity': 0.8
+                }
+            });
+        } else {
+            m.addLayer({
+                id: 'feature-highlight',
+                type: 'line',
+                source: 'feature-highlight',
+                paint: {
+                    'line-color': '#ff0000',
+                    'line-width': 5,
+                    'line-opacity': 0.8
+                }
+            });
+        }
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            if (m.getLayer('feature-highlight')) {
+                m.removeLayer('feature-highlight');
+            }
+            if (m.getSource('feature-highlight')) {
+                m.removeSource('feature-highlight');
+            }
+            console.log('Feature highlight removed');
+        }, 3000);
+    }
     // Expose property features functions globally
     window.savePropertyFeature = function() {
         window.App.savePropertyFeature();
@@ -910,6 +1284,10 @@ window.App = window.App || {};
     
     window.deletePropertyFeature = function(featureId) {
         window.App.deletePropertyFeature(featureId);
+    };
+    
+    window.focusPropertyFeature = function(featureId) {
+        window.App.focusPropertyFeature(featureId);
     };
 
     // Expose wireCameraForm function
