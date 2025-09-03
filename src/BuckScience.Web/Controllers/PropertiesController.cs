@@ -514,6 +514,88 @@ public class PropertiesController : Controller
         return filters.HasAnyFilters ? filters : null;
     }
 
+    // FEATURE EDIT
+    [HttpGet]
+    [Route("/properties/{propertyId:int}/features/{featureId:int}/edit")]
+    public async Task<IActionResult> EditFeature(int propertyId, int featureId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify property ownership
+        var property = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (property is null) return NotFound();
+
+        // Get the feature
+        var feature = await _db.PropertyFeatures.AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Id == featureId && f.PropertyId == propertyId, ct);
+        if (feature is null) return NotFound();
+
+        // Convert geometry to WKT
+        var geometryWkt = feature.Geometry?.AsText() ?? string.Empty;
+
+        var vm = new EditPropertyFeatureVm
+        {
+            Id = feature.Id,
+            PropertyId = propertyId,
+            PropertyName = property.Name,
+            ClassificationType = feature.ClassificationType,
+            Notes = feature.Notes,
+            GeometryWkt = geometryWkt,
+            CreatedAt = feature.CreatedAt
+        };
+
+        return View(vm);
+    }
+
+    // FEATURE UPDATE
+    [HttpPost]
+    [Route("/properties/{propertyId:int}/features/{featureId:int}/edit")]
+    public async Task<IActionResult> EditFeature(int propertyId, int featureId, EditPropertyFeatureVm vm, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify property ownership
+        var property = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (property is null) return NotFound();
+
+        if (!ModelState.IsValid)
+        {
+            vm.PropertyName = property.Name;
+            return View(vm);
+        }
+
+        try
+        {
+            var cmd = new UpdatePropertyFeature.Command(
+                featureId,
+                vm.ClassificationType,
+                vm.GeometryWkt ?? string.Empty,
+                vm.Notes
+            );
+
+            var success = await UpdatePropertyFeature.HandleAsync(
+                cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
+
+            if (!success)
+            {
+                ModelState.AddModelError("", "Feature not found or access denied.");
+                vm.PropertyName = property.Name;
+                return View(vm);
+            }
+
+            // Redirect back to property details
+            return Redirect($"/properties/{propertyId}/details");
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"Error updating feature: {ex.Message}");
+            vm.PropertyName = property.Name;
+            return View(vm);
+        }
+    }
+
     private void PopulateTimeZones(PropertyCreateVm vm)
     {
         var timeZones = TimeZoneInfo.GetSystemTimeZones()

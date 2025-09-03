@@ -1,6 +1,7 @@
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Profiles;
 using BuckScience.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace BuckScience.Web.ViewModels.Properties;
 
@@ -25,5 +26,22 @@ public class PropertyFeatureVm
     public string Icon { get; set; } = string.Empty;
     public string? GeometryWkt { get; set; }
     public string? Notes { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class EditPropertyFeatureVm
+{
+    public int Id { get; set; }
+    public int PropertyId { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    
+    [Required]
+    [Display(Name = "Feature Type")]
+    public ClassificationType ClassificationType { get; set; }
+    
+    [Display(Name = "Notes")]
+    public string? Notes { get; set; }
+    
+    public string? GeometryWkt { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
