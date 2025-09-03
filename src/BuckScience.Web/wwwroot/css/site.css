@@ -18,7 +18,7 @@
     top: 0;
     left: 80px;
     bottom: 0;
-    min-width: 380px;
+    min-width: 400px;
     width: max-content;
     max-width: calc(100vw - 80px); /* Leave room for navbar */
     background: #fff;
@@ -246,16 +246,11 @@
 
 /* Property List */
 .property-list {
-    padding: 12px;
     overflow-y: auto;
     max-height: calc(100vh - 100px);
-}
-
-/* Property List */
-.property-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 20px;
 }
 
 /* Property Item */
@@ -266,7 +261,7 @@
     background: #fff;
     border: 1px solid #e1e4e8;
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 16px 20px;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
@@ -532,7 +527,6 @@
 .camera-details {
     min-height: 100%;
     max-width: 1200px;
-    min-width: 600px;
 }
 
 /* Camera Details Accordion Styling to match green theme */

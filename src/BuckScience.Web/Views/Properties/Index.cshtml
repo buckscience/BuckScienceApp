@@ -3,14 +3,6 @@
     ViewData["Title"] = "Properties";
 }
 
-<h1>Properties</h1>
-
-@if (TempData["DeletedId"] is int did)
-{
-    <div class="alert alert-success">Deleted Property with Id @did</div>
-}
-
-
 <h2 class="sidebar-title">My Hunt Areas</h2>
 <hr class="sidebar-title-separator" />
 <div class="property-list property-list-full">
@@ -26,7 +18,7 @@
             </div>
             <div class="property-actions">
                 <a href="/properties/@p.Id/details" class="btn btn-outline-primary btn-sm me-1" title="View Details">
-                    <i class="fas fa-eye"></i>
+                    <i class="fas fa-info-circle"></i>
                 </a>
                 <a href="/properties/@p.Id/edit" class="btn btn-custom-cancel btn-sm" title="Edit">
                     <i class="fas fa-edit"></i>
@@ -35,8 +27,8 @@
         </div>
     }
 </div>
-<div class="property-list-actions">
-    <a href="/properties/add" class="create-btn btn btn-custom-primary property-list-btn">
-        <i class="fas fa-plus"></i> Create New Property
+<div class="property-list-actions mt-4">
+    <a href="/properties/add" class="create-btn btn btn-custom-primary property-list-btn w-100">
+        <i class="fas fa-plus"></i> Add A Property
     </a>
 </div>

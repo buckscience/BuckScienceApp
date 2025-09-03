@@ -4,20 +4,17 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
 #nullable disable
 
-namespace BuckScience.Infrastructure.Persistence.Migrations
+namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250822135121_Initial")]
-    partial class Initial
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,7 +59,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime>("TrialStartDate")
+                    b.Property<DateTime?>("TrialStartDate")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -71,6 +68,18 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ApplicationUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AzureEntraB2CId = "b300176c-0f43-4a4d-afd3-d128f8e635a1",
+                            CreatedDate = new DateTime(2025, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayName = "Darrin B",
+                            Email = "darrin@buckscience.com",
+                            FirstName = "Darrin",
+                            LastName = "Brandon"
+                        });
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Camera", b =>
@@ -184,6 +193,10 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CoverPhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -276,7 +289,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("PropertyTag");
+                    b.ToTable("PropertyTags");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Tag", b =>
@@ -322,10 +335,16 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("DateTimeEpoch")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Hour")
                         .HasColumnType("int");
 
                     b.Property<double>("Humidity")
@@ -335,6 +354,12 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
 
                     b.Property<double>("MoonPhase")
                         .HasColumnType("float");
@@ -380,6 +405,12 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     b.HasIndex("DateTime");
 
                     b.HasIndex("DateTimeEpoch");
+
+                    b.HasIndex("Latitude", "Longitude", "Date")
+                        .HasDatabaseName("IX_Weather_Location_Date");
+
+                    b.HasIndex("Latitude", "Longitude", "Date", "Hour")
+                        .HasDatabaseName("IX_Weather_Location_Date_Hour");
 
                     b.ToTable("Weathers");
                 });

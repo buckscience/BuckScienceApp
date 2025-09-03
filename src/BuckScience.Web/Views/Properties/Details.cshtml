@@ -4,6 +4,7 @@
 }
 
 <div class="property-details">
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="sidebar-title">@Model.Name</h2>
         <a href="/properties" class="btn btn-custom-cancel btn-sm">
@@ -13,57 +14,52 @@
     <hr class="sidebar-title-separator" />
 
     <div class="accordion" id="propertyDetailsAccordion">
-        
+
         <!-- Cameras Section -->
         <div class="accordion-item">
-            <h2 class="accordion-header" id="camerasHeading">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
+            <h2 class="accordion-header d-flex justify-content-between align-items-center" id="camerasHeading">
+                <button class="accordion-button flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
                     <i class="fas fa-camera me-2"></i>
                     Cameras <span class="badge badge-custom-primary ms-2">@Model.Cameras.Count</span>
                 </button>
             </h2>
             <div id="camerasCollapse" class="accordion-collapse collapse show" aria-labelledby="camerasHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="text-muted">Manage cameras for this property</span>
-                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i> Add Camera
-                        </a>
-                    </div>
                     @if (Model.Cameras.Any())
                     {
-                        <div class="row g-3">
-                            @foreach (var camera in Model.Cameras)
-                            {
-                                <div class="@(Model.Cameras.Count == 1 ? "col-8 mx-auto" : "col-6")">
-                                    <div class="card h-100 camera-card" style="cursor: pointer; min-height: 140px;" onclick="navigateToCamera(@camera.Id)">
-                                        <div class="card-body d-flex flex-column">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="card-title mb-0">@camera.Name</h6>
-                                                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
-                                                    @(camera.IsActive ? "Active" : "Inactive")
-                                                </span>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <p class="card-text text-muted mb-2">
-                                                    @camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")
+                        <div class="container-fluid px-0">
+                            <div class="row g-3">
+                                @foreach (var camera in Model.Cameras)
+                                {
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <a href="/cameras/@camera.Id/details" class="card camera-card w-100 text-decoration-none">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-2">@camera.Name</h6>
+                                                <p class="card-text text-muted small mb-2">
+                                                    <span>Brand/Model: @camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
                                                 </p>
                                                 <p class="card-text text-muted small mb-2">
                                                     <i class="fas fa-map-marker-alt me-1"></i>
                                                     @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
                                                 </p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <p class="card-text small mb-0">
+                                                        <i class="fas fa-images me-1 text-custom-primary"></i>
+                                                        <strong>@camera.PhotoCount</strong> photos
+                                                    </p>
+                                                    <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                                                        @(camera.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div class="mt-auto">
-                                                <p class="card-text small mb-0">
-                                                    <i class="fas fa-images me-1 text-custom-primary"></i>
-                                                    <strong>@camera.PhotoCount</strong> photos
-                                                </p>
-                                            </div>
-                                        </div>
+                                        </a>
                                     </div>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm ms-2 mt-3" style="min-width:unset; padding:0.25rem 0.75rem;">
+                            <i class="fas fa-plus me-1"></i> Add Camera
+                        </a>
                     }
                     else
                     {
@@ -79,13 +75,10 @@
 
         <!-- Profiles Section -->
         <div class="accordion-item">
-            <h2 class="accordion-header" id="profilesHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
+            <h2 class="accordion-header d-flex justify-content-between align-items-center" id="profilesHeading">
+                <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
                     <i class="fas fa-crosshairs me-2"></i>
                     Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
-                    <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm ms-auto me-3" onclick="event.stopPropagation();">
-                        <i class="fas fa-plus me-1"></i>Add Profile
-                    </a>
                 </button>
             </h2>
             <div id="profilesCollapse" class="accordion-collapse collapse" aria-labelledby="profilesHeading" data-bs-parent="#propertyDetailsAccordion">
@@ -95,58 +88,39 @@
                         <div class="row g-3">
                             @foreach (var profile in Model.Profiles)
                             {
-                                <div class="col-md-6">
-                                    <div class="card h-100 profile-card" style="cursor: pointer;" onclick="navigateToProfile(@profile.Id)">
-                                        @if (!string.IsNullOrEmpty(profile.CoverPhotoUrl))
-                                        {
-                                            <div class="position-relative">
-                                                <img src="@profile.CoverPhotoUrl" 
-                                                     class="card-img-top" 
-                                                     alt="Cover photo for @profile.Name"
-                                                     style="height: 150px; object-fit: cover;" />
-                                                <div class="position-absolute top-0 end-0 m-2">
-                                                    <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
-                                                        @profile.ProfileStatus
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        }
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h6 class="card-title">@profile.Name</h6>
-                                                    <p class="card-text text-muted mb-1">
-                                                        <i class="fas fa-tag me-1"></i>
-                                                        @profile.TagName
-                                                    </p>
-                                                </div>
-                                                @if (string.IsNullOrEmpty(profile.CoverPhotoUrl))
-                                                {
-                                                    <div class="text-end">
-                                                        <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
-                                                            @profile.ProfileStatus
-                                                        </span>
-                                                    </div>
-                                                }
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" style="cursor:pointer;">
+                                        <div class="position-relative">
+                                            <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover;">
+                                            <div class="position-absolute top-0 end-0 m-2">
+                                                <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
+                                                    @profile.ProfileStatus
+                                                </span>
                                             </div>
                                         </div>
-                                    </div>
+                                        <div class="card-body text-center mt-auto">
+                                            <h6 class="card-title mb-0">@profile.Name</h6>
+                                        </div>
+                                    </a>
                                 </div>
                             }
                         </div>
+                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm ms-2 mt-3" onclick="event.stopPropagation();">
+                            <i class="fas fa-plus me-1"></i> Add Profile
+                        </a>
                     }
                     else
                     {
                         <div class="text-center py-4">
-                            <i class="fas fa-user-circle fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No profiles configured for this property yet.</p>
+                            <i class="fas fa-crosshairs fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No profiles for this property yet.</p>
                             <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary">Add Profile</a>
                         </div>
                     }
                 </div>
             </div>
         </div>
-
+        
         <!-- Features Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="featuresHeading">
@@ -156,14 +130,15 @@
                 </button>
             </h2>
             <div id="featuresCollapse" class="accordion-collapse collapse" aria-labelledby="featuresHeading" data-bs-parent="#propertyDetailsAccordion">
-                <div class="accordion-body" style="max-width: 1200px;">
-                    <div class="row g-3">
-                        @foreach (var feature in Model.Features)
-                        {
-                            <div class="col-md-6 col-lg-4 col-xl-3">
-                                <div class="card h-100 feature-card" style="cursor: pointer; max-width: 280px;" onclick="navigateToFeature('@feature.Type')">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-start">
+                <div class="accordion-body">
+                    @if (Model.Features.Any())
+                    {
+                        <div class="row g-3">
+                            @foreach (var feature in Model.Features)
+                            {
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <div class="card feature-card d-flex flex-column" style="cursor:pointer;" onclick="navigateToFeature('@feature.Type')">
+                                        <div class="card-body d-flex align-items-start">
                                             <div class="feature-icon me-3">
                                                 <i class="@feature.Icon fa-2x text-custom-primary"></i>
                                             </div>
@@ -175,12 +150,20 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No features for this property yet.</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -195,6 +178,30 @@
             _ => "badge-custom-secondary"
         };
     }
+}
+
+@section Styles {
+    <style>
+        .camera-card,
+        .profile-card,
+        .feature-card {
+            height: 100%;
+        }
+        
+        /* Better responsive card sizing */
+        @@media (min-width: 768px) {
+            .col-md-4 {
+                min-width: 240px; /* Minimum width for medium screens */
+            }
+        }
+        
+        /* Keep cards from getting too narrow on small screens */
+        @@media (min-width: 576px) and (max-width: 767.98px) {
+            .col-sm-6 {
+                min-width: 220px; /* Minimum width for small screens */
+            }
+        }
+    </style>
 }
 
 @section Scripts {
@@ -216,97 +223,7 @@
         }
 
         function navigateToFeature(featureType) {
-            // Placeholder for feature navigation
             console.log('Navigate to feature:', featureType);
-        }
-
-        // Add camera markers to the map
-        document.addEventListener('DOMContentLoaded', function() {
-            // Wait for map to be initialized
-            setTimeout(function() {
-                if (typeof App !== 'undefined' && App.getMap) {
-                    const map = App.getMap();
-                    if (map) {
-                        addCameraMarkers(map);
-                    }
-                }
-            }, 1000); // Give the map time to initialize
-        });
-
-        function addCameraMarkers(map) {
-            // Camera data from the server
-            const cameras = @Html.Raw(Json.Serialize(Model.Cameras.Select(c => new { 
-                id = c.Id, 
-                name = c.Name, 
-                lat = c.Latitude, 
-                lng = c.Longitude, 
-                isActive = c.IsActive,
-                brand = c.Brand,
-                model = c.Model,
-                photoCount = c.PhotoCount
-            })));
-
-            cameras.forEach(function(camera) {
-                // Create a custom marker element
-                const markerElement = document.createElement('div');
-                markerElement.className = 'camera-marker';
-                markerElement.style.cssText = `
-                    width: 30px;
-                    height: 30px;
-                    background: ${camera.isActive ? '#527A52' : '#6c757d'};
-                    border: 2px solid #fff;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 12px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                `;
-                markerElement.innerHTML = '<i class="fas fa-camera" style="font-size: 14px;"></i>';
-                markerElement.title = `${camera.name} - ${camera.isActive ? 'Active' : 'Inactive'}`;
-
-                // Create popup content
-                const popupContent = `
-                    <div style="padding: 5px;">
-                        <h6 style="margin: 0 0 5px 0;">${camera.name}</h6>
-                        <p style="margin: 0; font-size: 12px; color: #666;">
-                            <strong>${camera.brand}</strong> ${camera.model || ''}<br>
-                            ${camera.photoCount} photos<br>
-                            <span style="color: ${camera.isActive ? '#527A52' : '#6c757d'};">
-                                ${camera.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                        </p>
-                    </div>
-                `;
-
-                // Create marker with popup
-                const marker = new mapboxgl.Marker(markerElement)
-                    .setLngLat([camera.lng, camera.lat])
-                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
-                    .addTo(map);
-
-                // Add click handler to marker
-                markerElement.addEventListener('click', function() {
-                    navigateToCamera(camera.id);
-                });
-            });
-
-            // If we have cameras, fit the map to show all of them
-            if (cameras.length > 0) {
-                const bounds = new mapboxgl.LngLatBounds();
-                cameras.forEach(camera => {
-                    bounds.extend([camera.lng, camera.lat]);
-                });
-                
-                // Add some padding and ensure minimum zoom
-                map.fitBounds(bounds, {
-                    padding: 50,
-                    maxZoom: 15
-                });
-            }
         }
     </script>
 }

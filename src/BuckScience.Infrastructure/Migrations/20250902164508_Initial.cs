@@ -4,7 +4,7 @@ using NetTopologySuite.Geometries;
 
 #nullable disable
 
-namespace BuckScience.Infrastructure.Persistence.Migrations
+namespace BuckScience.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -24,7 +24,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     DisplayName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(320)", maxLength: 320, nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TrialStartDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    TrialStartDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -71,6 +71,10 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    Latitude = table.Column<double>(type: "float", nullable: false),
+                    Longitude = table.Column<double>(type: "float", nullable: false),
+                    Date = table.Column<DateOnly>(type: "date", nullable: false),
+                    Hour = table.Column<int>(type: "int", nullable: false),
                     DateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DateTimeEpoch = table.Column<int>(type: "int", nullable: false),
                     Temperature = table.Column<double>(type: "float", nullable: false),
@@ -128,7 +132,8 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ProfileStatus = table.Column<int>(type: "int", nullable: false),
                     PropertyId = table.Column<int>(type: "int", nullable: false),
-                    TagId = table.Column<int>(type: "int", nullable: false)
+                    TagId = table.Column<int>(type: "int", nullable: false),
+                    CoverPhotoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -148,7 +153,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PropertyTag",
+                name: "PropertyTags",
                 columns: table => new
                 {
                     PropertyId = table.Column<int>(type: "int", nullable: false),
@@ -157,15 +162,15 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PropertyTag", x => new { x.PropertyId, x.TagId });
+                    table.PrimaryKey("PK_PropertyTags", x => new { x.PropertyId, x.TagId });
                     table.ForeignKey(
-                        name: "FK_PropertyTag_Properties_PropertyId",
+                        name: "FK_PropertyTags_Properties_PropertyId",
                         column: x => x.PropertyId,
                         principalTable: "Properties",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PropertyTag_Tags_TagId",
+                        name: "FK_PropertyTags_Tags_TagId",
                         column: x => x.TagId,
                         principalTable: "Tags",
                         principalColumn: "Id",
@@ -224,6 +229,11 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.InsertData(
+                table: "ApplicationUsers",
+                columns: new[] { "Id", "AzureEntraB2CId", "CreatedDate", "DisplayName", "Email", "FirstName", "LastName", "TrialStartDate" },
+                values: new object[] { 1, "b300176c-0f43-4a4d-afd3-d128f8e635a1", new DateTime(2025, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc), "Darrin B", "darrin@buckscience.com", "Darrin", "Brandon", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ApplicationUsers_AzureEntraB2CId",
@@ -292,13 +302,13 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 columns: new[] { "ApplicationUserId", "Name" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PropertyTag_PropertyId",
-                table: "PropertyTag",
+                name: "IX_PropertyTags_PropertyId",
+                table: "PropertyTags",
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PropertyTag_TagId",
-                table: "PropertyTag",
+                name: "IX_PropertyTags_TagId",
+                table: "PropertyTags",
                 column: "TagId");
 
             migrationBuilder.CreateIndex(
@@ -306,6 +316,16 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 table: "Tags",
                 column: "TagName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Weather_Location_Date",
+                table: "Weathers",
+                columns: new[] { "Latitude", "Longitude", "Date" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Weather_Location_Date_Hour",
+                table: "Weathers",
+                columns: new[] { "Latitude", "Longitude", "Date", "Hour" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Weathers_DateTime",
@@ -331,7 +351,7 @@ namespace BuckScience.Infrastructure.Persistence.Migrations
                 name: "Profiles");
 
             migrationBuilder.DropTable(
-                name: "PropertyTag");
+                name: "PropertyTags");
 
             migrationBuilder.DropTable(
                 name: "Photos");
