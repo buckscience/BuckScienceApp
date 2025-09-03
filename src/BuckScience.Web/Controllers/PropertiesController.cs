@@ -367,33 +367,6 @@ public class PropertiesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // FEATURE EDITING: GET /properties/{propertyId}/features/{featureId}/edit
-    [HttpGet]
-    [Route("/properties/{propertyId:int}/features/{featureId:int}/edit")]
-    public async Task<IActionResult> EditFeature(int propertyId, int featureId, CancellationToken ct)
-    {
-        if (_currentUser.Id is null) return Forbid();
-
-        // Get the feature
-        var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(featureId, _db, _currentUser.Id.Value, ct);
-        if (feature is null) return NotFound();
-
-        // Verify the feature belongs to the property
-        if (feature.PropertyId != propertyId) return NotFound();
-
-        var vm = new PropertyFeatureEditVm
-        {
-            Id = feature.Id,
-            PropertyId = feature.PropertyId,
-            ClassificationType = feature.ClassificationType,
-            GeometryWkt = feature.GeometryWkt,
-            Notes = feature.Notes,
-            GeometryType = GetGeometryType(feature.GeometryWkt)
-        };
-
-        return View(vm);
-    }
-
     private static string GetGeometryType(string wkt)
     {
         if (string.IsNullOrEmpty(wkt)) return "Unknown";
