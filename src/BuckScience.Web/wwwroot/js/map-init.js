@@ -203,6 +203,9 @@ window.App = window.App || {};
                 }
             });
             map.addControl(draw, 'top-right');
+            
+            // Store the draw instance for global access
+            App._draw = draw;
         } else {
             console.warn('MapboxDraw not loaded. Include it to enable drawing features.');
         }

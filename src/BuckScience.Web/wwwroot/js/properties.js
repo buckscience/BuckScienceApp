@@ -478,23 +478,13 @@ window.App = window.App || {};
         const m = map();
         if (!m || !window.MapboxDraw) return;
 
-        // Access the draw control from the map
-        const controls = m._controls || [];
-        let draw = null;
-        for (const control of controls) {
-            if (control.control && control.control.getMode) {
-                draw = control.control;
-                break;
-            }
-        }
-
+        // Use the stored draw instance
+        const draw = window.App._draw;
+        
         if (!draw) {
-            console.warn('MapboxDraw control not found');
+            console.warn('MapboxDraw control not available');
             return;
         }
-
-        // Store the draw instance
-        window.App._draw = draw;
 
         // Listen for draw events
         m.on('draw.create', (e) => {
