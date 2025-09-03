@@ -189,6 +189,8 @@ public class PropertiesController : Controller
         {
             Id = prop.Id,
             Name = prop.Name,
+            Latitude = prop.Latitude,
+            Longitude = prop.Longitude,
             Cameras = cameras,
             Profiles = profiles,
             Features = features

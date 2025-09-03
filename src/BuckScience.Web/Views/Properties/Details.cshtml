@@ -282,6 +282,12 @@
 
         // Initialize property features when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            // Set property coordinates for global access
+            window.App.propertyCoords = {
+                lat: @Model.Latitude,
+                lng: @Model.Longitude
+            };
+            
             if (window.App && window.App.initializePropertyFeatures) {
                 window.App.initializePropertyFeatures(@Model.Id);
             }

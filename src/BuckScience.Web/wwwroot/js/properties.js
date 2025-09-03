@@ -246,12 +246,70 @@ window.App = window.App || {};
         // Store the current property ID
         window.App._currentPropertyId = propertyId;
 
+        // Center map on property and fit to include cameras/features
+        centerMapOnProperty();
+
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
         // Set up drawing event handlers for features
         setupFeatureDrawing(propertyId);
     };
+
+    function centerMapOnProperty() {
+        const m = map();
+        if (!m) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        // Create a bounding box to include property location, cameras, and features
+        let bounds = new mapboxgl.LngLatBounds();
+        
+        // Add property center to bounds
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
+
+        // Add camera locations to bounds if available
+        const cameras = getCameraLocations();
+        cameras.forEach(camera => {
+            bounds.extend([camera.lng, camera.lat]);
+        });
+
+        // If we have a valid bounds with multiple points, fit to bounds
+        // Otherwise, just center on the property
+        if (cameras.length > 0) {
+            m.fitBounds(bounds, {
+                padding: 50,
+                maxZoom: 16,
+                duration: 1200
+            });
+        } else {
+            // Just center on property with a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 14,
+                duration: 1200
+            });
+        }
+    }
+
+    function getCameraLocations() {
+        // Try to extract camera coordinates from the DOM
+        const cameras = [];
+        document.querySelectorAll('.camera-card').forEach(card => {
+            const coordsText = card.querySelector('.card-text:has(.fa-map-marker-alt)')?.textContent;
+            if (coordsText) {
+                const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                if (match) {
+                    cameras.push({
+                        lat: parseFloat(match[1]),
+                        lng: parseFloat(match[2])
+                    });
+                }
+            }
+        });
+        return cameras;
+    }
 
     function loadPropertyFeatures(propertyId) {
         const m = map();
@@ -365,6 +423,55 @@ window.App = window.App || {};
                 showFeaturePopup(feature, e.lngLat);
             });
         });
+
+        // Update bounds to include features if this is the initial load
+        updateBoundsWithFeatures(geojsonFeatures);
+    }
+
+    function updateBoundsWithFeatures(geojsonFeatures) {
+        const m = map();
+        if (!m || geojsonFeatures.length === 0) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        // Only update bounds if we haven't moved from the property center yet
+        const currentCenter = m.getCenter();
+        const propertyCenter = [propertyCoords.lng, propertyCoords.lat];
+        const distance = Math.sqrt(
+            Math.pow(currentCenter.lng - propertyCenter[0], 2) + 
+            Math.pow(currentCenter.lat - propertyCenter[1], 2)
+        );
+
+        // If we're still close to the property center (haven't manually panned), include features in bounds
+        if (distance < 0.01) { // Small threshold for "close to property center"
+            let bounds = new mapboxgl.LngLatBounds();
+            bounds.extend(propertyCenter);
+
+            // Add camera locations
+            const cameras = getCameraLocations();
+            cameras.forEach(camera => {
+                bounds.extend([camera.lng, camera.lat]);
+            });
+
+            // Add feature geometries to bounds
+            geojsonFeatures.forEach(feature => {
+                if (feature.geometry.type === 'Point') {
+                    bounds.extend(feature.geometry.coordinates);
+                } else if (feature.geometry.type === 'LineString') {
+                    feature.geometry.coordinates.forEach(coord => bounds.extend(coord));
+                } else if (feature.geometry.type === 'Polygon') {
+                    feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
+                }
+            });
+
+            // Fit to bounds with cameras and features
+            m.fitBounds(bounds, {
+                padding: 50,
+                maxZoom: 16,
+                duration: 800
+            });
+        }
     }
 
     function setupFeatureDrawing(propertyId) {
