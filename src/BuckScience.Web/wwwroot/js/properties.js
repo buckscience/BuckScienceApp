@@ -1312,7 +1312,7 @@ window.App = window.App || {};
         console.log('Parsing WKT:', wkt);
         
         try {
-            if (wkt.startsWith('POINT(')) {
+            if (wkt.startsWith('POINT')) {
                 const match = wkt.match(/POINT\s*\(\s*([^)]+)\s*\)/);
                 if (!match) {
                     console.error('POINT regex failed for:', wkt);
@@ -1342,7 +1342,7 @@ window.App = window.App || {};
                     coordinates: [lng, lat]
                 };
                 
-            } else if (wkt.startsWith('LINESTRING(')) {
+            } else if (wkt.startsWith('LINESTRING')) {
                 const match = wkt.match(/LINESTRING\s*\(\s*([^)]+)\s*\)/);
                 if (!match) {
                     console.error('LINESTRING regex failed for:', wkt);
@@ -1378,7 +1378,7 @@ window.App = window.App || {};
                     coordinates: coordinates
                 };
                 
-            } else if (wkt.startsWith('POLYGON(')) {
+            } else if (wkt.startsWith('POLYGON')) {
                 // Improved regex to handle nested parentheses properly
                 const match = wkt.match(/POLYGON\s*\(\s*\(([^)]+(?:\)[^)]*)*)\)\s*\)/);
                 if (!match) {
