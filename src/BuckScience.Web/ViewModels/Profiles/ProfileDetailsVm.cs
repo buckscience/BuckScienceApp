@@ -1,4 +1,5 @@
 using BuckScience.Domain.Enums;
+using BuckScience.Web.ViewModels.Photos;
 
 namespace BuckScience.Web.ViewModels.Profiles;
 
@@ -12,4 +13,5 @@ public class ProfileDetailsVm
     public int TagId { get; set; }
     public string TagName { get; set; } = string.Empty;
     public string? CoverPhotoUrl { get; set; }
+    public List<PropertyPhotoListItemVm> TaggedPhotos { get; set; } = new();
 }

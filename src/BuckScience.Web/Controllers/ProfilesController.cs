@@ -42,10 +42,58 @@ public class ProfilesController : Controller
             PropertyName = profile.PropertyName,
             TagId = profile.TagId,
             TagName = profile.TagName,
-            CoverPhotoUrl = profile.CoverPhotoUrl
+            CoverPhotoUrl = profile.CoverPhotoUrl,
+            TaggedPhotos = await _db.Photos
+                .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == profile.TagId))
+                .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
+                .Where(pc => pc.c.PropertyId == profile.PropertyId)
+                .Select(pc => new BuckScience.Web.ViewModels.Photos.PropertyPhotoListItemVm
+                {
+                    Id = pc.p.Id,
+                    PhotoUrl = pc.p.PhotoUrl,
+                    DateTaken = pc.p.DateTaken,
+                    DateUploaded = pc.p.DateUploaded,
+                    CameraId = pc.c.Id,
+                    CameraName = pc.c.Name,
+                    Tags = _db.PhotoTags.Where(pt => pt.PhotoId == pc.p.Id)
+                        .Join(_db.Tags, pt => pt.TagId, t => t.Id, (pt, t) => new BuckScience.Web.ViewModels.Photos.TagInfo { Id = t.Id, Name = t.TagName })
+                        .ToList()
+                })
+                .OrderByDescending(x => x.DateTaken)
+                .ToListAsync(ct)
         };
 
         return View(vm);
+    }
+
+    // AJAX: POST /profiles/{id}/make-cover-photo
+    [HttpPost]
+    [Route("/profiles/{id}/make-cover-photo")]
+    public async Task<IActionResult> MakeCoverPhoto(int id, [FromBody] MakeCoverPhotoRequest req, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Validate profile ownership
+        var profile = await GetProfile.HandleAsync(id, _db, _currentUser.Id.Value, ct);
+        if (profile == null) return NotFound();
+
+        // Validate photo exists and is tagged for this profile
+        var isTaggedPhoto = await _db.PhotoTags
+            .AnyAsync(pt => pt.PhotoId == req.PhotoId && pt.TagId == profile.TagId, ct);
+        if (!isTaggedPhoto) return BadRequest("Photo is not tagged for this profile.");
+
+        // Set cover photo
+        var dbProfile = await _db.Profiles.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (dbProfile == null) return NotFound();
+        dbProfile.SetCoverPhoto(await _db.Photos.Where(p => p.Id == req.PhotoId).Select(p => p.PhotoUrl).FirstOrDefaultAsync(ct));
+        await _db.SaveChangesAsync(ct);
+
+        return Json(new { coverPhotoUrl = dbProfile.CoverPhotoUrl });
+    }
+
+    public class MakeCoverPhotoRequest
+    {
+        public int PhotoId { get; set; }
     }
 
     // CREATE: GET /Properties/{propertyId}/profiles/create
