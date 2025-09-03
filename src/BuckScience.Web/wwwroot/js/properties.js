@@ -252,8 +252,11 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Set up drawing event handlers for features
-        setupFeatureDrawing(propertyId);
+        // Set up drawing event handlers for features (ensure this is only done once)
+        if (!window.App._featureDrawingSetup) {
+            setupFeatureDrawing(propertyId);
+            window.App._featureDrawingSetup = true;
+        }
     };
 
     function centerMapOnProperty() {
@@ -329,7 +332,7 @@ window.App = window.App || {};
         const m = map();
         if (!m) return;
 
-        // Remove existing feature layers
+        // Remove existing feature layers and source
         const featureLayerIds = ['property-features-fill', 'property-features-line', 'property-features-points'];
         featureLayerIds.forEach(layerId => {
             if (m.getLayer(layerId)) {
@@ -416,8 +419,13 @@ window.App = window.App || {};
             }
         });
 
+        // Remove any existing click handlers to prevent duplicates
+        featureLayerIds.forEach(layerId => {
+            m.off('click', layerId);
+        });
+
         // Add click handlers
-        ['property-features-fill', 'property-features-line', 'property-features-points'].forEach(layerId => {
+        featureLayerIds.forEach(layerId => {
             m.on('click', layerId, (e) => {
                 const feature = e.features[0];
                 showFeaturePopup(feature, e.lngLat);
@@ -485,6 +493,11 @@ window.App = window.App || {};
             console.warn('MapboxDraw control not available');
             return;
         }
+
+        // Remove existing event listeners to prevent duplicates
+        m.off('draw.create');
+        m.off('draw.update');
+        m.off('draw.delete');
 
         // Listen for draw events
         m.on('draw.create', (e) => {
@@ -619,8 +632,8 @@ window.App = window.App || {};
                     window.App._draw.delete(feature.id);
                 }
 
-                // Reload features
-                loadPropertyFeatures(propertyId);
+                // Reload property details view to refresh features list and count
+                refreshPropertyDetailsView(propertyId);
 
                 // Show success message
                 console.log('Feature saved successfully');
@@ -674,10 +687,10 @@ window.App = window.App || {};
         })
         .then(response => {
             if (response.ok) {
-                // Reload features
+                // Reload property details view to refresh features list and count
                 const propertyId = window.App._currentPropertyId;
                 if (propertyId) {
-                    loadPropertyFeatures(propertyId);
+                    refreshPropertyDetailsView(propertyId);
                 }
                 console.log('Feature deleted successfully');
             } else {
@@ -689,6 +702,34 @@ window.App = window.App || {};
             alert('Error deleting feature. Please try again.');
         });
     };
+
+    // Function to refresh the property details view after feature changes
+    function refreshPropertyDetailsView(propertyId) {
+        // Use the sidebar loader to refresh the property details view
+        if (window.App && window.App.loadSidebar) {
+            const propertyDetailsUrl = `/properties/${propertyId}`;
+            window.App.loadSidebar(propertyDetailsUrl, { push: false }).then(() => {
+                // After the view is reloaded, expand the features accordion to show the changes
+                setTimeout(() => {
+                    const featuresAccordion = document.getElementById('featuresCollapse');
+                    if (featuresAccordion && !featuresAccordion.classList.contains('show')) {
+                        // Use Bootstrap's collapse API to show the features section
+                        const bsCollapse = new bootstrap.Collapse(featuresAccordion, {
+                            show: true
+                        });
+                    }
+                    
+                    // Re-initialize property features for the refreshed view
+                    if (window.App && window.App.initializePropertyFeatures) {
+                        window.App.initializePropertyFeatures(propertyId);
+                    }
+                }, 200); // Small delay to ensure DOM is updated
+            });
+        } else {
+            // Fallback: just reload features if sidebar loader not available
+            loadPropertyFeatures(propertyId);
+        }
+    }
 
     // Helper functions
     function parseSimpleWKT(wkt) {
