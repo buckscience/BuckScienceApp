@@ -3,14 +3,13 @@
     ViewData["Title"] = "Edit Feature";
 }
 
-<div class="feature-edit-panel">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="sidebar-title">Edit Feature</h4>
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelFeatureEdit()">
-            <i class="fas fa-times"></i> Cancel
-        </button>
-    </div>
-    <hr class="sidebar-title-separator" />
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="sidebar-title">Edit Feature</h4>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelFeatureEdit()">
+        <i class="fas fa-times"></i> Cancel
+    </button>
+</div>
+<hr class="sidebar-title-separator" />
 
     <form id="featureEditForm" data-feature-id="@Model.Id" data-property-id="@Model.PropertyId">
         @Html.AntiForgeryToken()
@@ -57,7 +56,6 @@
             </button>
         </div>
     </form>
-</div>
 
 @section Scripts {
     <script>
@@ -251,7 +249,7 @@
                 errorAlert = document.createElement('div');
                 errorAlert.id = 'feature-edit-error';
                 errorAlert.className = 'alert alert-danger mt-3';
-                document.querySelector('.feature-edit-panel').appendChild(errorAlert);
+                document.querySelector('form').appendChild(errorAlert);
             }
             errorAlert.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
         }
@@ -262,31 +260,5 @@
 }
 
 @section Styles {
-    <style>
-        .feature-edit-panel {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
-            margin: 1rem;
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            width: 350px;
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
-            z-index: 1000;
-        }
-
-        @@media (max-width: 768px) {
-            .feature-edit-panel {
-                position: fixed;
-                top: 60px;
-                right: 10px;
-                left: 10px;
-                width: auto;
-                max-height: calc(100vh - 80px);
-            }
-        }
-    </style>
+    <!-- Edit feature form styles are handled by the sidebar layout -->
 }
