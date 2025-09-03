@@ -17,21 +17,45 @@ window.App = window.App || {};
 
     async function fetchPartial(url) {
         console.log('Fetching partial from:', url);
-        const resp = await fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
         
-        console.log('Fetch response status:', resp.status, resp.statusText);
-        
-        if (!resp.ok) {
-            const errorText = await resp.text();
-            console.error('Fetch error response:', errorText);
-            throw new Error(`Failed to load ${url}: ${resp.status} ${resp.statusText}`);
+        try {
+            const resp = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            
+            console.log('Fetch response status:', resp.status, resp.statusText);
+            
+            if (!resp.ok) {
+                const errorText = await resp.text();
+                console.error('Fetch error response:', errorText);
+                
+                // Provide more specific error messages
+                let errorMessage = `Failed to load ${url}: ${resp.status} ${resp.statusText}`;
+                if (resp.status === 404) {
+                    errorMessage = 'The requested page could not be found.';
+                } else if (resp.status === 500) {
+                    errorMessage = 'Server error occurred while loading content.';
+                } else if (resp.status === 403) {
+                    errorMessage = 'Access denied to the requested content.';
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            const html = await resp.text();
+            console.log('Fetch successful, response length:', html.length);
+            
+            if (!html || html.trim().length === 0) {
+                throw new Error('Received empty response from server');
+            }
+            
+            return html;
+        } catch (error) {
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Network error: Unable to connect to server');
+            }
+            throw error;
         }
-        
-        const html = await resp.text();
-        console.log('Fetch successful, response length:', html.length);
-        return html;
     }
 
     async function loadSidebar(url, { push = false } = {}) {
@@ -81,10 +105,40 @@ window.App = window.App || {};
         } catch (err) {
             console.error('Error loading sidebar content:', err);
             console.error('Failed URL:', url);
+            
+            // Provide better error messaging based on error type
+            let errorDetails = err.message;
+            let errorTitle = 'Failed to load content';
+            
+            if (err.message.includes('Network error')) {
+                errorTitle = 'Network Error';
+                errorDetails = 'Unable to connect to the server. Please check your connection and try again.';
+            } else if (err.message.includes('Server error')) {
+                errorTitle = 'Server Error';
+                errorDetails = 'The server encountered an error. Please try again in a moment.';
+            } else if (err.message.includes('404')) {
+                errorTitle = 'Page Not Found';
+                errorDetails = 'The requested page could not be found.';
+            } else if (err.message.includes('403')) {
+                errorTitle = 'Access Denied';
+                errorDetails = 'You do not have permission to access this content.';
+            }
+            
             container.innerHTML = `<div class="alert alert-danger">
-                <h6>Failed to load content</h6>
-                <p class="mb-0 small">Error: ${err.message}</p>
-                <p class="mb-0 small">URL: ${url}</p>
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>${errorTitle}</h6>
+                <p class="mb-2">${errorDetails}</p>
+                <details class="mb-0">
+                    <summary class="small text-muted" style="cursor: pointer;">Technical Details</summary>
+                    <p class="mb-0 small text-muted mt-2">
+                        <strong>URL:</strong> ${url}<br>
+                        <strong>Error:</strong> ${err.message}
+                    </p>
+                </details>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="window.App.loadSidebar('${url}', { push: false })">
+                        <i class="fas fa-redo me-1"></i>Try Again
+                    </button>
+                </div>
             </div>`;
         } finally {
             container.style.opacity = '';

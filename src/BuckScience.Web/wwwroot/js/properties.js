@@ -855,8 +855,276 @@ window.App = window.App || {};
 
     window.App.editPropertyFeature = function(featureId) {
         console.log('Edit feature:', featureId);
-        // TODO: Implement feature editing
-        alert('Feature editing is not yet implemented. This will allow you to modify the feature geometry and properties.');
+        
+        const m = map();
+        if (!m) {
+            console.error('Map not available for editing feature');
+            return;
+        }
+        
+        // Get the features source
+        const source = m.getSource('property-features');
+        if (!source) {
+            console.error('Property features source not found on map');
+            alert('Features not loaded on map. Please refresh and try again.');
+            return;
+        }
+        
+        // Get the feature data
+        const sourceData = source._data;
+        if (!sourceData || !sourceData.features) {
+            console.error('No feature data available');
+            alert('No feature data available. Please refresh and try again.');
+            return;
+        }
+        
+        // Find the feature with the specified ID
+        const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
+        if (!targetFeature) {
+            console.error('Feature not found:', featureId);
+            alert('Feature not found on map. Please refresh and try again.');
+            return;
+        }
+        
+        console.log('Found target feature for editing:', targetFeature);
+        
+        // Check if we have the drawing control available
+        const draw = window.App._draw;
+        if (!draw) {
+            console.warn('MapboxDraw control not available');
+            alert('Drawing tools not available. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Show edit modal with current feature data
+        showFeatureEditModal(targetFeature, featureId);
+    };
+
+    function showFeatureEditModal(feature, featureId) {
+        const props = feature.properties;
+        
+        const modalHtml = `
+            <div class="modal fade" id="featureEditModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Property Feature</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="featureEditForm">
+                                <div class="mb-3">
+                                    <label for="editFeatureType" class="form-label">Feature Type</label>
+                                    <select class="form-select" id="editFeatureType" required>
+                                        <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
+                                        <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Feeding Zone</option>
+                                        <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
+                                        <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
+                                        <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
+                                        <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
+                                        <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editFeatureNotes" class="form-label">Notes</label>
+                                    <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editGeometry">
+                                        <label class="form-check-label" for="editGeometry">
+                                            Edit geometry (shape/location)
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Check this to modify the feature's shape or location on the map</small>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveFeatureEdit(${featureId})">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('featureEditModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Store feature data for saving
+        window.App._editingFeature = feature;
+        window.App._editingFeatureId = featureId;
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('featureEditModal'));
+        modal.show();
+        
+        // Handle geometry editing checkbox
+        const editGeometryCheckbox = document.getElementById('editGeometry');
+        editGeometryCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Enable geometry editing
+                enableGeometryEditing(feature);
+            } else {
+                // Disable geometry editing
+                disableGeometryEditing();
+            }
+        });
+    }
+
+    function enableGeometryEditing(feature) {
+        const draw = window.App._draw;
+        if (!draw) {
+            console.warn('Drawing control not available');
+            return;
+        }
+
+        console.log('Enabling geometry editing for feature');
+        
+        // Convert the feature to a format that MapboxDraw can understand
+        const drawFeature = {
+            type: 'Feature',
+            properties: {},
+            geometry: feature.geometry
+        };
+        
+        try {
+            // Add the feature to the draw control
+            const featureIds = draw.add(drawFeature);
+            console.log('Added feature to draw control:', featureIds);
+            
+            // Store the draw feature ID for later cleanup
+            window.App._editingDrawFeatureId = featureIds[0];
+            
+            // Put draw control in direct select mode for this feature
+            draw.changeMode('direct_select', { featureId: featureIds[0] });
+            
+            // Show editing instructions
+            const instructionDiv = document.createElement('div');
+            instructionDiv.id = 'editing-instructions';
+            instructionDiv.className = 'alert alert-info position-fixed';
+            instructionDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 300px;';
+            instructionDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>Geometry Editing Active</strong><br>
+                        <small>Drag points to modify the shape. Click and drag to move the entire feature. Changes will be saved when you click "Save Changes".</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-sm" onclick="disableGeometryEditing()"></button>
+                </div>
+            `;
+            document.body.appendChild(instructionDiv);
+            
+        } catch (error) {
+            console.error('Error enabling geometry editing:', error);
+            alert('Failed to enable geometry editing. Please try again.');
+        }
+    }
+
+    function disableGeometryEditing() {
+        const draw = window.App._draw;
+        if (draw && window.App._editingDrawFeatureId) {
+            try {
+                // Remove the feature from draw control
+                draw.delete(window.App._editingDrawFeatureId);
+                draw.changeMode('simple_select');
+                console.log('Disabled geometry editing');
+            } catch (error) {
+                console.warn('Error disabling geometry editing:', error);
+            }
+            
+            window.App._editingDrawFeatureId = null;
+        }
+        
+        // Remove instructions
+        const instructionDiv = document.getElementById('editing-instructions');
+        if (instructionDiv) {
+            instructionDiv.remove();
+        }
+        
+        // Uncheck the checkbox
+        const editGeometryCheckbox = document.getElementById('editGeometry');
+        if (editGeometryCheckbox) {
+            editGeometryCheckbox.checked = false;
+        }
+    }
+
+    window.App.saveFeatureEdit = function(featureId) {
+        const feature = window.App._editingFeature;
+        if (!feature) {
+            console.error('No feature being edited');
+            return;
+        }
+
+        const featureType = parseInt(document.getElementById('editFeatureType').value);
+        const notes = document.getElementById('editFeatureNotes').value.trim() || null;
+        let geometryWkt = geometryToWKT(feature.geometry); // Default to original geometry
+        
+        // Check if geometry was being edited
+        const draw = window.App._draw;
+        if (window.App._editingDrawFeatureId && draw) {
+            try {
+                // Get the modified geometry from the draw control
+                const drawFeature = draw.get(window.App._editingDrawFeatureId);
+                if (drawFeature) {
+                    geometryWkt = geometryToWKT(drawFeature.geometry);
+                    console.log('Using modified geometry:', geometryWkt);
+                }
+            } catch (error) {
+                console.warn('Could not get modified geometry, using original:', error);
+            }
+        }
+
+        const data = {
+            classificationType: featureType,
+            geometryWkt: geometryWkt,
+            notes: notes
+        };
+
+        const url = `/features/${featureId}`;
+        const method = 'PUT';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('featureEditModal'));
+                modal.hide();
+                
+                // Clean up editing state
+                disableGeometryEditing();
+                window.App._editingFeature = null;
+                window.App._editingFeatureId = null;
+
+                // Reload property details view to refresh features list
+                const propertyId = window.App._currentPropertyId;
+                if (propertyId) {
+                    refreshPropertyDetailsView(propertyId);
+                }
+
+                console.log('Feature updated successfully');
+            } else {
+                throw new Error('Failed to update feature');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating feature:', error);
+            alert('Error updating feature. Please try again.');
+        });
     };
 
     // Implement the focus feature functionality (the "eyeball" button)
@@ -1288,6 +1556,35 @@ window.App = window.App || {};
     
     window.focusPropertyFeature = function(featureId) {
         window.App.focusPropertyFeature(featureId);
+    };
+    
+    window.saveFeatureEdit = function(featureId) {
+        window.App.saveFeatureEdit(featureId);
+    };
+    
+    window.disableGeometryEditing = function() {
+        if (window.App._editingDrawFeatureId) {
+            const draw = window.App._draw;
+            if (draw) {
+                try {
+                    draw.delete(window.App._editingDrawFeatureId);
+                    draw.changeMode('simple_select');
+                } catch (error) {
+                    console.warn('Error disabling geometry editing:', error);
+                }
+                window.App._editingDrawFeatureId = null;
+            }
+        }
+        
+        const instructionDiv = document.getElementById('editing-instructions');
+        if (instructionDiv) {
+            instructionDiv.remove();
+        }
+        
+        const editGeometryCheckbox = document.getElementById('editGeometry');
+        if (editGeometryCheckbox) {
+            editGeometryCheckbox.checked = false;
+        }
     };
 
     // Expose wireCameraForm function
