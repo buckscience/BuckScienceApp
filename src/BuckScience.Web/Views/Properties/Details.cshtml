@@ -277,7 +277,11 @@
                 `;
                 document.body.appendChild(instructionDiv);
             } else {
-                alert('Drawing tools not available. Please refresh the page and try again.');
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Error', 'Drawing tools not available. Please refresh the page and try again.', 'error');
+                } else {
+                    alert('Drawing tools not available. Please refresh the page and try again.');
+                }
             }
         }
 

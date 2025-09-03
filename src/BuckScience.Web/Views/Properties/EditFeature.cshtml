@@ -1,0 +1,292 @@
+@model BuckScience.Web.ViewModels.Properties.PropertyFeatureEditVm
+@{
+    ViewData["Title"] = "Edit Feature";
+}
+
+<div class="feature-edit-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="sidebar-title">Edit Feature</h4>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelFeatureEdit()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    </div>
+    <hr class="sidebar-title-separator" />
+
+    <form id="featureEditForm" data-feature-id="@Model.Id" data-property-id="@Model.PropertyId">
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <label class="form-label">Geometry Type</label>
+            <div class="form-control-plaintext">
+                <i class="fas fa-shapes me-2 text-custom-primary"></i>
+                @Model.GeometryType
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="ClassificationType" class="form-label">Feature Type</label>
+            <select class="form-select" id="ClassificationType" name="ClassificationType" required>
+                <option value="">Select feature type</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.BeddingArea)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.BeddingArea)">Bedding Area</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.TravelCorridor)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.TravelCorridor)">Travel Corridor</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.WaterSource)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.WaterSource)">Water Source</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.FoodSource)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.FoodSource)">Food Source</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.PinchPointFunnel)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.PinchPointFunnel)">Pinch Point/Funnel</option>
+                <option value="@((int)BuckScience.Domain.Enums.ClassificationType.Other)" selected="@(Model.ClassificationType == BuckScience.Domain.Enums.ClassificationType.Other)">Other</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="Notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="Notes" name="Notes" rows="3" placeholder="Optional notes about this feature">@Model.Notes</textarea>
+        </div>
+
+        <div class="alert alert-info">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-info-circle me-2 mt-1"></i>
+                <div>
+                    <strong>Editing Instructions</strong><br>
+                    <small>You can now modify the feature's location and shape directly on the map. Drag points to reshape, or drag the entire feature to move it.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-2"></i>Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let isEditingGeometry = false;
+        let currentFeatureId = @Model.Id;
+        let currentPropertyId = @Model.PropertyId;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Feature edit panel loaded for feature:', currentFeatureId);
+            
+            // Enable geometry editing immediately
+            enableGeometryEditing();
+            
+            // Handle form submission
+            document.getElementById('featureEditForm').addEventListener('submit', handleFormSubmit);
+        });
+
+        function enableGeometryEditing() {
+            if (!window.App || !window.App._draw) {
+                console.error('Drawing tools not available');
+                showError('Drawing tools not available. Please refresh the page.');
+                return;
+            }
+
+            const m = window.App.getMap();
+            if (!m) {
+                console.error('Map not available');
+                showError('Map not available for editing.');
+                return;
+            }
+
+            // Get the feature from the map
+            const source = m.getSource('property-features');
+            if (!source || !source._data || !source._data.features) {
+                console.error('Features not loaded on map');
+                showError('Features not loaded. Please refresh the page.');
+                return;
+            }
+
+            const targetFeature = source._data.features.find(f => f.properties.id === currentFeatureId);
+            if (!targetFeature) {
+                console.error('Feature not found on map');
+                showError('Feature not found on map. Please refresh the page.');
+                return;
+            }
+
+            console.log('Enabling editing for feature:', targetFeature);
+
+            try {
+                // Add feature to draw control for editing
+                window.App._draw.add(targetFeature);
+                
+                // Enter edit mode
+                window.App._draw.changeMode('direct_select', {
+                    featureId: targetFeature.id || targetFeature.properties.id
+                });
+                
+                isEditingGeometry = true;
+                console.log('Geometry editing enabled');
+                
+            } catch (error) {
+                console.error('Error enabling geometry editing:', error);
+                showError('Failed to enable geometry editing: ' + error.message);
+            }
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const classificationType = parseInt(formData.get('ClassificationType'));
+            const notes = formData.get('Notes') || '';
+            
+            if (!classificationType) {
+                showError('Please select a feature type.');
+                return;
+            }
+
+            // Get current geometry from draw control if editing
+            let geometryWkt = '@Model.GeometryWkt'; // fallback to original
+            
+            if (isEditingGeometry && window.App._draw) {
+                try {
+                    const drawnFeatures = window.App._draw.getAll();
+                    const editedFeature = drawnFeatures.features.find(f => 
+                        f.properties.id === currentFeatureId || f.id === currentFeatureId
+                    );
+                    
+                    if (editedFeature) {
+                        geometryWkt = convertToWKT(editedFeature.geometry);
+                        console.log('Updated geometry WKT:', geometryWkt);
+                    }
+                } catch (error) {
+                    console.error('Error getting edited geometry:', error);
+                    showError('Error reading edited geometry. Using original.');
+                }
+            }
+
+            // Submit the update
+            const updateData = {
+                ClassificationType: classificationType,
+                GeometryWkt: geometryWkt,
+                Notes: notes
+            };
+
+            updateFeature(currentFeatureId, updateData);
+        }
+
+        function updateFeature(featureId, data) {
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            submitBtn.disabled = true;
+
+            fetch(`/features/${featureId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Feature updated successfully');
+                    
+                    // Clean up editing state
+                    cleanupEditing();
+                    
+                    // Navigate back to property details
+                    if (window.App && window.App.loadSidebar) {
+                        window.App.loadSidebar(`/properties/${currentPropertyId}/details`, { push: false });
+                    }
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating feature:', error);
+                showError('Error updating feature: ' + error.message);
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        }
+
+        function cancelFeatureEdit() {
+            cleanupEditing();
+            
+            // Navigate back to property details
+            if (window.App && window.App.loadSidebar) {
+                window.App.loadSidebar(`/properties/${currentPropertyId}/details`, { push: false });
+            }
+        }
+
+        function cleanupEditing() {
+            if (isEditingGeometry && window.App._draw) {
+                try {
+                    window.App._draw.changeMode('simple_select');
+                    window.App._draw.deleteAll();
+                    isEditingGeometry = false;
+                    console.log('Cleaned up editing state');
+                } catch (error) {
+                    console.error('Error cleaning up editing state:', error);
+                }
+            }
+        }
+
+        function convertToWKT(geometry) {
+            if (!geometry) return '';
+            
+            switch (geometry.type) {
+                case 'Point':
+                    return `POINT(${geometry.coordinates[0]} ${geometry.coordinates[1]})`;
+                case 'LineString':
+                    const lineCoords = geometry.coordinates.map(coord => `${coord[0]} ${coord[1]}`).join(', ');
+                    return `LINESTRING(${lineCoords})`;
+                case 'Polygon':
+                    const polyCoords = geometry.coordinates[0].map(coord => `${coord[0]} ${coord[1]}`).join(', ');
+                    return `POLYGON((${polyCoords}))`;
+                default:
+                    return '';
+            }
+        }
+
+        function showError(message) {
+            // Create or update error alert
+            let errorAlert = document.getElementById('feature-edit-error');
+            if (!errorAlert) {
+                errorAlert = document.createElement('div');
+                errorAlert.id = 'feature-edit-error';
+                errorAlert.className = 'alert alert-danger mt-3';
+                document.querySelector('.feature-edit-panel').appendChild(errorAlert);
+            }
+            errorAlert.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+        }
+
+        // Make functions available globally
+        window.cancelFeatureEdit = cancelFeatureEdit;
+    </script>
+}
+
+@section Styles {
+    <style>
+        .feature-edit-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin: 1rem;
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 350px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        @@media (max-width: 768px) {
+            .feature-edit-panel {
+                position: fixed;
+                top: 60px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+                max-height: calc(100vh - 80px);
+            }
+        }
+    </style>
+}

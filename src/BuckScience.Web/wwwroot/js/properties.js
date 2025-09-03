@@ -148,7 +148,7 @@ window.App = window.App || {};
                     history.pushState({ url: action }, '', action);
                 } catch (err) {
                     console.error(err);
-                    alert('Failed to submit form.');
+                    window.App.showModal('Error', 'Failed to submit form.', 'error');
                 }
             });
         });
@@ -589,15 +589,9 @@ window.App = window.App || {};
                 m.off('click', layerId);
             });
 
-            // Add click handlers
+            // Remove feature click handlers - using proper navigation instead
+            // Hover effects only
             featureLayerIds.forEach(layerId => {
-                m.on('click', layerId, (e) => {
-                    if (e.features && e.features.length > 0) {
-                        const feature = e.features[0];
-                        showFeaturePopup(feature, e.lngLat);
-                    }
-                });
-                
                 // Change cursor on hover
                 m.on('mouseenter', layerId, () => {
                     m.getCanvas().style.cursor = 'pointer';
@@ -827,279 +821,35 @@ window.App = window.App || {};
         })
         .catch(error => {
             console.error('Error saving feature:', error);
-            alert('Error saving feature. Please try again.');
+            window.App.showModal('Error', 'Error saving feature. Please try again.', 'error');
         });
     };
 
-    function showFeaturePopup(feature, lngLat) {
-        const m = map();
-        if (!m) return;
-
-        const props = feature.properties;
-        const popupHtml = `
-            <div style="max-width: 200px;">
-                <h6>${props.name}</h6>
-                ${props.notes ? `<p class="small text-muted">${props.notes}</p>` : ''}
-                <div class="d-flex gap-2 mt-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editPropertyFeature(${props.id})">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deletePropertyFeature(${props.id})">Delete</button>
-                </div>
-            </div>
-        `;
-
-        new mapboxgl.Popup()
-            .setLngLat(lngLat)
-            .setHTML(popupHtml)
-            .addTo(m);
-    }
+    // Feature popup function removed - using proper navigation instead
 
     window.App.editPropertyFeature = function(featureId) {
         console.log('Edit feature:', featureId);
         
-        const m = map();
-        if (!m) {
-            console.error('Map not available for editing feature');
+        // Get the current property ID
+        const propertyId = window.App._currentPropertyId;
+        if (!propertyId) {
+            console.error('Property ID not available');
+            window.App.showModal('Error', 'Property information not available. Please refresh the page.', 'error');
             return;
         }
         
-        // Get the features source
-        const source = m.getSource('property-features');
-        if (!source) {
-            console.error('Property features source not found on map');
-            alert('Features not loaded on map. Please refresh and try again.');
-            return;
+        // Use proper navigation to load the edit view
+        if (window.App && window.App.loadSidebar) {
+            const editUrl = `/properties/${propertyId}/features/${featureId}/edit`;
+            console.log('Loading feature edit view:', editUrl);
+            window.App.loadSidebar(editUrl, { push: false });
+        } else {
+            console.error('Sidebar loader not available');
+            window.App.showModal('Error', 'Navigation system not available. Please refresh the page.', 'error');
         }
-        
-        // Get the feature data
-        const sourceData = source._data;
-        if (!sourceData || !sourceData.features) {
-            console.error('No feature data available');
-            alert('No feature data available. Please refresh and try again.');
-            return;
-        }
-        
-        // Find the feature with the specified ID
-        const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
-        if (!targetFeature) {
-            console.error('Feature not found:', featureId);
-            alert('Feature not found on map. Please refresh and try again.');
-            return;
-        }
-        
-        console.log('Found target feature for editing:', targetFeature);
-        
-        // Check if we have the drawing control available
-        const draw = window.App._draw;
-        if (!draw) {
-            console.warn('MapboxDraw control not available');
-            alert('Drawing tools not available. Please refresh the page and try again.');
-            return;
-        }
-        
-        // Show edit modal with current feature data
-        showFeatureEditModal(targetFeature, featureId);
     };
 
-    function showFeatureEditModal(feature, featureId) {
-        const props = feature.properties;
-        
-        const modalHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureEditPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Edit Property Feature</h5>
-                    <button type="button" class="btn-close" onclick="cancelFeatureEdit()"></button>
-                </div>
-                <div class="alert alert-success" role="alert">
-                    <i class="fas fa-edit me-2"></i>
-                    <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
-                </div>
-                <form id="featureEditForm">
-                    <div class="mb-3">
-                        <label for="editFeatureType" class="form-label">Feature Type</label>
-                        <select class="form-select" id="editFeatureType" required>
-                            <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
-                            <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
-                            <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
-                            <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
-                            <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
-                            <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
-                            <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Geometry Type</label>
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted">${feature.geometry.type}</small>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="editFeatureNotes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
-                    </div>
-                </form>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary flex-fill" onclick="cancelFeatureEdit()">Cancel</button>
-                    <button type="button" class="btn btn-success flex-fill" onclick="saveFeatureEdit(${featureId})">
-                        <i class="fas fa-save me-1"></i>Save Changes
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Remove existing panel if any
-        const existingPanel = document.getElementById('featureEditPanel');
-        if (existingPanel) {
-            existingPanel.remove();
-        }
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Store feature data for saving
-        window.App._editingFeature = feature;
-        window.App._editingFeatureId = featureId;
-        
-        // Automatically enable geometry editing when panel opens
-        enableGeometryEditing(feature);
-    }
-
-    function enableGeometryEditing(feature) {
-        const draw = window.App._draw;
-        if (!draw) {
-            console.warn('Drawing control not available');
-            return;
-        }
-
-        console.log('Enabling geometry editing for feature');
-        
-        // Convert the feature to a format that MapboxDraw can understand
-        const drawFeature = {
-            type: 'Feature',
-            properties: {},
-            geometry: feature.geometry
-        };
-        
-        try {
-            // Add the feature to the draw control
-            const featureIds = draw.add(drawFeature);
-            console.log('Added feature to draw control:', featureIds);
-            
-            // Store the draw feature ID for later cleanup
-            window.App._editingDrawFeatureId = featureIds[0];
-            
-            // Put draw control in direct select mode for this feature
-            draw.changeMode('direct_select', { featureId: featureIds[0] });
-            
-        } catch (error) {
-            console.error('Error enabling geometry editing:', error);
-            alert('Failed to enable geometry editing. Please try again.');
-        }
-    }
-
-    function disableGeometryEditing() {
-        const draw = window.App._draw;
-        if (draw && window.App._editingDrawFeatureId) {
-            try {
-                // Remove the feature from draw control
-                draw.delete(window.App._editingDrawFeatureId);
-                draw.changeMode('simple_select');
-                console.log('Disabled geometry editing');
-            } catch (error) {
-                console.warn('Error disabling geometry editing:', error);
-            }
-            
-            window.App._editingDrawFeatureId = null;
-        }
-    }
-
-    window.App.cancelFeatureEdit = function() {
-        // Clean up editing state
-        disableGeometryEditing();
-        window.App._editingFeature = null;
-        window.App._editingFeatureId = null;
-        
-        // Remove the edit panel
-        const panel = document.getElementById('featureEditPanel');
-        if (panel) {
-            panel.remove();
-        }
-        
-        console.log('Feature editing cancelled');
-    };
-
-    window.App.saveFeatureEdit = function(featureId) {
-        const feature = window.App._editingFeature;
-        if (!feature) {
-            console.error('No feature being edited');
-            return;
-        }
-
-        const featureType = parseInt(document.getElementById('editFeatureType').value);
-        const notes = document.getElementById('editFeatureNotes').value.trim() || null;
-        let geometryWkt = geometryToWKT(feature.geometry); // Default to original geometry
-        
-        // Check if geometry was being edited
-        const draw = window.App._draw;
-        if (window.App._editingDrawFeatureId && draw) {
-            try {
-                // Get the modified geometry from the draw control
-                const drawFeature = draw.get(window.App._editingDrawFeatureId);
-                if (drawFeature) {
-                    geometryWkt = geometryToWKT(drawFeature.geometry);
-                    console.log('Using modified geometry:', geometryWkt);
-                }
-            } catch (error) {
-                console.warn('Could not get modified geometry, using original:', error);
-            }
-        }
-
-        const data = {
-            classificationType: featureType,
-            geometryWkt: geometryWkt,
-            notes: notes
-        };
-
-        const url = `/features/${featureId}`;
-        const method = 'PUT';
-
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (response.ok) {
-                // Close panel
-                const panel = document.getElementById('featureEditPanel');
-                if (panel) {
-                    panel.remove();
-                }
-                
-                // Clean up editing state
-                disableGeometryEditing();
-                window.App._editingFeature = null;
-                window.App._editingFeatureId = null;
-
-                // Reload property details view to refresh features list
-                const propertyId = window.App._currentPropertyId;
-                if (propertyId) {
-                    refreshPropertyDetailsView(propertyId);
-                }
-
-                console.log('Feature updated successfully');
-            } else {
-                throw new Error('Failed to update feature');
-            }
-        })
-        .catch(error => {
-            console.error('Error updating feature:', error);
-            alert('Error updating feature. Please try again.');
-        });
-    };
+    // Old editing functions removed - using proper MVC navigation instead
 
     // Implement the focus feature functionality (the "eyeball" button)
     window.App.focusPropertyFeature = function(featureId) {
@@ -1115,7 +865,7 @@ window.App = window.App || {};
         const source = m.getSource('property-features');
         if (!source) {
             console.error('Property features source not found on map');
-            alert('Features not loaded on map. Please refresh and try again.');
+            window.App.showModal('Error', 'Features not loaded on map. Please refresh and try again.', 'error');
             return;
         }
         
@@ -1123,7 +873,7 @@ window.App = window.App || {};
         const sourceData = source._data;
         if (!sourceData || !sourceData.features) {
             console.error('No feature data available');
-            alert('No feature data available. Please refresh and try again.');
+            window.App.showModal('Error', 'No feature data available. Please refresh and try again.', 'error');
             return;
         }
         
@@ -1131,7 +881,7 @@ window.App = window.App || {};
         const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
         if (!targetFeature) {
             console.error('Feature not found:', featureId);
-            alert('Feature not found on map. Please refresh and try again.');
+            window.App.showModal('Error', 'Feature not found on map. Please refresh and try again.', 'error');
             return;
         }
         
@@ -1165,32 +915,35 @@ window.App = window.App || {};
     };
 
     window.App.deletePropertyFeature = function(featureId) {
-        if (!confirm('Are you sure you want to delete this feature?')) {
-            return;
-        }
-
-        fetch(`/features/${featureId}`, {
-            method: 'DELETE',
-            headers: {
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+        window.App.showConfirmModal(
+            'Delete Feature',
+            'Are you sure you want to delete this feature? This action cannot be undone.',
+            function() {
+                // User confirmed deletion
+                fetch(`/features/${featureId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Reload property details view to refresh features list and count
+                        const propertyId = window.App._currentPropertyId;
+                        if (propertyId) {
+                            refreshPropertyDetailsView(propertyId);
+                        }
+                        console.log('Feature deleted successfully');
+                    } else {
+                        throw new Error('Failed to delete feature');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting feature:', error);
+                    window.App.showModal('Error', 'Error deleting feature. Please try again.', 'error');
+                });
             }
-        })
-        .then(response => {
-            if (response.ok) {
-                // Reload property details view to refresh features list and count
-                const propertyId = window.App._currentPropertyId;
-                if (propertyId) {
-                    refreshPropertyDetailsView(propertyId);
-                }
-                console.log('Feature deleted successfully');
-            } else {
-                throw new Error('Failed to delete feature');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting feature:', error);
-            alert('Error deleting feature. Please try again.');
-        });
+        );
     };
 
     // Function to refresh the property details view after feature changes
@@ -1564,6 +1317,116 @@ window.App = window.App || {};
             editGeometryCheckbox.checked = false;
         }
     };
+
+    // Modal helper to replace JavaScript alerts
+    function showModal(title, message, type = 'info') {
+        // Remove any existing modal
+        const existingModal = document.getElementById('app-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create modal HTML
+        const modalId = 'app-modal';
+        const iconClass = type === 'error' ? 'fas fa-exclamation-triangle text-danger' : 
+                         type === 'success' ? 'fas fa-check-circle text-success' : 
+                         'fas fa-info-circle text-info';
+
+        const modalHtml = `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="${modalId}Label">
+                                <i class="${iconClass} me-2"></i>${title}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${message}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modalElement = document.getElementById(modalId);
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        // Clean up when modal is hidden
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            modalElement.remove();
+        });
+    }
+
+    // Confirmation modal helper
+    function showConfirmModal(title, message, onConfirm, onCancel = null) {
+        // Remove any existing modal
+        const existingModal = document.getElementById('app-confirm-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalId = 'app-confirm-modal';
+        const modalHtml = `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="${modalId}Label">
+                                <i class="fas fa-question-circle text-warning me-2"></i>${title}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${message}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancel-btn">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirm-btn">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modalElement = document.getElementById(modalId);
+        const modal = new bootstrap.Modal(modalElement);
+        
+        // Handle confirm button
+        document.getElementById('confirm-btn').addEventListener('click', () => {
+            modal.hide();
+            if (onConfirm) onConfirm();
+        });
+
+        // Handle cancel button
+        document.getElementById('cancel-btn').addEventListener('click', () => {
+            modal.hide();
+            if (onCancel) onCancel();
+        });
+
+        modal.show();
+
+        // Clean up when modal is hidden
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            modalElement.remove();
+        });
+    }
+
+    // Expose modal functions globally
+    window.App.showModal = showModal;
+    window.App.showConfirmModal = showConfirmModal;
 
     // Expose wireCameraForm function
     window.App.wireCameraForm = wireCameraForm;

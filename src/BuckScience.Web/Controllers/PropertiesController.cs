@@ -367,6 +367,45 @@ public class PropertiesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // FEATURE EDITING: GET /properties/{propertyId}/features/{featureId}/edit
+    [HttpGet]
+    [Route("/properties/{propertyId:int}/features/{featureId:int}/edit")]
+    public async Task<IActionResult> EditFeature(int propertyId, int featureId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Get the feature
+        var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(featureId, _db, _currentUser.Id.Value, ct);
+        if (feature is null) return NotFound();
+
+        // Verify the feature belongs to the property
+        if (feature.PropertyId != propertyId) return NotFound();
+
+        var vm = new PropertyFeatureEditVm
+        {
+            Id = feature.Id,
+            PropertyId = feature.PropertyId,
+            ClassificationType = feature.ClassificationType,
+            GeometryWkt = feature.GeometryWkt,
+            Notes = feature.Notes,
+            GeometryType = GetGeometryType(feature.GeometryWkt)
+        };
+
+        return View(vm);
+    }
+
+    private static string GetGeometryType(string wkt)
+    {
+        if (string.IsNullOrEmpty(wkt)) return "Unknown";
+        
+        var upperWkt = wkt.Trim().ToUpper();
+        if (upperWkt.StartsWith("POINT")) return "Point";
+        if (upperWkt.StartsWith("LINESTRING")) return "LineString";
+        if (upperWkt.StartsWith("POLYGON")) return "Polygon";
+        
+        return "Unknown";
+    }
+
     private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
