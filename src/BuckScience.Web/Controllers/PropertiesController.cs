@@ -4,6 +4,7 @@ using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
+using BuckScience.Application.PropertyFeatures;
 using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Helpers;
@@ -170,16 +171,19 @@ public class PropertiesController : Controller
         // Get profiles for this property
         var profiles = await ListPropertyProfiles.HandleAsync(_db, _currentUser.Id.Value, id, ct);
 
-        // Create feature placeholders based on ClassificationType enum
-        var features = Enum.GetValues<ClassificationType>()
-            .Select(type => new PropertyFeatureVm
-            {
-                Type = type,
-                Name = GetFeatureName(type),
-                Description = GetFeatureDescription(type),
-                Icon = GetFeatureIcon(type)
-            })
-            .ToList();
+        // Get actual features for this property
+        var propertyFeatures = await ListPropertyFeatures.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+        var features = propertyFeatures.Select(pf => new PropertyFeatureVm
+        {
+            Id = pf.Id,
+            Type = pf.ClassificationType,
+            Name = GetFeatureName(pf.ClassificationType),
+            Description = GetFeatureDescription(pf.ClassificationType),
+            Icon = GetFeatureIcon(pf.ClassificationType),
+            GeometryWkt = pf.GeometryWkt,
+            Notes = pf.Notes,
+            CreatedAt = pf.CreatedAt
+        }).ToList();
 
         var vm = new PropertyDetailsVm
         {

@@ -16,8 +16,12 @@ public class PropertyDetailsVm
 
 public class PropertyFeatureVm
 {
+    public int Id { get; set; }
     public ClassificationType Type { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Icon { get; set; } = string.Empty;
+    public string? GeometryWkt { get; set; }
+    public string? Notes { get; set; }
+    public DateTime? CreatedAt { get; set; }
 }
