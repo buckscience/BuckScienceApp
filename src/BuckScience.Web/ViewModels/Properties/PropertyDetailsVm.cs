@@ -28,20 +28,3 @@ public class PropertyFeatureVm
     public string? Notes { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
-
-public class EditPropertyFeatureVm
-{
-    public int Id { get; set; }
-    public int PropertyId { get; set; }
-    public string PropertyName { get; set; } = string.Empty;
-    
-    [Required]
-    [Display(Name = "Feature Type")]
-    public ClassificationType ClassificationType { get; set; }
-    
-    [Display(Name = "Notes")]
-    public string? Notes { get; set; }
-    
-    public string? GeometryWkt { get; set; }
-    public DateTime? CreatedAt { get; set; }
-}

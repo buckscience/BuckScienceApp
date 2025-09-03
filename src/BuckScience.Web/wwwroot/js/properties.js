@@ -830,31 +830,294 @@ window.App = window.App || {};
     window.App.editPropertyFeature = function(featureId) {
         console.log('Edit feature:', featureId);
         
-        // Get property ID from current context
-        const propertyId = window.App._currentPropertyId;
-        if (!propertyId) {
-            console.error('Property ID not available');
-            window.App.showModal('Error', 'Property ID not available. Please refresh and try again.', 'error');
+        const m = map();
+        if (!m) {
+            console.error('Map not available for editing feature');
             return;
         }
         
-        // Navigate to feature edit view using proper MVC route
-        const editUrl = `/properties/${propertyId}/features/${featureId}/edit`;
-        console.log('Navigating to feature edit:', editUrl);
+        // Get the features source
+        const source = m.getSource('property-features');
+        if (!source) {
+            console.error('Property features source not found on map');
+            window.App.showModal('Error', 'Features not loaded on map. Please refresh and try again.', 'error');
+            return;
+        }
         
-        if (window.App && window.App.loadSidebar) {
-            window.App.loadSidebar(editUrl, { push: false });
-        } else {
-            // Fallback to direct navigation
-            window.location.href = editUrl;
+        // Get the feature data
+        const sourceData = source._data;
+        if (!sourceData || !sourceData.features) {
+            console.error('No feature data available');
+            window.App.showModal('Error', 'No feature data available. Please refresh and try again.', 'error');
+            return;
+        }
+        
+        // Find the feature with the specified ID
+        const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
+        if (!targetFeature) {
+            console.error('Feature not found:', featureId);
+            window.App.showModal('Error', 'Feature not found on map. Please refresh and try again.', 'error');
+            return;
+        }
+        
+        console.log('Found target feature for editing:', targetFeature);
+        
+        // Check if we have the drawing control available
+        const draw = window.App._draw;
+        if (!draw) {
+            console.warn('MapboxDraw control not available');
+            window.App.showModal('Error', 'Drawing tools not available. Please refresh the page and try again.', 'error');
+            return;
+        }
+        
+        // Show edit panel with current feature data
+        showFeatureEditPanel(targetFeature, featureId);
+    };
+
+    function showFeatureEditPanel(feature, featureId) {
+        const props = feature.properties;
+        
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureEditPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Edit Property Feature</h5>
+                    <button type="button" class="btn-close" onclick="cancelFeatureEdit()"></button>
+                </div>
+                <div class="alert alert-success" role="alert">
+                    <i class="fas fa-edit me-2"></i>
+                    <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
+                </div>
+                <form id="featureEditForm">
+                    <div class="mb-3">
+                        <label for="editFeatureType" class="form-label">Feature Type</label>
+                        <select class="form-select" id="editFeatureType" required>
+                            <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
+                            <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Travel Corridor</option>
+                            <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Water Source</option>
+                            <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Food Source</option>
+                            <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Pinch Point/Funnel</option>
+                            <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Geometry Type</label>
+                        <div class="p-2 border rounded bg-light">
+                            <small class="text-muted">${feature.geometry.type}</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editFeatureNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
+                    </div>
+                </form>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary flex-fill" onclick="cancelFeatureEdit()">Cancel</button>
+                    <button type="button" class="btn btn-success flex-fill" onclick="saveFeatureEdit(${featureId})">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Remove existing panel if any
+        const existingPanel = document.getElementById('featureEditPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
+
+        // Store feature data for saving
+        window.App._editingFeature = feature;
+        window.App._editingFeatureId = featureId;
+        
+        // Automatically enable geometry editing when panel opens
+        enableGeometryEditing(feature);
+    }
+
+    function enableGeometryEditing(feature) {
+        const draw = window.App._draw;
+        if (!draw) {
+            console.warn('Drawing control not available');
+            return;
+        }
+
+        console.log('Enabling geometry editing for feature');
+        
+        // Convert the feature to a format that MapboxDraw can understand
+        const drawFeature = {
+            type: 'Feature',
+            properties: {},
+            geometry: feature.geometry
+        };
+        
+        try {
+            // Add the feature to the draw control
+            const featureIds = draw.add(drawFeature);
+            console.log('Added feature to draw control:', featureIds);
+            
+            // Store the draw feature ID for later cleanup
+            window.App._editingDrawFeatureId = featureIds[0];
+            
+            // Put draw control in direct select mode for this feature
+            draw.changeMode('direct_select', { featureId: featureIds[0] });
+            
+        } catch (error) {
+            console.error('Error enabling geometry editing:', error);
+            window.App.showModal('Error', 'Failed to enable geometry editing. Please try again.', 'error');
+        }
+    }
+
+    function disableGeometryEditing() {
+        const draw = window.App._draw;
+        if (draw && window.App._editingDrawFeatureId) {
+            try {
+                draw.delete(window.App._editingDrawFeatureId);
+                draw.changeMode('simple_select');
+            } catch (error) {
+                console.warn('Error disabling geometry editing:', error);
+            }
+            window.App._editingDrawFeatureId = null;
+        }
+    }
+
+    window.App.saveFeatureEdit = function(featureId) {
+        console.log('Saving feature edit for:', featureId);
+        
+        const typeSelect = document.getElementById('editFeatureType');
+        const notesTextarea = document.getElementById('editFeatureNotes');
+        
+        if (!typeSelect) {
+            console.error('Feature type select not found');
+            window.App.showModal('Error', 'Feature type selection not found. Please try again.', 'error');
+            return;
+        }
+        
+        const classificationType = parseInt(typeSelect.value);
+        const notes = notesTextarea ? notesTextarea.value.trim() : '';
+        
+        if (!classificationType) {
+            window.App.showModal('Error', 'Please select a feature type.', 'error');
+            return;
+        }
+        
+        // Get current geometry from draw control if editing
+        let geometryWkt = window.App._editingFeature ? window.App._editingFeature.properties.geometryWkt : '';
+        
+        if (window.App._editingDrawFeatureId && window.App._draw) {
+            try {
+                const drawnFeatures = window.App._draw.getAll();
+                const editedFeature = drawnFeatures.features.find(f => f.id === window.App._editingDrawFeatureId);
+                
+                if (editedFeature) {
+                    geometryWkt = convertToWKT(editedFeature.geometry);
+                    console.log('Updated geometry WKT:', geometryWkt);
+                }
+            } catch (error) {
+                console.error('Error getting edited geometry:', error);
+                window.App.showModal('Error', 'Error reading edited geometry. Using original.', 'error');
+            }
+        }
+        
+        // Prepare the update data
+        const updateData = {
+            ClassificationType: classificationType,
+            GeometryWkt: geometryWkt,
+            Notes: notes
+        };
+        
+        // Submit the update
+        updateFeatureWithData(featureId, updateData);
+    };
+
+    function updateFeatureWithData(featureId, data) {
+        const saveBtn = document.querySelector('#featureEditPanel button.btn-success');
+        if (saveBtn) {
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            saveBtn.disabled = true;
+            
+            fetch(`/features/${featureId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Feature updated successfully');
+                    
+                    // Clean up editing state
+                    disableGeometryEditing();
+                    window.App._editingFeature = null;
+                    window.App._editingFeatureId = null;
+                    
+                    // Remove the edit panel
+                    const panel = document.getElementById('featureEditPanel');
+                    if (panel) {
+                        panel.remove();
+                    }
+                    
+                    // Refresh the property details to show updated feature
+                    const propertyId = window.App._currentPropertyId;
+                    if (propertyId) {
+                        refreshPropertyDetailsView(propertyId);
+                    }
+                    
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating feature:', error);
+                window.App.showModal('Error', 'Error updating feature: ' + error.message, 'error');
+            })
+            .finally(() => {
+                if (saveBtn) {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+            });
+        }
+    }
+
+    window.cancelFeatureEdit = function() {
+        console.log('Cancelling feature edit');
+        
+        // Clean up editing state
+        disableGeometryEditing();
+        window.App._editingFeature = null;
+        window.App._editingFeatureId = null;
+        
+        // Remove the edit panel
+        const panel = document.getElementById('featureEditPanel');
+        if (panel) {
+            panel.remove();
         }
     };
 
-    // All feature editing now uses proper MVC navigation - floating panel functions removed
+    function convertToWKT(geometry) {
+        if (!geometry) return '';
+        
+        switch (geometry.type) {
+            case 'Point':
+                return `POINT(${geometry.coordinates[0]} ${geometry.coordinates[1]})`;
+            case 'LineString':
+                const lineCoords = geometry.coordinates.map(coord => `${coord[0]} ${coord[1]}`).join(', ');
+                return `LINESTRING(${lineCoords})`;
+            case 'Polygon':
+                const polyCoords = geometry.coordinates[0].map(coord => `${coord[0]} ${coord[1]}`).join(', ');
+                return `POLYGON((${polyCoords}))`;
+            default:
+                return '';
+        }
+    }
 
-    // All geometry editing functions removed - now handled by MVC controllers
-
-    // All save and cancel editing functions removed - now handled by MVC controllers
+    // Old editing functions removed - using proper MVC navigation instead
 
     // Implement the focus feature functionality (the "eyeball" button)
     window.App.focusPropertyFeature = function(featureId) {
@@ -1290,8 +1553,38 @@ window.App = window.App || {};
         window.App.focusPropertyFeature(featureId);
     };
     
+    window.saveFeatureEdit = function(featureId) {
+        window.App.saveFeatureEdit(featureId);
+    };
     
-    // Feature editing functions removed - now handled by MVC controllers
+    window.cancelFeatureEdit = function() {
+        window.App.cancelFeatureEdit();
+    };
+    
+    window.disableGeometryEditing = function() {
+        if (window.App._editingDrawFeatureId) {
+            const draw = window.App._draw;
+            if (draw) {
+                try {
+                    draw.delete(window.App._editingDrawFeatureId);
+                    draw.changeMode('simple_select');
+                } catch (error) {
+                    console.warn('Error disabling geometry editing:', error);
+                }
+                window.App._editingDrawFeatureId = null;
+            }
+        }
+        
+        const instructionDiv = document.getElementById('editing-instructions');
+        if (instructionDiv) {
+            instructionDiv.remove();
+        }
+        
+        const editGeometryCheckbox = document.getElementById('editGeometry');
+        if (editGeometryCheckbox) {
+            editGeometryCheckbox.checked = false;
+        }
+    };
 
     // Modal helper to replace JavaScript alerts
     function showModal(title, message, type = 'info') {
