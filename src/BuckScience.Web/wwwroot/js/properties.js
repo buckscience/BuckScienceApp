@@ -904,84 +904,64 @@ window.App = window.App || {};
         const props = feature.properties;
         
         const modalHtml = `
-            <div class="modal fade" id="featureEditModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Edit Property Feature</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="alert alert-info" role="alert">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Editing Active:</strong> You can now drag points on the map to modify the feature's shape, or drag the entire feature to move it. Changes will be saved when you click "Save Changes".
-                            </div>
-                            <form id="featureEditForm">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="editFeatureType" class="form-label">Feature Type</label>
-                                            <select class="form-select" id="editFeatureType" required>
-                                                <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
-                                                <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
-                                                <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
-                                                <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
-                                                <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
-                                                <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
-                                                <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label">Current Geometry</label>
-                                            <div class="p-2 border rounded bg-light">
-                                                <small class="text-muted">${feature.geometry.type}: Ready for editing on map</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editFeatureNotes" class="form-label">Notes</label>
-                                    <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-success" onclick="saveFeatureEdit(${featureId})">
-                                <i class="fas fa-save me-1"></i>Save Changes
-                            </button>
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureEditPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Edit Property Feature</h5>
+                    <button type="button" class="btn-close" onclick="cancelFeatureEdit()"></button>
+                </div>
+                <div class="alert alert-success" role="alert">
+                    <i class="fas fa-edit me-2"></i>
+                    <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
+                </div>
+                <form id="featureEditForm">
+                    <div class="mb-3">
+                        <label for="editFeatureType" class="form-label">Feature Type</label>
+                        <select class="form-select" id="editFeatureType" required>
+                            <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
+                            <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
+                            <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
+                            <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
+                            <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
+                            <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
+                            <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Geometry Type</label>
+                        <div class="p-2 border rounded bg-light">
+                            <small class="text-muted">${feature.geometry.type}</small>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label for="editFeatureNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
+                    </div>
+                </form>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary flex-fill" onclick="cancelFeatureEdit()">Cancel</button>
+                    <button type="button" class="btn btn-success flex-fill" onclick="saveFeatureEdit(${featureId})">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
                 </div>
             </div>
         `;
 
-        // Remove existing modal if any
-        const existingModal = document.getElementById('featureEditModal');
-        if (existingModal) {
-            existingModal.remove();
+        // Remove existing panel if any
+        const existingPanel = document.getElementById('featureEditPanel');
+        if (existingPanel) {
+            existingPanel.remove();
         }
 
-        // Add modal to DOM
+        // Add panel to DOM
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         // Store feature data for saving
         window.App._editingFeature = feature;
         window.App._editingFeatureId = featureId;
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('featureEditModal'));
-        modal.show();
         
-        // Automatically enable geometry editing when modal opens
+        // Automatically enable geometry editing when panel opens
         enableGeometryEditing(feature);
-        
-        // Clean up when modal closes
-        modal._element.addEventListener('hidden.bs.modal', function() {
-            disableGeometryEditing();
-        });
     }
 
     function enableGeometryEditing(feature) {
@@ -1033,6 +1013,21 @@ window.App = window.App || {};
         }
     }
 
+    window.App.cancelFeatureEdit = function() {
+        // Clean up editing state
+        disableGeometryEditing();
+        window.App._editingFeature = null;
+        window.App._editingFeatureId = null;
+        
+        // Remove the edit panel
+        const panel = document.getElementById('featureEditPanel');
+        if (panel) {
+            panel.remove();
+        }
+        
+        console.log('Feature editing cancelled');
+    };
+
     window.App.saveFeatureEdit = function(featureId) {
         const feature = window.App._editingFeature;
         if (!feature) {
@@ -1078,9 +1073,11 @@ window.App = window.App || {};
         })
         .then(response => {
             if (response.ok) {
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('featureEditModal'));
-                modal.hide();
+                // Close panel
+                const panel = document.getElementById('featureEditPanel');
+                if (panel) {
+                    panel.remove();
+                }
                 
                 // Clean up editing state
                 disableGeometryEditing();
@@ -1537,6 +1534,10 @@ window.App = window.App || {};
     
     window.saveFeatureEdit = function(featureId) {
         window.App.saveFeatureEdit(featureId);
+    };
+    
+    window.cancelFeatureEdit = function() {
+        window.App.cancelFeatureEdit();
     };
     
     window.disableGeometryEditing = function() {
