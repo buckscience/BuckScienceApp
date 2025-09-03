@@ -20,7 +20,7 @@ window.App = window.App || {};
         if (!m || !bbox || bbox.length !== 4) return;
         m.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], {
             padding: 40,
-            maxZoom: 13,
+            maxZoom: 18,
             duration: 1200,
             ...options
         });
@@ -47,7 +47,7 @@ window.App = window.App || {};
             latInput.value = Number(lat).toFixed(6);
             lngInput.value = Number(lng).toFixed(6);
             marker.setLngLat([lng, lat]).addTo(m);
-            if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 14) });
+            if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 18) });
         }
 
         // Initialize from inputs or map center

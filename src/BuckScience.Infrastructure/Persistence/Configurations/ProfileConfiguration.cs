@@ -14,6 +14,9 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
                   .HasMaxLength(100)
                   .IsRequired();
 
+            entity.Property(p => p.CoverPhotoUrl)
+                  .HasMaxLength(500); // Optional field for cover photo URL
+
             // Enum maps to int by default
             entity.Property(p => p.ProfileStatus)
                   .IsRequired();

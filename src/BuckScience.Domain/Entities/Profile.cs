@@ -26,6 +26,8 @@ namespace BuckScience.Domain.Entities
         public int TagId { get; private set; }
         public virtual Tag Tag { get; private set; } = default!;
 
+        public string? CoverPhotoUrl { get; private set; }
+
         // Behavior
         public void Rename(string newName)
         {
@@ -48,6 +50,11 @@ namespace BuckScience.Domain.Entities
         {
             if (tagId <= 0) throw new ArgumentOutOfRangeException(nameof(tagId));
             TagId = tagId;
+        }
+
+        public void SetCoverPhoto(string? coverPhotoUrl)
+        {
+            CoverPhotoUrl = coverPhotoUrl;
         }
     }
 }
