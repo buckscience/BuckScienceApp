@@ -202,7 +202,7 @@ public class PropertiesController : Controller
     private static string GetFeatureName(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "Bedding Area",
-        ClassificationType.FeedingZone => "Feeding Zone",
+        ClassificationType.FoodSource => "Food Source",
         ClassificationType.TravelCorridor => "Travel Corridor",
         ClassificationType.PinchPointFunnel => "Pinch Point/Funnel",
         ClassificationType.WaterSource => "Water Source",
@@ -214,7 +214,7 @@ public class PropertiesController : Controller
     private static string GetFeatureDescription(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "Areas where deer rest during the day",
-        ClassificationType.FeedingZone => "Primary feeding and foraging areas",
+        ClassificationType.FoodSource => "Primary feeding and foraging areas",
         ClassificationType.TravelCorridor => "Paths deer use to move between areas",
         ClassificationType.PinchPointFunnel => "Natural funnels that concentrate deer movement",
         ClassificationType.WaterSource => "Water sources like creeks, ponds, or springs",
@@ -226,7 +226,7 @@ public class PropertiesController : Controller
     private static string GetFeatureIcon(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "fas fa-bed",
-        ClassificationType.FeedingZone => "fas fa-seedling",
+        ClassificationType.FoodSource => "fas fa-seedling",
         ClassificationType.TravelCorridor => "fas fa-route",
         ClassificationType.PinchPointFunnel => "fas fa-compress-arrows-alt",
         ClassificationType.WaterSource => "fas fa-tint",

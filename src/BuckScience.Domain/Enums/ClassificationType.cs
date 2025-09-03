@@ -3,7 +3,7 @@ namespace BuckScience.Domain.Enums
     public enum ClassificationType
     {
         BeddingArea = 1,
-        FeedingZone = 2,
+        FoodSource = 2,
         TravelCorridor = 3,
         PinchPointFunnel = 4,
         WaterSource = 5,

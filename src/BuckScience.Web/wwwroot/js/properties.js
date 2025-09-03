@@ -735,7 +735,7 @@ window.App = window.App || {};
                                     <label for="featureType" class="form-label">Feature Type</label>
                                     <select class="form-select" id="featureType" required>
                                         <option value="1">Bedding Area</option>
-                                        <option value="2">Feeding Zone</option>
+                                        <option value="2">Food Source</option>
                                         <option value="3">Travel Corridor</option>
                                         <option value="4">Pinch Point/Funnel</option>
                                         <option value="5">Water Source</option>
@@ -905,44 +905,53 @@ window.App = window.App || {};
         
         const modalHtml = `
             <div class="modal fade" id="featureEditModal" tabindex="-1">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit Property Feature</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Editing Active:</strong> You can now drag points on the map to modify the feature's shape, or drag the entire feature to move it. Changes will be saved when you click "Save Changes".
+                            </div>
                             <form id="featureEditForm">
-                                <div class="mb-3">
-                                    <label for="editFeatureType" class="form-label">Feature Type</label>
-                                    <select class="form-select" id="editFeatureType" required>
-                                        <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
-                                        <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Feeding Zone</option>
-                                        <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
-                                        <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
-                                        <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
-                                        <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
-                                        <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
-                                    </select>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editFeatureType" class="form-label">Feature Type</label>
+                                            <select class="form-select" id="editFeatureType" required>
+                                                <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
+                                                <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
+                                                <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
+                                                <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
+                                                <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
+                                                <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
+                                                <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Geometry</label>
+                                            <div class="p-2 border rounded bg-light">
+                                                <small class="text-muted">${feature.geometry.type}: Ready for editing on map</small>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="editFeatureNotes" class="form-label">Notes</label>
                                     <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
                                 </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editGeometry">
-                                        <label class="form-check-label" for="editGeometry">
-                                            Edit geometry (shape/location)
-                                        </label>
-                                    </div>
-                                    <small class="text-muted">Check this to modify the feature's shape or location on the map</small>
-                                </div>
                             </form>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" onclick="saveFeatureEdit(${featureId})">Save Changes</button>
+                            <button type="button" class="btn btn-success" onclick="saveFeatureEdit(${featureId})">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -966,16 +975,12 @@ window.App = window.App || {};
         const modal = new bootstrap.Modal(document.getElementById('featureEditModal'));
         modal.show();
         
-        // Handle geometry editing checkbox
-        const editGeometryCheckbox = document.getElementById('editGeometry');
-        editGeometryCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                // Enable geometry editing
-                enableGeometryEditing(feature);
-            } else {
-                // Disable geometry editing
-                disableGeometryEditing();
-            }
+        // Automatically enable geometry editing when modal opens
+        enableGeometryEditing(feature);
+        
+        // Clean up when modal closes
+        modal._element.addEventListener('hidden.bs.modal', function() {
+            disableGeometryEditing();
         });
     }
 
@@ -1006,22 +1011,6 @@ window.App = window.App || {};
             // Put draw control in direct select mode for this feature
             draw.changeMode('direct_select', { featureId: featureIds[0] });
             
-            // Show editing instructions
-            const instructionDiv = document.createElement('div');
-            instructionDiv.id = 'editing-instructions';
-            instructionDiv.className = 'alert alert-info position-fixed';
-            instructionDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 300px;';
-            instructionDiv.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <strong>Geometry Editing Active</strong><br>
-                        <small>Drag points to modify the shape. Click and drag to move the entire feature. Changes will be saved when you click "Save Changes".</small>
-                    </div>
-                    <button type="button" class="btn-close btn-close-sm" onclick="disableGeometryEditing()"></button>
-                </div>
-            `;
-            document.body.appendChild(instructionDiv);
-            
         } catch (error) {
             console.error('Error enabling geometry editing:', error);
             alert('Failed to enable geometry editing. Please try again.');
@@ -1041,18 +1030,6 @@ window.App = window.App || {};
             }
             
             window.App._editingDrawFeatureId = null;
-        }
-        
-        // Remove instructions
-        const instructionDiv = document.getElementById('editing-instructions');
-        if (instructionDiv) {
-            instructionDiv.remove();
-        }
-        
-        // Uncheck the checkbox
-        const editGeometryCheckbox = document.getElementById('editGeometry');
-        if (editGeometryCheckbox) {
-            editGeometryCheckbox.checked = false;
         }
     }
 
@@ -1456,7 +1433,7 @@ window.App = window.App || {};
     function getFeatureName(classificationType) {
         const names = {
             1: 'Bedding Area',
-            2: 'Feeding Zone',
+            2: 'Food Source',
             3: 'Travel Corridor',
             4: 'Pinch Point/Funnel',
             5: 'Water Source',
