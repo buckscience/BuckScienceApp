@@ -3,120 +3,124 @@
     ViewData["Title"] = $"Profile: {Model.Name}";
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-start mb-4">
-                <div>
-                    <h2>@Model.Name</h2>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item">
-                                <a href="javascript:void(0)" onclick="window.App.loadSidebar('/properties', { push: true })">
-                                    <i class="fas fa-map-marked-alt me-1"></i>Properties
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <a href="javascript:void(0)" onclick="window.App.loadSidebar('/properties/@Model.PropertyId/details', { push: true })">
-                                    @Model.PropertyName
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
-                        </ol>
-                    </nav>
-                </div>
-                <div class="btn-group" role="group">
-                    <a href="/profiles/@Model.Id/edit" class="btn btn-custom-primary">
-                        <i class="fas fa-edit me-1"></i>Edit Profile
-                    </a>
-                    <a href="/profiles/@Model.Id/delete" class="btn btn-custom-danger">
-                        <i class="fas fa-trash me-1"></i>Delete
-                    </a>
-                </div>
-            </div>
+<div class="property-details">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">@Model.Name</h2>
+        <a href="javascript:void(0)" onclick="window.App.loadSidebar('/properties/@Model.PropertyId/details', { push: true })" class="btn btn-custom-cancel btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Property
+        </a>
+    </div>
+    <hr class="sidebar-title-separator" />
 
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-user-circle me-2"></i>Profile Information
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Name</label>
-                                        <p class="mb-0">@Model.Name</p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Status</label>
-                                        <p class="mb-0">
-                                            <span class="badge @GetProfileStatusBadgeClass(Model.ProfileStatus)">
-                                                @Model.ProfileStatus
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Tag</label>
-                                        <p class="mb-0">
-                                            <i class="fas fa-tag me-1"></i>@Model.TagName
-                                        </p>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Property</label>
-                                        <p class="mb-0">
-                                            <i class="fas fa-map-marker-alt me-1"></i>@Model.PropertyName
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    @if (!string.IsNullOrEmpty(Model.CoverPhotoUrl))
-                                    {
-                                        <div class="mb-3">
-                                            <label class="form-label fw-semibold">Cover Photo</label>
-                                            <div class="text-center">
-                                                <img src="@Model.CoverPhotoUrl" 
-                                                     class="img-fluid rounded shadow-sm" 
-                                                     alt="Cover photo for @Model.Name"
-                                                     style="max-height: 200px; object-fit: cover;" />
-                                            </div>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="mb-3">
-                                            <label class="form-label fw-semibold">Cover Photo</label>
-                                            <div class="text-center py-3">
-                                                <i class="fas fa-image fa-3x text-muted mb-2"></i>
-                                                <p class="text-muted mb-0">No cover photo available</p>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
+    <div class="accordion" id="profileDetailsAccordion">
+
+        <!-- Profile Information Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="profileInfoHeading">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#profileInfoCollapse" aria-expanded="true" aria-controls="profileInfoCollapse">
+                    <i class="fas fa-user-circle me-2"></i>
+                    Profile Information
+                </button>
+            </h2>
+            <div id="profileInfoCollapse" class="accordion-collapse collapse show" aria-labelledby="profileInfoHeading" data-bs-parent="#profileDetailsAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Name</label>
+                                <p class="mb-0">@Model.Name</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Status</label>
+                                <p class="mb-0">
+                                    <span class="badge @GetProfileStatusBadgeClass(Model.ProfileStatus)">
+                                        @Model.ProfileStatus
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tag</label>
+                                <p class="mb-0">
+                                    <i class="fas fa-tag me-1"></i>@Model.TagName
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Property</label>
+                                <p class="mb-0">
+                                    <i class="fas fa-map-marker-alt me-1"></i>@Model.PropertyName
+                                </p>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-images me-2"></i>Tagged Photos
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Photos with the tag "@Model.TagName" will be displayed here in a future update.</p>
-                            <a href="/properties/@Model.PropertyId/photos?tag=@Model.TagId" class="btn btn-custom-outline-primary btn-sm">
-                                <i class="fas fa-images me-1"></i>View All Photos
-                            </a>
+                        <div class="col-md-6">
+                            @if (!string.IsNullOrEmpty(Model.CoverPhotoUrl))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Cover Photo</label>
+                                    <div class="text-center">
+                                        <img src="@Model.CoverPhotoUrl" 
+                                             class="img-fluid rounded shadow-sm" 
+                                             alt="Cover photo for @Model.Name"
+                                             style="max-height: 200px; object-fit: cover;" />
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Cover Photo</label>
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-image fa-3x text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No cover photo available</p>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Tagged Photos Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="taggedPhotosHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#taggedPhotosCollapse" aria-expanded="false" aria-controls="taggedPhotosCollapse">
+                    <i class="fas fa-images me-2"></i>
+                    Tagged Photos
+                </button>
+            </h2>
+            <div id="taggedPhotosCollapse" class="accordion-collapse collapse" aria-labelledby="taggedPhotosHeading" data-bs-parent="#profileDetailsAccordion">
+                <div class="accordion-body">
+                    <p class="text-muted">Photos with the tag "@Model.TagName" will be displayed here in a future update.</p>
+                    <a href="/properties/@Model.PropertyId/photos?tag=@Model.TagId" class="btn btn-custom-outline-primary btn-sm">
+                        <i class="fas fa-images me-1"></i>View All Photos
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="actionsHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#actionsCollapse" aria-expanded="false" aria-controls="actionsCollapse">
+                    <i class="fas fa-tools me-2"></i>
+                    Actions
+                </button>
+            </h2>
+            <div id="actionsCollapse" class="accordion-collapse collapse" aria-labelledby="actionsHeading" data-bs-parent="#profileDetailsAccordion">
+                <div class="accordion-body">
+                    <div class="d-flex gap-2">
+                        <a href="/profiles/@Model.Id/edit" class="btn btn-custom-primary">
+                            <i class="fas fa-edit me-1"></i>Edit Profile
+                        </a>
+                        <a href="/profiles/@Model.Id/delete" class="btn btn-custom-danger">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
