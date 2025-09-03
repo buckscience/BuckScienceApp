@@ -91,36 +91,63 @@
             </h2>
             <div id="taggedPhotosCollapse" class="accordion-collapse collapse" aria-labelledby="taggedPhotosHeading" data-bs-parent="#profileDetailsAccordion">
                 <div class="accordion-body">
-                    <p class="text-muted">Photos with the tag "@Model.TagName" will be displayed here in a future update.</p>
-                    <a href="/properties/@Model.PropertyId/photos?tag=@Model.TagId" class="btn btn-custom-outline-primary btn-sm">
-                        <i class="fas fa-images me-1"></i>View All Photos
-                    </a>
+                    @if (Model.TaggedPhotos != null && Model.TaggedPhotos.Any())
+                    {
+                        <div class="row g-3">
+                            @foreach (var photo in Model.TaggedPhotos)
+                            {
+                                <div class="col-6">
+                                    <div class="card shadow-sm h-100">
+                                        <img src="@photo.EncodedPhotoUrl"
+                                             class="card-img-top w-100"
+                                             alt="Tagged photo"
+                                             style="height: 150px; object-fit: cover; border-radius: 10px; cursor:pointer;"
+                                             onclick="showCoverPhotoModal(@photo.Id, '@photo.EncodedPhotoUrl')" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <a href="/properties/@Model.PropertyId/photos" class="btn btn-custom-outline-primary">
+                                <i class="fas fa-images me-1"></i> Tag Additional Photos
+                            </a>
+                        </div>
+
+                        <!-- Cover Photo Modal -->
+                        <div class="modal fade" id="coverPhotoModal" tabindex="-1" aria-labelledby="coverPhotoModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="coverPhotoModalLabel">Tagged Photo</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <img id="coverPhotoModalImg" src="" class="img-fluid" alt="Tagged photo" />
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary" id="makeCoverPhotoBtn">Make Cover Photo</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                            // Move modal to body to ensure it appears above sidebar and overlays
+                            document.addEventListener('DOMContentLoaded', function() {
+                                var modal = document.getElementById('coverPhotoModal');
+                                if (modal) {
+                                    document.body.appendChild(modal);
+                                }
+                            });
+                        </script>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No photos found for tag "@Model.TagName".</p>
+                    }
                 </div>
             </div>
         </div>
-
-        <!-- Actions Section -->
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="actionsHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#actionsCollapse" aria-expanded="false" aria-controls="actionsCollapse">
-                    <i class="fas fa-tools me-2"></i>
-                    Actions
-                </button>
-            </h2>
-            <div id="actionsCollapse" class="accordion-collapse collapse" aria-labelledby="actionsHeading" data-bs-parent="#profileDetailsAccordion">
-                <div class="accordion-body">
-                    <div class="d-flex gap-2">
-                        <a href="/profiles/@Model.Id/edit" class="btn btn-custom-primary">
-                            <i class="fas fa-edit me-1"></i>Edit Profile
-                        </a>
-                        <a href="/profiles/@Model.Id/delete" class="btn btn-custom-danger">
-                            <i class="fas fa-trash me-1"></i>Delete
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -135,4 +162,48 @@
             _ => "badge-custom-secondary"
         };
     }
+}
+
+@section Scripts {
+    <script>
+        let selectedPhotoId = null;
+        function showCoverPhotoModal(photoId, photoUrl) {
+            selectedPhotoId = photoId;
+            document.getElementById('coverPhotoModalImg').src = photoUrl;
+            var modal = new bootstrap.Modal(document.getElementById('coverPhotoModal'));
+            modal.show();
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = document.getElementById('coverPhotoModal');
+            if (modal) {
+                document.body.appendChild(modal);
+            }
+            // Attach event handler after DOM is ready
+            var makeCoverPhotoBtn = document.getElementById('makeCoverPhotoBtn');
+            if (makeCoverPhotoBtn) {
+                makeCoverPhotoBtn.addEventListener('click', function() {
+                    if (!selectedPhotoId) return;
+                    fetch(`/profiles/@Model.Id/make-cover-photo`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        },
+                        body: JSON.stringify({ photoId: selectedPhotoId })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            response.json().then(data => {
+                                document.querySelector('img[alt="Cover photo for @Model.Name"]')?.setAttribute('src', data.coverPhotoUrl);
+                                bootstrap.Modal.getInstance(document.getElementById('coverPhotoModal')).hide();
+                            });
+                        } else {
+                            alert('Failed to set cover photo.');
+                        }
+                    })
+                    .catch(() => alert('Failed to set cover photo.'));
+                });
+            }
+        });
+    </script>
 }
