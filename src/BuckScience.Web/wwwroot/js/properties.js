@@ -240,8 +240,18 @@ window.App = window.App || {};
 
     // Property Features functionality
     window.App.initializePropertyFeatures = function(propertyId) {
+        console.log('Initializing property features for property:', propertyId);
+        
         const m = map();
-        if (!m || !propertyId) return;
+        if (!m) {
+            console.error('Map not available for initializing property features');
+            return;
+        }
+        
+        if (!propertyId) {
+            console.error('Property ID is required for initializing property features');
+            return;
+        }
 
         // Store the current property ID
         window.App._currentPropertyId = propertyId;
@@ -316,43 +326,69 @@ window.App = window.App || {};
 
     function loadPropertyFeatures(propertyId) {
         const m = map();
-        if (!m) return;
+        if (!m) {
+            console.error('Map not available for loading features');
+            return;
+        }
 
+        console.log('Loading features for property:', propertyId);
+        
         fetch(`/properties/${propertyId}/features`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Features API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`Features API failed with status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(features => {
+                console.log('Loaded features:', features);
                 displayFeaturesOnMap(features);
             })
             .catch(error => {
                 console.error('Error loading property features:', error);
+                // Don't show alert for debugging, just log the error
             });
     }
 
     function displayFeaturesOnMap(features) {
         const m = map();
-        if (!m) return;
+        if (!m) {
+            console.error('Map not available for displaying features');
+            return;
+        }
+
+        console.log('Displaying features on map:', features);
 
         // Remove existing feature layers and source
         const featureLayerIds = ['property-features-fill', 'property-features-line', 'property-features-points'];
         featureLayerIds.forEach(layerId => {
             if (m.getLayer(layerId)) {
+                console.log('Removing existing layer:', layerId);
                 m.removeLayer(layerId);
             }
         });
 
         if (m.getSource('property-features')) {
+            console.log('Removing existing features source');
             m.removeSource('property-features');
         }
 
-        if (features.length === 0) return;
+        if (!features || features.length === 0) {
+            console.log('No features to display');
+            return;
+        }
 
         // Convert features to GeoJSON
         const geojsonFeatures = features.map(feature => {
             const wkt = feature.geometryWkt;
+            console.log('Processing feature WKT:', wkt);
+            
             // Simple WKT parsing - in production, use a proper WKT parser
             let geometry;
             try {
                 geometry = parseSimpleWKT(wkt);
+                console.log('Parsed geometry:', geometry);
             } catch (e) {
                 console.warn('Could not parse WKT:', wkt, e);
                 return null;
@@ -372,11 +408,20 @@ window.App = window.App || {};
             };
         }).filter(f => f !== null);
 
+        console.log('Converted to GeoJSON features:', geojsonFeatures);
+
+        if (geojsonFeatures.length === 0) {
+            console.warn('No valid features after WKT parsing');
+            return;
+        }
+
         const geojson = {
             type: 'FeatureCollection',
             features: geojsonFeatures
         };
 
+        console.log('Adding features source to map');
+        
         // Add source
         m.addSource('property-features', {
             type: 'geojson',
@@ -384,6 +429,8 @@ window.App = window.App || {};
         });
 
         // Add layers for different geometry types
+        console.log('Adding feature layers');
+        
         m.addLayer({
             id: 'property-features-fill',
             type: 'fill',
@@ -431,6 +478,8 @@ window.App = window.App || {};
                 showFeaturePopup(feature, e.lngLat);
             });
         });
+
+        console.log('Features successfully added to map');
 
         // Update bounds to include features if this is the initial load
         updateBoundsWithFeatures(geojsonFeatures);
@@ -705,14 +754,21 @@ window.App = window.App || {};
 
     // Function to refresh the property details view after feature changes
     function refreshPropertyDetailsView(propertyId) {
+        console.log('Refreshing property details view for property:', propertyId);
+        
         // Use the sidebar loader to refresh the property details view
         if (window.App && window.App.loadSidebar) {
-            const propertyDetailsUrl = `/properties/${propertyId}`;
+            const propertyDetailsUrl = `/properties/${propertyId}/details`;
+            console.log('Loading sidebar with URL:', propertyDetailsUrl);
+            
             window.App.loadSidebar(propertyDetailsUrl, { push: false }).then(() => {
+                console.log('Property details view refreshed successfully');
+                
                 // After the view is reloaded, expand the features accordion to show the changes
                 setTimeout(() => {
                     const featuresAccordion = document.getElementById('featuresCollapse');
                     if (featuresAccordion && !featuresAccordion.classList.contains('show')) {
+                        console.log('Expanding features accordion');
                         // Use Bootstrap's collapse API to show the features section
                         const bsCollapse = new bootstrap.Collapse(featuresAccordion, {
                             show: true
@@ -721,11 +777,18 @@ window.App = window.App || {};
                     
                     // Re-initialize property features for the refreshed view
                     if (window.App && window.App.initializePropertyFeatures) {
+                        console.log('Re-initializing property features');
                         window.App.initializePropertyFeatures(propertyId);
                     }
                 }, 200); // Small delay to ensure DOM is updated
+            }).catch(error => {
+                console.error('Error refreshing property details view:', error);
+                // Fallback: just reload features if sidebar loader fails
+                console.log('Falling back to reloading features only');
+                loadPropertyFeatures(propertyId);
             });
         } else {
+            console.warn('Sidebar loader not available, falling back to reloading features');
             // Fallback: just reload features if sidebar loader not available
             loadPropertyFeatures(propertyId);
         }
@@ -734,35 +797,65 @@ window.App = window.App || {};
     // Helper functions
     function parseSimpleWKT(wkt) {
         // Basic WKT parsing - this is simplified and should use a proper library in production
+        if (!wkt || typeof wkt !== 'string') {
+            throw new Error('Invalid WKT: must be a non-empty string');
+        }
+        
+        wkt = wkt.trim();
+        console.log('Parsing WKT:', wkt);
+        
         if (wkt.startsWith('POINT(')) {
-            const coords = wkt.match(/POINT\(([^)]+)\)/)[1].split(' ');
+            const match = wkt.match(/POINT\s*\(\s*([^)]+)\s*\)/i);
+            if (!match) throw new Error('Invalid POINT WKT format');
+            
+            const coords = match[1].trim().split(/\s+/);
+            if (coords.length < 2) throw new Error('POINT must have at least 2 coordinates');
+            
             return {
                 type: 'Point',
                 coordinates: [parseFloat(coords[0]), parseFloat(coords[1])]
             };
         } else if (wkt.startsWith('LINESTRING(')) {
-            const coordString = wkt.match(/LINESTRING\(([^)]+)\)/)[1];
+            const match = wkt.match(/LINESTRING\s*\(\s*([^)]+)\s*\)/i);
+            if (!match) throw new Error('Invalid LINESTRING WKT format');
+            
+            const coordString = match[1].trim();
             const coordinates = coordString.split(',').map(pair => {
-                const coords = pair.trim().split(' ');
+                const coords = pair.trim().split(/\s+/);
+                if (coords.length < 2) throw new Error('Each coordinate pair must have at least 2 values');
                 return [parseFloat(coords[0]), parseFloat(coords[1])];
             });
+            
+            if (coordinates.length < 2) throw new Error('LINESTRING must have at least 2 coordinate pairs');
+            
             return {
                 type: 'LineString',
                 coordinates: coordinates
             };
         } else if (wkt.startsWith('POLYGON(')) {
-            const match = wkt.match(/POLYGON\(\(([^)]+)\)\)/);
-            if (match) {
-                const coordString = match[1];
-                const coordinates = coordString.split(',').map(pair => {
-                    const coords = pair.trim().split(' ');
-                    return [parseFloat(coords[0]), parseFloat(coords[1])];
-                });
-                return {
-                    type: 'Polygon',
-                    coordinates: [coordinates]
-                };
+            const match = wkt.match(/POLYGON\s*\(\s*\(\s*([^)]+)\s*\)\s*\)/i);
+            if (!match) throw new Error('Invalid POLYGON WKT format');
+            
+            const coordString = match[1].trim();
+            const coordinates = coordString.split(',').map(pair => {
+                const coords = pair.trim().split(/\s+/);
+                if (coords.length < 2) throw new Error('Each coordinate pair must have at least 2 values');
+                return [parseFloat(coords[0]), parseFloat(coords[1])];
+            });
+            
+            if (coordinates.length < 3) throw new Error('POLYGON must have at least 3 coordinate pairs');
+            
+            // Ensure polygon is closed (first and last points are the same)
+            const first = coordinates[0];
+            const last = coordinates[coordinates.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+                coordinates.push([first[0], first[1]]);
             }
+            
+            return {
+                type: 'Polygon',
+                coordinates: [coordinates]
+            };
         }
         throw new Error('Unsupported WKT format: ' + wkt);
     }

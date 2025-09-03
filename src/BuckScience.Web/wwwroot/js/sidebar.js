@@ -16,37 +16,60 @@ window.App = window.App || {};
     }
 
     async function fetchPartial(url) {
+        console.log('Fetching partial from:', url);
         const resp = await fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
-        if (!resp.ok) throw new Error(`Failed to load ${url}: ${resp.status}`);
-        return await resp.text();
+        
+        console.log('Fetch response status:', resp.status, resp.statusText);
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error('Fetch error response:', errorText);
+            throw new Error(`Failed to load ${url}: ${resp.status} ${resp.statusText}`);
+        }
+        
+        const html = await resp.text();
+        console.log('Fetch successful, response length:', html.length);
+        return html;
     }
 
     async function loadSidebar(url, { push = false } = {}) {
         const container = document.getElementById('sidebar-content');
-        if (!container) return;
+        if (!container) {
+            console.error('Sidebar container not found');
+            return;
+        }
+
+        console.log('Loading sidebar with URL:', url);
 
         // Visual hint
         container.style.opacity = '0.6';
 
         try {
+            console.log('Fetching sidebar content from:', url);
             const html = await fetchPartial(url);
+            console.log('Received HTML response, length:', html.length);
+            
             // Accept either plain fragment or full page; if full page,
             // try to extract just the #sidebar-content child
             if (isHtml(html)) {
                 // naive insert: treat response as partial
                 container.innerHTML = html;
+                console.log('Updated sidebar content');
             } else {
                 container.textContent = html;
+                console.log('Updated sidebar with text content');
             }
 
             // Inform any feature-specific scripts
             const ev = new CustomEvent('sidebar:loaded', { detail: { url } });
             document.dispatchEvent(ev);
+            console.log('Dispatched sidebar:loaded event');
 
             if (push) {
                 history.pushState({ url }, '', url);
+                console.log('Updated browser history');
             }
 
             // Update toggle position after content load with improved timing
@@ -56,8 +79,13 @@ window.App = window.App || {};
                 }
             }, 100); // Increased from 50ms to 100ms for better reliability
         } catch (err) {
-            console.error(err);
-            container.innerHTML = `<div class="alert alert-danger">Failed to load content.</div>`;
+            console.error('Error loading sidebar content:', err);
+            console.error('Failed URL:', url);
+            container.innerHTML = `<div class="alert alert-danger">
+                <h6>Failed to load content</h6>
+                <p class="mb-0 small">Error: ${err.message}</p>
+                <p class="mb-0 small">URL: ${url}</p>
+            </div>`;
         } finally {
             container.style.opacity = '';
         }
