@@ -185,7 +185,7 @@ window.App = window.App || {};
             center: [-98.5795, 39.8283], // USA-ish center
             zoom: 4.5,
             minZoom: 3,
-            maxZoom: 15,
+            maxZoom: 22,
             renderWorldCopies: false,
             cooperativeGestures: true,
             fadeDuration: 0

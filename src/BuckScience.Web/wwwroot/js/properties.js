@@ -280,14 +280,14 @@ window.App = window.App || {};
         if (cameras.length > 0) {
             m.fitBounds(bounds, {
                 padding: 50,
-                maxZoom: 16,
+                maxZoom: 18,
                 duration: 1200
             });
         } else {
             // Just center on property with a reasonable zoom level
             m.flyTo({
                 center: [propertyCoords.lng, propertyCoords.lat],
-                zoom: 14,
+                zoom: 16,
                 duration: 1200
             });
         }
@@ -468,7 +468,7 @@ window.App = window.App || {};
             // Fit to bounds with cameras and features
             m.fitBounds(bounds, {
                 padding: 50,
-                maxZoom: 16,
+                maxZoom: 18,
                 duration: 800
             });
         }
@@ -511,6 +511,12 @@ window.App = window.App || {};
     }
 
     function handleFeatureCreated(feature, propertyId) {
+        // Clear any drawing instructions
+        const instructionDiv = document.getElementById('drawing-instructions');
+        if (instructionDiv) {
+            instructionDiv.remove();
+        }
+        
         // Show a modal to select feature type and add notes
         showFeatureTypeModal(feature, propertyId, 'create');
     }

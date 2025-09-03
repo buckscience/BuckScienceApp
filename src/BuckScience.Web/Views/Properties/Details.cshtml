@@ -255,8 +255,30 @@
 
         function startDrawingFeature() {
             console.log('Start drawing feature');
-            // The user will use the drawing tools on the map
-            alert('Use the drawing tools on the map (polygon, line, or point) to add a new feature. After drawing, you will be prompted to select the feature type.');
+            
+            // Check if we have the drawing control available
+            if (window.App && window.App._draw) {
+                // Change to polygon drawing mode by default
+                window.App._draw.changeMode('draw_polygon');
+                
+                // Show instructions
+                const instructionDiv = document.createElement('div');
+                instructionDiv.id = 'drawing-instructions';
+                instructionDiv.className = 'alert alert-info position-fixed';
+                instructionDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1000; max-width: 300px;';
+                instructionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Drawing Mode Active</strong><br>
+                            <small>Click points to draw a polygon. Double-click to finish. You can also use the line or point tools in the map toolbar.</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-sm" onclick="cancelDrawing()"></button>
+                    </div>
+                `;
+                document.body.appendChild(instructionDiv);
+            } else {
+                alert('Drawing tools not available. Please refresh the page and try again.');
+            }
         }
 
         function focusFeature(featureId) {
@@ -293,8 +315,22 @@
             }
         });
 
+        function cancelDrawing() {
+            // Remove instructions
+            const instructionDiv = document.getElementById('drawing-instructions');
+            if (instructionDiv) {
+                instructionDiv.remove();
+            }
+            
+            // Return to simple select mode
+            if (window.App && window.App._draw) {
+                window.App._draw.changeMode('simple_select');
+            }
+        }
+
         // Make functions available globally for onclick handlers
         window.startDrawingFeature = startDrawingFeature;
+        window.cancelDrawing = cancelDrawing;
         window.focusFeature = focusFeature;
         window.editFeature = editFeature;
         window.deleteFeature = deleteFeature;
