@@ -330,15 +330,32 @@ window.App = window.App || {};
     function getCameraData() {
         // Extract detailed camera information from the DOM for map display
         const cameras = [];
-        document.querySelectorAll('.camera-card').forEach(card => {
+        const cameraCards = document.querySelectorAll('.camera-card');
+        console.log('Found camera cards:', cameraCards.length);
+        
+        cameraCards.forEach((card, index) => {
+            console.log(`Processing camera card ${index + 1}:`, card);
+            
             const nameElement = card.querySelector('.card-title');
-            const coordsText = card.querySelector('.card-text:has(.fa-map-marker-alt)')?.textContent;
-            const brandModelElement = card.querySelector('.card-text:nth-of-type(1)'); // First card-text element
+            // Look for coordinates by finding the icon and then getting the parent's text
+            const coordsIcon = card.querySelector('.fa-map-marker-alt');
+            const coordsText = coordsIcon ? coordsIcon.parentElement.textContent : null;
+            const brandModelElements = card.querySelectorAll('.card-text');
+            const brandModelElement = brandModelElements.length > 0 ? brandModelElements[0] : null; // First card-text element
             const isActiveElement = card.querySelector('.badge');
-            const photoCountElement = card.querySelector('.card-text:has(.fa-images) strong');
+            const photoCountElement = card.querySelector('strong');
+            
+            console.log(`Camera ${index + 1} elements:`, {
+                nameElement: nameElement?.textContent,
+                coordsText: coordsText,
+                brandModelElement: brandModelElement?.textContent,
+                isActiveElement: isActiveElement?.textContent,
+                photoCountElement: photoCountElement?.textContent
+            });
             
             if (coordsText && nameElement) {
                 const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                console.log(`Camera ${index + 1} coordinates match:`, match);
                 if (match) {
                     const camera = {
                         name: nameElement.textContent.trim(),
@@ -356,10 +373,20 @@ window.App = window.App || {};
                         }
                     }
                     
+                    console.log(`Adding camera ${index + 1}:`, camera);
                     cameras.push(camera);
+                } else {
+                    console.warn(`Camera ${index + 1} coordinates not found in text:`, coordsText);
                 }
+            } else {
+                console.warn(`Camera ${index + 1} missing required elements:`, {
+                    hasCoords: !!coordsText,
+                    hasName: !!nameElement
+                });
             }
         });
+        
+        console.log('Final camera data:', cameras);
         return cameras;
     }
 
@@ -715,6 +742,7 @@ window.App = window.App || {};
         // Get camera data from DOM
         const cameras = getCameraData();
         console.log('Displaying cameras on map. Total cameras:', cameras.length);
+        console.log('Camera data extracted:', cameras);
 
         // Remove existing camera markers
         if (window.App._cameraMarkers) {
