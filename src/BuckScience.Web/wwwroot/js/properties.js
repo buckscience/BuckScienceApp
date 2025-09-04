@@ -20,7 +20,7 @@ window.App = window.App || {};
         if (!m || !bbox || bbox.length !== 4) return;
         m.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], {
             padding: 40,
-            maxZoom: 18,
+            maxZoom: 19,
             duration: 1200,
             ...options
         });
@@ -332,7 +332,7 @@ window.App = window.App || {};
                     left: 60,
                     right: 60
                 },
-                maxZoom: 16, // Don't zoom in too far
+                maxZoom: 18, // More zoomed in for better view
                 duration: 1500
             });
         } else {
@@ -701,7 +701,7 @@ window.App = window.App || {};
                     left: 50,
                     right: 50
                 },
-                maxZoom: 16, // Don't zoom in too far
+                maxZoom: 18, // More zoomed in for better view
                 duration: 1200
             });
         } else {
@@ -887,7 +887,7 @@ window.App = window.App || {};
                     left: 50,
                     right: 50
                 },
-                maxZoom: 16, // Don't zoom in too far
+                maxZoom: 18, // More zoomed in for better view
                 duration: 1200
             });
         } else {
