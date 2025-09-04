@@ -34,36 +34,41 @@
                                 @foreach (var camera in Model.Cameras)
                                 {
                                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                        <div class="card camera-card w-100" style="cursor: pointer;" onclick="panToCameraLocation(@camera.Longitude, @camera.Latitude)">
-                                            <div class="card-body">
-                                                <h6 class="card-title mb-2">@camera.Name</h6>
-                                                <p class="card-text text-muted small mb-2">
-                                                    <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
-                                                </p>
-                                                <p class="card-text text-muted small mb-2">
-                                                    <i class="fas fa-map-marker-alt me-1"></i>
-                                                    @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
-                                                </p>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <p class="card-text small mb-0">
-                                                        <i class="fas fa-images me-1 text-custom-primary"></i>
-                                                        <strong>@camera.PhotoCount</strong> photos
-                                                    </p>
-                                                    <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
-                                                        @(camera.IsActive ? "Active" : "Inactive")
-                                                    </span>
-                                                </div>
-                                                <div class="d-flex gap-1 mt-2">
-                                                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
-                                                        <i class="fas fa-circle-info"></i>
-                                                    </button>
-                                                    <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill" onclick="event.stopPropagation()">
-                                                        <i class="fas fa-images"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+    <div class="card camera-card w-100" style="cursor: pointer;" onclick="panToCameraLocation(@camera.Longitude, @camera.Latitude)">
+        <div class="card-body">
+            <!-- Title and Badge -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="card-title mb-0">@camera.Name</h6>
+                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                    @(camera.IsActive ? "Active" : "Inactive")
+                </span>
+            </div>
+
+            <!-- Camera Brand/Model -->
+            <p class="card-text text-muted small mb-2">
+                <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
+            </p>
+
+            <!-- Location -->
+            <p class="card-text text-muted small mb-2">
+                <i class="fas fa-map-marker-alt me-1"></i>
+                @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
+            </p>
+
+            <!-- Buttons -->
+            <div class="d-flex gap-1 mt-2">
+                <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
+                    <i class="fas fa-circle-info"></i>
+                </button>
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill d-flex align-items-center justify-content-center gap-1">
+                    <i class="fas fa-images"></i>
+                    <span>@camera.PhotoCount</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
                                 }
                             </div>
                         </div>
