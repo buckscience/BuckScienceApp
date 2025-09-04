@@ -21,7 +21,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="camerasHeading">
                 <button class="accordion-button flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
-                    <i class="fas fa-camera me-2"></i>
+                    <i class="fas fa-camera fa-lg me-2"></i>
                     Cameras <span class="badge badge-custom-primary ms-2">@Model.Cameras.Count</span>
                 </button>
             </h2>
@@ -34,11 +34,11 @@
                                 @foreach (var camera in Model.Cameras)
                                 {
                                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                        <a href="/cameras/@camera.Id/details" class="card camera-card w-100 text-decoration-none">
+                                        <div class="card camera-card w-100" style="cursor: pointer;" onclick="panToCameraLocation(@camera.Longitude, @camera.Latitude)">
                                             <div class="card-body">
                                                 <h6 class="card-title mb-2">@camera.Name</h6>
                                                 <p class="card-text text-muted small mb-2">
-                                                    <span>Brand/Model: @camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
+                                                    <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
                                                 </p>
                                                 <p class="card-text text-muted small mb-2">
                                                     <i class="fas fa-map-marker-alt me-1"></i>
@@ -53,8 +53,16 @@
                                                         @(camera.IsActive ? "Active" : "Inactive")
                                                     </span>
                                                 </div>
+                                                <div class="d-flex gap-1 mt-2">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
+                                                        <i class="fas fa-circle-info"></i>
+                                                    </button>
+                                                    <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill" onclick="event.stopPropagation()">
+                                                        <i class="fas fa-images"></i>
+                                                    </a>
+                                                </div>
                                             </div>
-                                        </a>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -79,7 +87,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="profilesHeading">
                 <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
-                    <i class="fas fa-crosshairs me-2"></i>
+                    <i class="fas fa-crosshairs fa-lg me-2"></i>
                     Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
                 </button>
             </h2>
@@ -127,7 +135,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header" id="featuresHeading">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#featuresCollapse" aria-expanded="false" aria-controls="featuresCollapse">
-                    <i class="fas fa-map-marked-alt me-2"></i>
+                    <i class="fas fa-map-marked-alt fa-lg me-2"></i>
                     Features <span class="badge badge-custom-primary ms-2">@Model.Features.Count</span>
                 </button>
             </h2>
@@ -135,53 +143,87 @@
                 <div class="accordion-body">
                     <div class="mb-3">
                         <button type="button" class="btn btn-custom-primary btn-sm" onclick="startDrawingFeature()">
-                            <i class="fas fa-plus me-1"></i> Add Feature
+                            <i class="fas fa-crosshairs fa-lg me-1"></i> Add Feature
                         </button>
                         <small class="text-muted ms-2">Use the drawing tools on the map to add property features</small>
                     </div>
                     
                     @if (Model.Features.Any())
                     {
-                        <div class="row g-3">
-                            @foreach (var feature in Model.Features)
-                            {
-                                <div class="col-12">
-                                    <div class="card feature-card">
-                                        <div class="card-body d-flex align-items-start">
-                                            <div class="feature-icon me-3">
-                                                <i class="@feature.Icon fa-2x text-custom-primary"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <h6 class="card-title mb-1">@feature.Name</h6>
-                                                        @if (!string.IsNullOrEmpty(feature.Notes))
-                                                        {
-                                                            <p class="card-text text-muted small mb-1">@feature.Notes</p>
-                                                        }
-                                                        @if (feature.CreatedAt.HasValue)
-                                                        {
-                                                            <small class="text-muted">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
-                                                        }
-                                                    </div>
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                        <!-- Category Filter -->
+                        <div class="mb-3">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <label class="form-label mb-0 me-2">Filter by Category:</label>
+                                <button class="btn btn-outline-secondary btn-sm feature-category-filter active" data-category="all">
+                                    All (@Model.Features.Count)
+                                </button>
+                                @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                                {
+                                    <button class="btn btn-outline-secondary btn-sm feature-category-filter" data-category="@((int)categoryGroup.Key)">
+                                        @GetCategoryDisplayName(categoryGroup.Key) (@categoryGroup.Count())
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
+                        <!-- Features grouped by category -->
+                        @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                        {
+                            var categoryId = $"featureCategory{(int)categoryGroup.Key}";
+                            <div class="feature-category-group" data-category="@((int)categoryGroup.Key)">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-muted mb-0 flex-grow-1">
+                                        <i class="@GetCategoryIcon(categoryGroup.Key) me-1"></i>
+                                        @GetCategoryDisplayName(categoryGroup.Key) 
+                                        <span class="badge badge-custom-secondary ms-1">@categoryGroup.Count()</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#@categoryId" aria-expanded="true" aria-controls="@categoryId">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div class="collapse show" id="@categoryId">
+                                    <div class="row g-3 mb-4">
+                                        @foreach (var feature in categoryGroup)
+                                        {
+                                            <div class="col-12 col-md-6">
+                                                <div class="card feature-card">
+                                                    <div class="card-body d-flex align-items-start">
+                                                        <div class="flex-grow-1">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <h6 class="card-title mb-1">@feature.Name</h6>
+                                                                    <small class="text-muted">@feature.TypeName</small>
+                                                                    @if (!string.IsNullOrEmpty(feature.Notes))
+                                                                    {
+                                                                        <p class="card-text text-muted small mb-1 mt-1">@feature.Notes</p>
+                                                                    }
+                                                                    @if (feature.CreatedAt.HasValue)
+                                                                    {
+                                                                        <small class="text-muted d-block">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                    }
+                                                                </div>
+                                                                <div class="btn-group" role="group">
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        }
                                     </div>
                                 </div>
-                            }
-                        </div>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -209,6 +251,32 @@
             _ => "badge-custom-secondary"
         };
     }
+
+    private string GetCategoryDisplayName(BuckScience.Domain.Enums.FeatureCategory category)
+    {
+        return category switch
+        {
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "Topographical",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "Food Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "Water Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "Bedding & Cover",
+            BuckScience.Domain.Enums.FeatureCategory.Other => "Other",
+            _ => category.ToString()
+        };
+    }
+
+    private string GetCategoryIcon(BuckScience.Domain.Enums.FeatureCategory category)
+    {
+        return category switch
+        {
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "fas fa-xl fa-route",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "fas fa-xl fa-wheat-awn",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "fas fa-xl fa-water",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "fas fa-xl fa-tree",
+            BuckScience.Domain.Enums.FeatureCategory.Other => "fas fa-xl fa-circle-question",
+            _ => "fas fa-circle-question"
+        };
+    }
 }
 
 @section Styles {
@@ -232,6 +300,26 @@
                 min-width: 220px; /* Minimum width for small screens */
             }
         }
+
+        /* Feature category collapse styling */
+        .feature-category-group .collapse {
+            transition: all 0.3s ease;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] {
+            border: none;
+            background: transparent;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"]:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] i {
+            transition: transform 0.2s ease;
+        }
     </style>
 }
 
@@ -239,7 +327,28 @@
     <script>
         function navigateToCamera(cameraId) {
             if (window.App && window.App.loadSidebar) {
-                window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+                // Find the camera data to get coordinates
+                const camera = @Html.Raw(Json.Serialize(Model.Cameras));
+                const targetCamera = camera.find(c => c.id === cameraId);
+                
+                if (targetCamera) {
+                    // Load camera details in sidebar
+                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true })
+                        .then(() => {
+                            // After sidebar loads, pan to camera location
+                            if (window.App && window.App.panToCameraLocation) {
+                                setTimeout(() => {
+                                    window.App.panToCameraLocation(targetCamera.longitude, targetCamera.latitude);
+                                }, 300); // Small delay to ensure sidebar is fully loaded
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Error loading camera details:', error);
+                        });
+                } else {
+                    console.error('Camera not found:', cameraId);
+                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+                }
             } else {
                 console.log('Navigate to camera:', cameraId);
             }
@@ -341,5 +450,53 @@
         window.focusPropertyFeature = focusPropertyFeature;
         window.editFeature = editFeature;
         window.deleteFeature = deleteFeature;
+
+        // Feature category filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.feature-category-filter');
+            const categoryGroups = document.querySelectorAll('.feature-category-group');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetCategory = this.getAttribute('data-category');
+                    
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show/hide category groups
+                    if (targetCategory === 'all') {
+                        categoryGroups.forEach(group => group.style.display = 'block');
+                    } else {
+                        categoryGroups.forEach(group => {
+                            const groupCategory = group.getAttribute('data-category');
+                            group.style.display = groupCategory === targetCategory ? 'block' : 'none';
+                        });
+                    }
+                });
+            });
+
+            // Handle collapse button icon rotation
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        // Toggle rotation class after a small delay to let Bootstrap process the collapse
+                        setTimeout(() => {
+                            const target = document.querySelector(this.getAttribute('data-bs-target'));
+                            if (target) {
+                                if (target.classList.contains('show')) {
+                                    icon.classList.remove('fa-chevron-down');
+                                    icon.classList.add('fa-chevron-up');
+                                } else {
+                                    icon.classList.remove('fa-chevron-up');
+                                    icon.classList.add('fa-chevron-down');
+                                }
+                            }
+                        }, 200);
+                    }
+                });
+            });
+        });
     </script>
 }

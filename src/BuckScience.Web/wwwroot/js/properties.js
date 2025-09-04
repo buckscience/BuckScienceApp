@@ -20,7 +20,7 @@ window.App = window.App || {};
         if (!m || !bbox || bbox.length !== 4) return;
         m.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], {
             padding: 40,
-            maxZoom: 18,
+            maxZoom: 19,
             duration: 1200,
             ...options
         });
@@ -256,21 +256,94 @@ window.App = window.App || {};
         // Store the current property ID
         window.App._currentPropertyId = propertyId;
 
-        // Center map on property 
-        centerMapOnProperty();
+        // Load and display existing features for this property
+        loadPropertyFeatures(propertyId);
 
         // Display cameras on the map 
         displayCamerasOnMap();
-
-        // Load and display existing features for this property
-        loadPropertyFeatures(propertyId);
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
             setupFeatureDrawing(propertyId);
             window.App._featureDrawingSetup = true;
         }
+
+        // After a short delay, calculate comprehensive bounds including all elements
+        setTimeout(() => {
+            calculateComprehensiveBounds();
+        }, 1500); // Wait for features and cameras to load
     };
+
+    function calculateComprehensiveBounds() {
+        const m = map();
+        if (!m) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        console.log('Calculating comprehensive bounds for map');
+
+        // Create bounds and always include property location
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
+        let hasAdditionalPoints = false;
+
+        // Add all camera markers to bounds
+        if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
+            console.log('Adding', window.App._cameraMarkers.length, 'cameras to bounds');
+            window.App._cameraMarkers.forEach(marker => {
+                const lngLat = marker.getLngLat();
+                bounds.extend([lngLat.lng, lngLat.lat]);
+                hasAdditionalPoints = true;
+            });
+        }
+
+        // Add all features to bounds
+        const featuresSource = m.getSource('property-features');
+        if (featuresSource && featuresSource._data && featuresSource._data.features) {
+            const features = featuresSource._data.features;
+            console.log('Adding', features.length, 'features to bounds');
+            
+            features.forEach(feature => {
+                if (feature.geometry.type === 'Point') {
+                    bounds.extend(feature.geometry.coordinates);
+                    hasAdditionalPoints = true;
+                } else if (feature.geometry.type === 'LineString') {
+                    feature.geometry.coordinates.forEach(coord => {
+                        bounds.extend(coord);
+                        hasAdditionalPoints = true;
+                    });
+                } else if (feature.geometry.type === 'Polygon') {
+                    feature.geometry.coordinates[0].forEach(coord => {
+                        bounds.extend(coord);
+                        hasAdditionalPoints = true;
+                    });
+                }
+            });
+        }
+
+        // Apply bounds or center on property
+        if (hasAdditionalPoints) {
+            console.log('Fitting bounds to include all cameras and features');
+            m.fitBounds(bounds, {
+                padding: {
+                    top: 60,
+                    bottom: 60,
+                    left: 60,
+                    right: 60
+                },
+                maxZoom: 18, // More zoomed in for better view
+                duration: 1500
+            });
+        } else {
+            console.log('No additional points found, centering on property');
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1500
+            });
+        }
+    }
 
     function centerMapOnProperty() {
         const m = map();
@@ -585,25 +658,17 @@ window.App = window.App || {};
 
     function updateBoundsWithFeatures(geojsonFeatures) {
         const m = map();
-        if (!m || geojsonFeatures.length === 0) return;
+        if (!m) return;
 
         const propertyCoords = window.App?.propertyCoords;
         if (!propertyCoords) return;
 
-        // Only update bounds if we haven't moved from the property center yet
-        const currentCenter = m.getCenter();
-        const propertyCenter = [propertyCoords.lng, propertyCoords.lat];
-        const distance = Math.sqrt(
-            Math.pow(currentCenter.lng - propertyCenter[0], 2) + 
-            Math.pow(currentCenter.lat - propertyCenter[1], 2)
-        );
+        // Create bounds and always include property location
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
 
-        // If we're still close to the property center (haven't manually panned), include features in bounds
-        if (distance < 0.01) { // Small threshold for "close to property center"
-            let bounds = new mapboxgl.LngLatBounds();
-            bounds.extend(propertyCenter);
-
-            // Add feature geometries to bounds
+        // Add all feature geometries to bounds
+        if (geojsonFeatures && geojsonFeatures.length > 0) {
             geojsonFeatures.forEach(feature => {
                 if (feature.geometry.type === 'Point') {
                     bounds.extend(feature.geometry.coordinates);
@@ -613,20 +678,38 @@ window.App = window.App || {};
                     feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
                 }
             });
+        }
 
-            // Get camera data from markers if available
-            if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
-                window.App._cameraMarkers.forEach(marker => {
-                    const lngLat = marker.getLngLat();
-                    bounds.extend([lngLat.lng, lngLat.lat]);
-                });
-            }
+        // Add all camera markers to bounds
+        if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
+            window.App._cameraMarkers.forEach(marker => {
+                const lngLat = marker.getLngLat();
+                bounds.extend([lngLat.lng, lngLat.lat]);
+            });
+        }
 
-            // Fit to bounds with cameras and features
+        // Only update bounds if we have more than just the property location
+        const boundsArray = bounds.toArray();
+        const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+        
+        if (hasMultiplePoints) {
+            // Fit to bounds with all elements included
             m.fitBounds(bounds, {
-                padding: 50,
-                maxZoom: 18,
-                duration: 800
+                padding: {
+                    top: 50,
+                    bottom: 50,
+                    left: 50,
+                    right: 50
+                },
+                maxZoom: 18, // More zoomed in for better view
+                duration: 1200
+            });
+        } else {
+            // If only property location, use a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1200
             });
         }
     }
@@ -791,42 +874,109 @@ window.App = window.App || {};
             bounds.extend([camera.longitude, camera.latitude]);
         });
 
-        // Fit to bounds with cameras and property
-        m.fitBounds(bounds, {
-            padding: 50,
-            maxZoom: 18,
-            duration: 1200
-        });
+        // Check if we have more than just the property location
+        const boundsArray = bounds.toArray();
+        const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+        
+        if (hasMultiplePoints) {
+            // Fit to bounds with cameras and property
+            m.fitBounds(bounds, {
+                padding: {
+                    top: 50,
+                    bottom: 50, 
+                    left: 50,
+                    right: 50
+                },
+                maxZoom: 18, // More zoomed in for better view
+                duration: 1200
+            });
+        } else {
+            // If only property location, use a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1200
+            });
+        }
     }
 
     function showCameraPopup(camera, lngLat) {
         const properties = camera.properties;
-        const popupContent = `
-            <div class="camera-popup" style="min-width: 250px;">
-                <h6 class="mb-2"><i class="fas fa-camera me-2"></i>${properties.name}</h6>
-                <div class="mb-2">
-                    <small class="text-muted">Brand/Model:</small><br>
-                    <span>${properties.brandModel}</span>
+        
+        // Remove any existing camera panel
+        const existingPanel = document.getElementById('cameraDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="cameraDetailsPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Camera Details</h5>
+                    <button type="button" class="btn-close" onclick="closeCameraDetailsPanel()"></button>
                 </div>
-                <div class="mb-2">
-                    <small class="text-muted">Status:</small><br>
-                    <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
-                        ${properties.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-camera me-2"></i>
+                    <strong>${properties.name}</strong>
                 </div>
-                <div class="mb-2">
-                    <small class="text-muted">Photos:</small><br>
-                    <span><i class="fas fa-images me-1"></i>${properties.photoCount}</span>
+                
+                <div class="mb-3">
+                    <label class="form-label">Equipment</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">Brand/Model: ${properties.brandModel}</small>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <div class="p-2 border rounded">
+                        <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
+                            ${properties.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Photo Count</label>
+                    <div class="p-2 border rounded bg-light">
+                        <strong class="text-primary">${properties.photoCount}</strong> photos
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}<br>
+                            <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-column">
+                    <button type="button" class="btn btn-outline-primary" onclick="panToCameraLocation(${lngLat.lng}, ${lngLat.lat}); closeCameraDetailsPanel();">
+                        <i class="fas fa-crosshairs me-1"></i>Focus on Map
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/cameras/${properties.id}/details'">
+                        <i class="fas fa-eye me-1"></i>View Details Page
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
+                        <i class="fas fa-images me-1"></i>View Photos
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCameraDetailsPanel()">
+                        Close
+                    </button>
                 </div>
             </div>
         `;
 
-        new mapboxgl.Popup({
-            maxWidth: '300px'
-        })
-            .setLngLat(lngLat)
-            .setHTML(popupContent)
-            .addTo(map());
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
+        
+        // Store panel reference globally for potential cleanup
+        window.App._currentCameraPanel = document.getElementById('cameraDetailsPanel');
     }
 
     function setupFeatureDrawing(propertyId) {
@@ -895,15 +1045,14 @@ window.App = window.App || {};
                         <div class="modal-body">
                             <form id="featureForm">
                                 <div class="mb-3">
+                                    <label for="featureName" class="form-label">Feature Name (optional)</label>
+                                    <input type="text" class="form-control" id="featureName" placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" maxlength="100">
+                                    <small class="text-muted">Leave blank to use the default feature type name</small>
+                                </div>
+                                <div class="mb-3">
                                     <label for="featureType" class="form-label">Feature Type</label>
                                     <select class="form-select" id="featureType" required>
-                                        <option value="1">Bedding Area</option>
-                                        <option value="2">Food Source</option>
-                                        <option value="3">Travel Corridor</option>
-                                        <option value="4">Pinch Point/Funnel</option>
-                                        <option value="5">Water Source</option>
-                                        <option value="6">Security Cover</option>
-                                        <option value="7">Other</option>
+                                        ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml() : '<option value="99">Other</option>'}
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -945,6 +1094,7 @@ window.App = window.App || {};
         const propertyId = window.App._tempPropertyId;
         const mode = window.App._tempMode;
 
+        const featureName = document.getElementById('featureName').value.trim() || null;
         const featureType = parseInt(document.getElementById('featureType').value);
         const notes = document.getElementById('featureNotes').value.trim() || null;
 
@@ -954,6 +1104,7 @@ window.App = window.App || {};
         const data = {
             classificationType: featureType,
             geometryWkt: geometryWkt,
+            name: featureName,
             notes: notes
         };
 
@@ -995,38 +1146,156 @@ window.App = window.App || {};
     };
 
     function showFeaturePopup(feature, lngLat) {
-        const m = map();
-        if (!m) return;
-
         const props = feature.properties;
-        const popupHtml = `
-            <div style="max-width: 350px;">
-                <h6>${props.name}</h6>
-                ${props.notes ? `<p class="small text-muted">${props.notes}</p>` : ''}
-                <div class="d-flex gap-2 mt-2">
-                    <button class="btn btn-xs btn-outline-primary px-2 py-1" style="font-size: 0.75rem;" onclick="editPropertyFeature(${props.id})">Edit</button>
-                    <button class="btn btn-xs btn-outline-danger px-2 py-1" style="font-size: 0.75rem;" onclick="deletePropertyFeature(${props.id})">Delete</button>
+        
+        // Remove any existing feature panel
+        const existingPanel = document.getElementById('featureDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureDetailsPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Property Feature</h5>
+                    <button type="button" class="btn-close" onclick="closeFeatureDetailsPanel()"></button>
+                </div>
+                
+                <div class="alert alert-primary" role="alert">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    <strong>${props.name}</strong>
+                </div>
+                
+                ${props.notes ? `
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <div class="p-2 border rounded bg-light">
+                            <small class="text-muted">${props.notes}</small>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}<br>
+                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-column">
+                    <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); closeFeatureDetailsPanel();">
+                        <i class="fas fa-edit me-1"></i>Edit Feature
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); closeFeatureDetailsPanel();">
+                        <i class="fas fa-trash me-1"></i>Delete Feature
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeFeatureDetailsPanel()">
+                        Close
+                    </button>
                 </div>
             </div>
         `;
 
-        const popup = new mapboxgl.Popup()
-            .setLngLat(lngLat)
-            .setHTML(popupHtml)
-            .addTo(m);
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
         
-        // Store popup reference globally for potential cleanup
-        window.App._currentFeaturePopup = popup;
+        // Store panel reference globally for potential cleanup
+        window.App._currentFeaturePanel = document.getElementById('featureDetailsPanel');
     }
 
-    window.App.editPropertyFeature = function(featureId) {
-        console.log('Edit feature:', featureId);
+    // Function to close feature panel
+    window.App.closeFeaturePopup = function() {
+        if (window.App._currentFeatureModal) {
+            window.App._currentFeatureModal.hide();
+            window.App._currentFeatureModal = null;
+        }
         
-        // Close any existing popup when entering edit mode
+        // Also handle legacy popup cleanup if any exists
         if (window.App._currentFeaturePopup) {
             window.App._currentFeaturePopup.remove();
             window.App._currentFeaturePopup = null;
         }
+        
+        // Clean up any existing modals in DOM
+        const existingModal = document.getElementById('featureDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Clean up new panel
+        if (window.App._currentFeaturePanel) {
+            window.App._currentFeaturePanel.remove();
+            window.App._currentFeaturePanel = null;
+        }
+        
+        const existingPanel = document.getElementById('featureDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+    };
+
+    // Function to close camera modal/panel
+    window.App.closeCameraModal = function() {
+        if (window.App._currentCameraModal) {
+            window.App._currentCameraModal.hide();
+            window.App._currentCameraModal = null;
+        }
+        
+        // Clean up any existing camera modals in DOM
+        const existingModal = document.getElementById('cameraDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Clean up new panel
+        if (window.App._currentCameraPanel) {
+            window.App._currentCameraPanel.remove();
+            window.App._currentCameraPanel = null;
+        }
+        
+        const existingPanel = document.getElementById('cameraDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+    };
+
+    // Function to pan to camera location (similar to focusPropertyFeature)
+    window.App.panToCameraLocation = function(lng, lat) {
+        console.log('Panning to camera location:', lng, lat);
+        
+        const m = map();
+        if (!m) {
+            console.error('Map not available for panning to camera');
+            return;
+        }
+        
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+            console.error('Invalid camera coordinates:', lng, lat);
+            return;
+        }
+        
+        // Pan to camera location with appropriate zoom
+        m.flyTo({
+            center: [lng, lat],
+            zoom: Math.max(m.getZoom(), 17), // Zoom in closer for camera location
+            duration: 1500
+        });
+        
+        console.log('Panning to camera complete');
+    };
+
+    window.App.editPropertyFeature = function(featureId) {
+        console.log('Edit feature:', featureId);
+        
+        // Close any existing popup or modal when entering edit mode
+        window.App.closeFeaturePopup();
+        
+        // Close sidebar if it's open
+        closeSidebarIfOpen();
         
         const m = map();
         if (!m) {
@@ -1088,15 +1357,14 @@ window.App = window.App || {};
                 </div>
                 <form id="featureEditForm">
                     <div class="mb-3">
+                        <label for="editFeatureName" class="form-label">Feature Name</label>
+                        <input type="text" class="form-control" id="editFeatureName" placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" value="${props.name || ''}" maxlength="100">
+                        <small class="text-muted">Leave blank to use the default feature type name</small>
+                    </div>
+                    <div class="mb-3">
                         <label for="editFeatureType" class="form-label">Feature Type</label>
                         <select class="form-select" id="editFeatureType" required>
-                            <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
-                            <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
-                            <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
-                            <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
-                            <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
-                            <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
-                            <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
+                            ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml(props.classificationType) : '<option value="99">Other</option>'}
                         </select>
                     </div>
                     <div class="mb-3" style="display: none;">
@@ -1207,6 +1475,7 @@ window.App = window.App || {};
             return;
         }
 
+        const featureName = document.getElementById('editFeatureName').value.trim() || null;
         const featureType = parseInt(document.getElementById('editFeatureType').value);
         const notes = document.getElementById('editFeatureNotes').value.trim() || null;
         let geometryWkt = geometryToWKT(feature.geometry); // Default to original geometry
@@ -1229,6 +1498,7 @@ window.App = window.App || {};
         const data = {
             classificationType: featureType,
             geometryWkt: geometryWkt,
+            name: featureName,
             notes: notes
         };
 
@@ -1598,29 +1868,39 @@ window.App = window.App || {};
     }
 
     function getFeatureName(classificationType) {
-        const names = {
-            1: 'Bedding Area',
-            2: 'Food Source',
-            3: 'Travel Corridor',
-            4: 'Pinch Point/Funnel',
-            5: 'Water Source',
-            6: 'Security Cover',
-            7: 'Other'
-        };
-        return names[classificationType] || 'Unknown';
+        return window.FeatureUtils ? window.FeatureUtils.getFeatureName(classificationType) : 'Unknown';
     }
 
     function getFeatureColor(classificationType) {
-        const colors = {
-            1: '#8B4513', // Brown for bedding
-            2: '#32CD32', // Green for feeding
-            3: '#FF6347', // Red for travel corridor
-            4: '#FF8C00', // Orange for pinch points
-            5: '#1E90FF', // Blue for water
-            6: '#228B22', // Dark green for cover
-            7: '#9370DB'  // Purple for other
-        };
-        return colors[classificationType] || '#999999';
+        return window.FeatureUtils ? window.FeatureUtils.getFeatureColor(classificationType) : '#999999';
+    }
+
+    // Function to close sidebar if it's open
+    function closeSidebarIfOpen() {
+        const aside = document.getElementById('sidebar');
+        if (aside && !aside.classList.contains('collapsed')) {
+            console.log('Closing sidebar for feature editing');
+            
+            // Trigger the collapse similar to how the toggle button works
+            aside.classList.add('collapsed');
+            aside.style.transform = 'translateX(-100%)';
+            
+            // Update the toggle button icon if present
+            const btn = document.getElementById('sidebar-toggle');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-chevron-right';
+                }
+            }
+            
+            // Update toggle position after animation
+            setTimeout(() => {
+                if (window.updateTogglePosition) {
+                    window.updateTogglePosition();
+                }
+            }, 300);
+        }
     }
 
     // Function to temporarily highlight a feature
@@ -1708,6 +1988,30 @@ window.App = window.App || {};
     
     window.cancelFeatureEdit = function() {
         window.App.cancelFeatureEdit();
+    };
+    
+    window.closeFeaturePopup = function() {
+        window.App.closeFeaturePopup();
+    };
+
+    window.closeFeaturePopup = function() {
+        window.App.closeFeaturePopup();
+    };
+
+    window.closeCameraModal = function() {
+        window.App.closeCameraModal();
+    };
+    
+    window.closeFeatureDetailsPanel = function() {
+        window.App.closeFeaturePopup();
+    };
+
+    window.closeCameraDetailsPanel = function() {
+        window.App.closeCameraModal();
+    };
+    
+    window.panToCameraLocation = function(lng, lat) {
+        window.App.panToCameraLocation(lng, lat);
     };
     
     window.disableGeometryEditing = function() {

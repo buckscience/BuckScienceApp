@@ -21,7 +21,9 @@ public class PropertyFeatureVm
 {
     public int Id { get; set; }
     public ClassificationType Type { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public FeatureCategory Category { get; set; }
+    public string Name { get; set; } = string.Empty; // Custom name provided by user
+    public string TypeName { get; set; } = string.Empty; // Feature type name (e.g., "Food Plot")
     public string Description { get; set; } = string.Empty;
     public string Icon { get; set; } = string.Empty;
     public string? GeometryWkt { get; set; }

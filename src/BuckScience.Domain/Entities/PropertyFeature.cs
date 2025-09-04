@@ -11,6 +11,7 @@ public class PropertyFeature
         int propertyId,
         ClassificationType classificationType,
         Geometry geometry,
+        string? name = null,
         string? notes = null,
         int? createdBy = null,
         DateTime? createdAt = null)
@@ -18,6 +19,7 @@ public class PropertyFeature
         PropertyId = propertyId;
         ClassificationType = classificationType;
         SetGeometry(geometry);
+        Name = name;
         Notes = notes;
         CreatedBy = createdBy;
         CreatedAt = createdAt ?? DateTime.UtcNow;
@@ -27,6 +29,7 @@ public class PropertyFeature
     public int PropertyId { get; private set; }
     public ClassificationType ClassificationType { get; private set; }
     public Geometry Geometry { get; private set; } = default!;
+    public string? Name { get; private set; }
     public string? Notes { get; private set; }
     public int? CreatedBy { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -49,6 +52,11 @@ public class PropertyFeature
     public void UpdateNotes(string? notes)
     {
         Notes = notes;
+    }
+
+    public void UpdateName(string? name)
+    {
+        Name = name;
     }
 
     public void AssignCreatedBy(int userId)

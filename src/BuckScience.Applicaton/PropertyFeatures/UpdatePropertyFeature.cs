@@ -12,6 +12,7 @@ public static class UpdatePropertyFeature
         int Id,
         ClassificationType ClassificationType,
         string GeometryWkt,
+        string? Name = null,
         string? Notes = null);
 
     public static async Task<bool> HandleAsync(
@@ -44,6 +45,7 @@ public static class UpdatePropertyFeature
         // Update feature
         feature.UpdateClassificationType(cmd.ClassificationType);
         feature.SetGeometry(geometry);
+        feature.UpdateName(cmd.Name);
         feature.UpdateNotes(cmd.Notes);
 
         await db.SaveChangesAsync(ct);

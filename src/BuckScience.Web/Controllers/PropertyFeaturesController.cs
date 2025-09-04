@@ -50,6 +50,7 @@ public class PropertyFeaturesController : ControllerBase
                 propertyId,
                 request.ClassificationType,
                 request.GeometryWkt,
+                request.Name,
                 request.Notes);
 
             var featureId = await Application.PropertyFeatures.CreatePropertyFeature.HandleAsync(cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
@@ -91,6 +92,7 @@ public class PropertyFeaturesController : ControllerBase
                 featureId,
                 request.ClassificationType,
                 request.GeometryWkt,
+                request.Name,
                 request.Notes);
 
             var success = await Application.PropertyFeatures.UpdatePropertyFeature.HandleAsync(cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
@@ -121,6 +123,7 @@ public class PropertyFeaturesController : ControllerBase
     {
         public ClassificationType ClassificationType { get; set; }
         public string GeometryWkt { get; set; } = string.Empty;
+        public string? Name { get; set; }
         public string? Notes { get; set; }
     }
 
@@ -128,6 +131,7 @@ public class PropertyFeaturesController : ControllerBase
     {
         public ClassificationType ClassificationType { get; set; }
         public string GeometryWkt { get; set; } = string.Empty;
+        public string? Name { get; set; }
         public string? Notes { get; set; }
     }
 }

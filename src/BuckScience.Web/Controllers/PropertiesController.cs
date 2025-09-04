@@ -7,6 +7,7 @@ using BuckScience.Application.Properties;
 using BuckScience.Application.PropertyFeatures;
 using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
+using BuckScience.Domain.Helpers;
 using BuckScience.Web.Helpers;
 using BuckScience.Web.ViewModels;
 using BuckScience.Web.ViewModels.Photos;
@@ -177,7 +178,9 @@ public class PropertiesController : Controller
         {
             Id = pf.Id,
             Type = pf.ClassificationType,
-            Name = GetFeatureName(pf.ClassificationType),
+            Category = FeatureHelper.GetCategory(pf.ClassificationType),
+            Name = pf.Name ?? GetFeatureName(pf.ClassificationType), // Use custom name if provided, fallback to type name
+            TypeName = GetFeatureName(pf.ClassificationType), // Always show the feature type name
             Description = GetFeatureDescription(pf.ClassificationType),
             Icon = GetFeatureIcon(pf.ClassificationType),
             GeometryWkt = pf.GeometryWkt,
@@ -199,41 +202,11 @@ public class PropertiesController : Controller
         return View(vm);
     }
 
-    private static string GetFeatureName(ClassificationType type) => type switch
-    {
-        ClassificationType.BeddingArea => "Bedding Area",
-        ClassificationType.FoodSource => "Food Source",
-        ClassificationType.TravelCorridor => "Travel Corridor",
-        ClassificationType.PinchPointFunnel => "Pinch Point/Funnel",
-        ClassificationType.WaterSource => "Water Source",
-        ClassificationType.SecurityCover => "Security Cover",
-        ClassificationType.Other => "Other",
-        _ => type.ToString()
-    };
+    private static string GetFeatureName(ClassificationType type) => FeatureHelper.GetFeatureName(type);
 
-    private static string GetFeatureDescription(ClassificationType type) => type switch
-    {
-        ClassificationType.BeddingArea => "Areas where deer rest during the day",
-        ClassificationType.FoodSource => "Primary feeding and foraging areas",
-        ClassificationType.TravelCorridor => "Paths deer use to move between areas",
-        ClassificationType.PinchPointFunnel => "Natural funnels that concentrate deer movement",
-        ClassificationType.WaterSource => "Water sources like creeks, ponds, or springs",
-        ClassificationType.SecurityCover => "Thick cover that provides security for deer",
-        ClassificationType.Other => "Other important features on the property",
-        _ => $"Features related to {type}"
-    };
+    private static string GetFeatureDescription(ClassificationType type) => FeatureHelper.GetFeatureDescription(type);
 
-    private static string GetFeatureIcon(ClassificationType type) => type switch
-    {
-        ClassificationType.BeddingArea => "fas fa-bed",
-        ClassificationType.FoodSource => "fas fa-seedling",
-        ClassificationType.TravelCorridor => "fas fa-route",
-        ClassificationType.PinchPointFunnel => "fas fa-compress-arrows-alt",
-        ClassificationType.WaterSource => "fas fa-tint",
-        ClassificationType.SecurityCover => "fas fa-shield-alt",
-        ClassificationType.Other => "fas fa-map-pin",
-        _ => "fas fa-map-pin"
-    };
+    private static string GetFeatureIcon(ClassificationType type) => FeatureHelper.GetFeatureIcon(type);
 
     // PHOTOS: GET /properties/{id}/photos
     [HttpGet]
