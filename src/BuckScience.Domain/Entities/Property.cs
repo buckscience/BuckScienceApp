@@ -46,6 +46,7 @@ public class Property
 
     // Navigation
     public virtual ICollection<Camera> Cameras { get; set; } = new HashSet<Camera>();
+    public virtual ICollection<PropertyFeature> PropertyFeatures { get; set; } = new HashSet<PropertyFeature>();
 
     public void AssignOwner(int applicationUserId)
     {

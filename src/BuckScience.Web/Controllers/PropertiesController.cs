@@ -4,6 +4,7 @@ using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Properties;
+using BuckScience.Application.PropertyFeatures;
 using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Helpers;
@@ -170,21 +171,26 @@ public class PropertiesController : Controller
         // Get profiles for this property
         var profiles = await ListPropertyProfiles.HandleAsync(_db, _currentUser.Id.Value, id, ct);
 
-        // Create feature placeholders based on ClassificationType enum
-        var features = Enum.GetValues<ClassificationType>()
-            .Select(type => new PropertyFeatureVm
-            {
-                Type = type,
-                Name = GetFeatureName(type),
-                Description = GetFeatureDescription(type),
-                Icon = GetFeatureIcon(type)
-            })
-            .ToList();
+        // Get actual features for this property
+        var propertyFeatures = await ListPropertyFeatures.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+        var features = propertyFeatures.Select(pf => new PropertyFeatureVm
+        {
+            Id = pf.Id,
+            Type = pf.ClassificationType,
+            Name = GetFeatureName(pf.ClassificationType),
+            Description = GetFeatureDescription(pf.ClassificationType),
+            Icon = GetFeatureIcon(pf.ClassificationType),
+            GeometryWkt = pf.GeometryWkt,
+            Notes = pf.Notes,
+            CreatedAt = pf.CreatedAt
+        }).ToList();
 
         var vm = new PropertyDetailsVm
         {
             Id = prop.Id,
             Name = prop.Name,
+            Latitude = prop.Latitude,
+            Longitude = prop.Longitude,
             Cameras = cameras,
             Profiles = profiles,
             Features = features
@@ -196,7 +202,7 @@ public class PropertiesController : Controller
     private static string GetFeatureName(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "Bedding Area",
-        ClassificationType.FeedingZone => "Feeding Zone",
+        ClassificationType.FoodSource => "Food Source",
         ClassificationType.TravelCorridor => "Travel Corridor",
         ClassificationType.PinchPointFunnel => "Pinch Point/Funnel",
         ClassificationType.WaterSource => "Water Source",
@@ -208,7 +214,7 @@ public class PropertiesController : Controller
     private static string GetFeatureDescription(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "Areas where deer rest during the day",
-        ClassificationType.FeedingZone => "Primary feeding and foraging areas",
+        ClassificationType.FoodSource => "Primary feeding and foraging areas",
         ClassificationType.TravelCorridor => "Paths deer use to move between areas",
         ClassificationType.PinchPointFunnel => "Natural funnels that concentrate deer movement",
         ClassificationType.WaterSource => "Water sources like creeks, ponds, or springs",
@@ -220,7 +226,7 @@ public class PropertiesController : Controller
     private static string GetFeatureIcon(ClassificationType type) => type switch
     {
         ClassificationType.BeddingArea => "fas fa-bed",
-        ClassificationType.FeedingZone => "fas fa-seedling",
+        ClassificationType.FoodSource => "fas fa-seedling",
         ClassificationType.TravelCorridor => "fas fa-route",
         ClassificationType.PinchPointFunnel => "fas fa-compress-arrows-alt",
         ClassificationType.WaterSource => "fas fa-tint",
@@ -361,6 +367,18 @@ public class PropertiesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    private static string GetGeometryType(string wkt)
+    {
+        if (string.IsNullOrEmpty(wkt)) return "Unknown";
+        
+        var upperWkt = wkt.Trim().ToUpper();
+        if (upperWkt.StartsWith("POINT")) return "Point";
+        if (upperWkt.StartsWith("LINESTRING")) return "LineString";
+        if (upperWkt.StartsWith("POLYGON")) return "Polygon";
+        
+        return "Unknown";
+    }
+
     private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
@@ -495,6 +513,8 @@ public class PropertiesController : Controller
         // Return null if no filters are applied to avoid unnecessary processing
         return filters.HasAnyFilters ? filters : null;
     }
+
+
 
     private void PopulateTimeZones(PropertyCreateVm vm)
     {

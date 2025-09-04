@@ -3,6 +3,8 @@
     ViewData["Title"] = $"{Model.Name} - Details";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="property-details">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -131,21 +133,49 @@
             </h2>
             <div id="featuresCollapse" class="accordion-collapse collapse" aria-labelledby="featuresHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-custom-primary btn-sm" onclick="startDrawingFeature()">
+                            <i class="fas fa-plus me-1"></i> Add Feature
+                        </button>
+                        <small class="text-muted ms-2">Use the drawing tools on the map to add property features</small>
+                    </div>
+                    
                     @if (Model.Features.Any())
                     {
                         <div class="row g-3">
                             @foreach (var feature in Model.Features)
                             {
-                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                    <div class="card feature-card d-flex flex-column" style="cursor:pointer;" onclick="navigateToFeature('@feature.Type')">
+                                <div class="col-12">
+                                    <div class="card feature-card">
                                         <div class="card-body d-flex align-items-start">
                                             <div class="feature-icon me-3">
                                                 <i class="@feature.Icon fa-2x text-custom-primary"></i>
                                             </div>
-                                            <div>
-                                                <h6 class="card-title">@feature.Name</h6>
-                                                <p class="card-text text-muted small">@feature.Description</p>
-                                                <span class="badge badge-custom-light">Coming Soon</span>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">@feature.Name</h6>
+                                                        @if (!string.IsNullOrEmpty(feature.Notes))
+                                                        {
+                                                            <p class="card-text text-muted small mb-1">@feature.Notes</p>
+                                                        }
+                                                        @if (feature.CreatedAt.HasValue)
+                                                        {
+                                                            <small class="text-muted">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                        }
+                                                    </div>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -158,6 +188,7 @@
                         <div class="text-center py-4">
                             <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No features for this property yet.</p>
+                            <p class="text-muted small">Use the drawing tools on the map to add features like bedding areas, travel corridors, water sources, etc.</p>
                         </div>
                     }
                 </div>
@@ -222,8 +253,93 @@
             }
         }
 
-        function navigateToFeature(featureType) {
-            console.log('Navigate to feature:', featureType);
+        function startDrawingFeature() {
+            console.log('Start drawing feature');
+            
+            // Check if we have the drawing control available
+            if (window.App && window.App._draw) {
+                // Change to polygon drawing mode by default
+                window.App._draw.changeMode('draw_polygon');
+                
+                // Show instructions
+                const instructionDiv = document.createElement('div');
+                instructionDiv.id = 'drawing-instructions';
+                instructionDiv.className = 'alert alert-info position-fixed';
+                instructionDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1000; max-width: 300px;';
+                instructionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Drawing Mode Active</strong><br>
+                            <small>Click points to draw a polygon. Double-click to finish. You can also use the line or point tools in the map toolbar.</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-sm" onclick="cancelDrawing()"></button>
+                    </div>
+                `;
+                document.body.appendChild(instructionDiv);
+            } else {
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Error', 'Drawing tools not available. Please refresh the page and try again.', 'error');
+                } else {
+                    alert('Drawing tools not available. Please refresh the page and try again.');
+                }
+            }
         }
+
+        function focusPropertyFeature(featureId) {
+            if (window.App && window.App.focusPropertyFeature) {
+                window.App.focusPropertyFeature(featureId);
+            } else {
+                console.log('Focus feature function not available:', featureId);
+            }
+        }
+
+        function editFeature(featureId) {
+            if (window.App && window.App.editPropertyFeature) {
+                window.App.editPropertyFeature(featureId);
+            } else {
+                console.log('Edit feature:', featureId);
+            }
+        }
+
+        function deleteFeature(featureId) {
+            if (window.App && window.App.deletePropertyFeature) {
+                window.App.deletePropertyFeature(featureId);
+            } else {
+                console.log('Delete feature:', featureId);
+            }
+        }
+
+        // Initialize property features when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set property coordinates for global access
+            window.App.propertyCoords = {
+                lat: @Model.Latitude,
+                lng: @Model.Longitude
+            };
+            
+            if (window.App && window.App.initializePropertyFeatures) {
+                window.App.initializePropertyFeatures(@Model.Id);
+            }
+        });
+
+        function cancelDrawing() {
+            // Remove instructions
+            const instructionDiv = document.getElementById('drawing-instructions');
+            if (instructionDiv) {
+                instructionDiv.remove();
+            }
+            
+            // Return to simple select mode
+            if (window.App && window.App._draw) {
+                window.App._draw.changeMode('simple_select');
+            }
+        }
+
+        // Make functions available globally for onclick handlers
+        window.startDrawingFeature = startDrawingFeature;
+        window.cancelDrawing = cancelDrawing;
+        window.focusPropertyFeature = focusPropertyFeature;
+        window.editFeature = editFeature;
+        window.deleteFeature = deleteFeature;
     </script>
 }
