@@ -13,8 +13,8 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250903182847_AddPropertyFeature")]
-    partial class AddPropertyFeature
+    [Migration("20250903184539_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
