@@ -259,6 +259,9 @@ window.App = window.App || {};
         // Center map on property and fit to include cameras/features
         centerMapOnProperty();
 
+        // Display cameras on the map
+        displayCamerasOnMap();
+
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
@@ -283,7 +286,7 @@ window.App = window.App || {};
         bounds.extend([propertyCoords.lng, propertyCoords.lat]);
 
         // Add camera locations to bounds if available
-        const cameras = getCameraLocations();
+        const cameras = getCameraData();
         cameras.forEach(camera => {
             bounds.extend([camera.lng, camera.lat]);
         });
@@ -318,6 +321,42 @@ window.App = window.App || {};
                         lat: parseFloat(match[1]),
                         lng: parseFloat(match[2])
                     });
+                }
+            }
+        });
+        return cameras;
+    }
+
+    function getCameraData() {
+        // Extract detailed camera information from the DOM for map display
+        const cameras = [];
+        document.querySelectorAll('.camera-card').forEach(card => {
+            const nameElement = card.querySelector('.card-title');
+            const coordsText = card.querySelector('.card-text:has(.fa-map-marker-alt)')?.textContent;
+            const brandModelElement = card.querySelector('.card-text:nth-of-type(1)'); // First card-text element
+            const isActiveElement = card.querySelector('.badge');
+            const photoCountElement = card.querySelector('.card-text:has(.fa-images) strong');
+            
+            if (coordsText && nameElement) {
+                const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                if (match) {
+                    const camera = {
+                        name: nameElement.textContent.trim(),
+                        lat: parseFloat(match[1]),
+                        lng: parseFloat(match[2]),
+                        isActive: isActiveElement?.textContent.trim() === 'Active',
+                        photoCount: photoCountElement ? parseInt(photoCountElement.textContent) || 0 : 0
+                    };
+                    
+                    // Extract brand/model if available
+                    if (brandModelElement?.textContent) {
+                        const brandMatch = brandModelElement.textContent.match(/Brand\/Model:\s*(.+)$/);
+                        if (brandMatch) {
+                            camera.brandModel = brandMatch[1].trim();
+                        }
+                    }
+                    
+                    cameras.push(camera);
                 }
             }
         });
@@ -641,7 +680,7 @@ window.App = window.App || {};
             bounds.extend(propertyCenter);
 
             // Add camera locations
-            const cameras = getCameraLocations();
+            const cameras = getCameraData();
             cameras.forEach(camera => {
                 bounds.extend([camera.lng, camera.lat]);
             });
@@ -664,6 +703,173 @@ window.App = window.App || {};
                 duration: 800
             });
         }
+    }
+
+    function displayCamerasOnMap() {
+        const m = map();
+        if (!m) {
+            console.error('Map not available for displaying cameras');
+            return;
+        }
+
+        // Get camera data from DOM
+        const cameras = getCameraData();
+        console.log('Displaying cameras on map. Total cameras:', cameras.length);
+
+        // Remove existing camera markers
+        if (window.App._cameraMarkers) {
+            window.App._cameraMarkers.forEach(marker => marker.remove());
+        }
+        window.App._cameraMarkers = [];
+
+        // Remove existing camera layers and source
+        const cameraLayerIds = ['property-cameras-points', 'property-cameras-labels'];
+        cameraLayerIds.forEach(layerId => {
+            if (m.getLayer(layerId)) {
+                console.log('Removing existing camera layer:', layerId);
+                try {
+                    m.removeLayer(layerId);
+                } catch (e) {
+                    console.warn('Error removing camera layer:', layerId, e);
+                }
+            }
+        });
+
+        if (m.getSource('property-cameras')) {
+            console.log('Removing existing cameras source');
+            try {
+                m.removeSource('property-cameras');
+            } catch (e) {
+                console.warn('Error removing cameras source:', e);
+            }
+        }
+
+        if (cameras.length === 0) {
+            console.log('No cameras to display');
+            return;
+        }
+
+        // Convert cameras to GeoJSON
+        const cameraFeatures = cameras.map((camera, index) => ({
+            type: 'Feature',
+            properties: {
+                id: `camera-${index}`,
+                name: camera.name,
+                isActive: camera.isActive,
+                photoCount: camera.photoCount,
+                brandModel: camera.brandModel || 'Unknown'
+            },
+            geometry: {
+                type: 'Point',
+                coordinates: [camera.lng, camera.lat]
+            }
+        }));
+
+        const geojson = {
+            type: 'FeatureCollection',
+            features: cameraFeatures
+        };
+
+        console.log('Adding cameras source to map with', cameraFeatures.length, 'cameras');
+
+        try {
+            // Add source
+            m.addSource('property-cameras', {
+                type: 'geojson',
+                data: geojson
+            });
+
+            console.log('Cameras source added successfully');
+
+            // Add camera points layer with different styling for active/inactive
+            m.addLayer({
+                id: 'property-cameras-points',
+                type: 'circle',
+                source: 'property-cameras',
+                paint: {
+                    'circle-color': [
+                        'case',
+                        ['get', 'isActive'],
+                        '#FF6B35', // Orange for active cameras
+                        '#999999'  // Gray for inactive cameras
+                    ],
+                    'circle-radius': 12,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 3
+                }
+            });
+
+            // Add camera labels layer
+            m.addLayer({
+                id: 'property-cameras-labels',
+                type: 'symbol',
+                source: 'property-cameras',
+                layout: {
+                    'text-field': '📷', // Camera emoji
+                    'text-size': 16,
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true
+                },
+                paint: {
+                    'text-color': '#ffffff'
+                }
+            });
+
+            console.log('Camera layers added successfully');
+
+            // Add click handlers for cameras
+            cameraLayerIds.forEach(layerId => {
+                m.off('click', layerId); // Remove existing handlers
+                m.on('click', layerId, (e) => {
+                    if (e.features && e.features.length > 0) {
+                        const camera = e.features[0];
+                        showCameraPopup(camera, e.lngLat);
+                    }
+                });
+
+                // Change cursor on hover
+                m.on('mouseenter', layerId, () => {
+                    m.getCanvas().style.cursor = 'pointer';
+                });
+
+                m.on('mouseleave', layerId, () => {
+                    m.getCanvas().style.cursor = '';
+                });
+            });
+
+        } catch (error) {
+            console.error('Error adding cameras to map:', error);
+        }
+    }
+
+    function showCameraPopup(camera, lngLat) {
+        const properties = camera.properties;
+        const popupContent = `
+            <div class="camera-popup" style="min-width: 250px;">
+                <h6 class="mb-2"><i class="fas fa-camera me-2"></i>${properties.name}</h6>
+                <div class="mb-2">
+                    <small class="text-muted">Brand/Model:</small><br>
+                    <span>${properties.brandModel}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Status:</small><br>
+                    <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
+                        ${properties.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Photos:</small><br>
+                    <span><i class="fas fa-images me-1"></i>${properties.photoCount}</span>
+                </div>
+            </div>
+        `;
+
+        new mapboxgl.Popup({
+            maxWidth: '300px'
+        })
+            .setLngLat(lngLat)
+            .setHTML(popupContent)
+            .addTo(map());
     }
 
     function setupFeatureDrawing(propertyId) {
