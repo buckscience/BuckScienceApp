@@ -336,41 +336,59 @@ window.App = window.App || {};
         cameraCards.forEach((card, index) => {
             console.log(`Processing camera card ${index + 1}:`, card);
             
+            // Get camera name from card title
             const nameElement = card.querySelector('.card-title');
-            // Look for coordinates by finding the icon and then getting the parent's text
+            
+            // Get coordinates from the paragraph containing the map icon
+            // Structure: <p class="card-text ..."><i class="fas fa-map-marker-alt ..."></i>lat, lng</p>
             const coordsIcon = card.querySelector('.fa-map-marker-alt');
-            const coordsText = coordsIcon ? coordsIcon.parentElement.textContent : null;
-            const brandModelElements = card.querySelectorAll('.card-text');
-            const brandModelElement = brandModelElements.length > 0 ? brandModelElements[0] : null; // First card-text element
-            const isActiveElement = card.querySelector('.badge');
+            const coordsText = coordsIcon ? coordsIcon.parentElement.textContent.trim() : null;
+            
+            // Get brand/model from first card-text paragraph  
+            // Structure: <p class="card-text ..."><span>Brand/Model: ...</span></p>
+            const brandModelParagraph = card.querySelector('.card-text:first-of-type');
+            const brandModelText = brandModelParagraph ? brandModelParagraph.textContent.trim() : null;
+            
+            // Get active status from badge
+            // Structure: <span class="badge ...">Active/Inactive</span>
+            const badgeElement = card.querySelector('.badge');
+            
+            // Get photo count from strong element
+            // Structure: <strong>123</strong> photos
             const photoCountElement = card.querySelector('strong');
             
             console.log(`Camera ${index + 1} elements:`, {
                 nameElement: nameElement?.textContent,
                 coordsText: coordsText,
-                brandModelElement: brandModelElement?.textContent,
-                isActiveElement: isActiveElement?.textContent,
+                brandModelText: brandModelText,
+                badgeElement: badgeElement?.textContent,
                 photoCountElement: photoCountElement?.textContent
             });
             
             if (coordsText && nameElement) {
+                // Extract coordinates from text like "lat, lng"
                 const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
                 console.log(`Camera ${index + 1} coordinates match:`, match);
+                
                 if (match) {
                     const camera = {
                         name: nameElement.textContent.trim(),
                         lat: parseFloat(match[1]),
                         lng: parseFloat(match[2]),
-                        isActive: isActiveElement?.textContent.trim() === 'Active',
+                        isActive: badgeElement?.textContent.trim() === 'Active',
                         photoCount: photoCountElement ? parseInt(photoCountElement.textContent) || 0 : 0
                     };
                     
                     // Extract brand/model if available
-                    if (brandModelElement?.textContent) {
-                        const brandMatch = brandModelElement.textContent.match(/Brand\/Model:\s*(.+)$/);
+                    if (brandModelText) {
+                        const brandMatch = brandModelText.match(/Brand\/Model:\s*(.+)$/);
                         if (brandMatch) {
                             camera.brandModel = brandMatch[1].trim();
+                        } else {
+                            camera.brandModel = 'Unknown';
                         }
+                    } else {
+                        camera.brandModel = 'Unknown';
                     }
                     
                     console.log(`Adding camera ${index + 1}:`, camera);
