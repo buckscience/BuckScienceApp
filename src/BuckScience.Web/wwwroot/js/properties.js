@@ -902,32 +902,114 @@ window.App = window.App || {};
 
     function showCameraPopup(camera, lngLat) {
         const properties = camera.properties;
-        const popupContent = `
-            <div class="camera-popup" style="min-width: 250px;">
-                <h6 class="mb-2"><i class="fas fa-camera me-2"></i>${properties.name}</h6>
-                <div class="mb-2">
-                    <small class="text-muted">Brand/Model:</small><br>
-                    <span>${properties.brandModel}</span>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">Status:</small><br>
-                    <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
-                        ${properties.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted">Photos:</small><br>
-                    <span><i class="fas fa-images me-1"></i>${properties.photoCount}</span>
+        
+        // Remove any existing camera modal
+        const existingModal = document.getElementById('cameraDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalHtml = `
+            <div class="modal fade" id="cameraDetailsModal" tabindex="-1" aria-labelledby="cameraDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title" id="cameraDetailsModalLabel">
+                                <i class="fas fa-camera me-2"></i>Camera Details
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h4 class="text-warning mb-4">${properties.name}</h4>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-muted mb-2">
+                                                <i class="fas fa-cogs me-2"></i>Equipment
+                                            </h6>
+                                            <p class="mb-1"><strong>Brand/Model:</strong></p>
+                                            <p class="text-muted">${properties.brandModel}</p>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-muted mb-2">
+                                                <i class="fas fa-power-off me-2"></i>Status
+                                            </h6>
+                                            <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'} fs-6 px-3 py-2">
+                                                ${properties.isActive ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-muted mb-2">
+                                                <i class="fas fa-images me-2"></i>Photo Count
+                                            </h6>
+                                            <p class="h5 text-primary">${properties.photoCount} photos</p>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="text-muted mb-2">
+                                                <i class="fas fa-map-marker-alt me-2"></i>Location
+                                            </h6>
+                                            <p class="text-muted mb-1">
+                                                <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}
+                                            </p>
+                                            <p class="text-muted">
+                                                <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <i class="fas fa-camera fa-4x ${properties.isActive ? 'text-success' : 'text-secondary'}"></i>
+                                            </div>
+                                            <h6 class="card-title">${properties.name}</h6>
+                                            <p class="card-text">
+                                                <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
+                                                    ${properties.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </p>
+                                            <p class="card-text text-muted small">
+                                                ${properties.photoCount} photos captured
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-primary" onclick="window.location.href='/cameras/${properties.id}/details'">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
+                                <i class="fas fa-images me-1"></i>View Photos
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
 
-        new mapboxgl.Popup({
-            maxWidth: '300px'
-        })
-            .setLngLat(lngLat)
-            .setHTML(popupContent)
-            .addTo(map());
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('cameraDetailsModal'));
+        modal.show();
+
+        // Clean up after modal is hidden
+        document.getElementById('cameraDetailsModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('cameraDetailsModal').remove();
+        });
+        
+        // Store modal reference globally for potential cleanup
+        window.App._currentCameraModal = modal;
     }
 
     function setupFeatureDrawing(propertyId) {
@@ -1090,53 +1172,131 @@ window.App = window.App || {};
     };
 
     function showFeaturePopup(feature, lngLat) {
-        const m = map();
-        if (!m) return;
-
         const props = feature.properties;
-        const popupHtml = `
-            <div style="min-width: 400px; max-width: 500px;">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="mb-0">${props.name}</h5>
-                    <button type="button" class="btn-close" onclick="closeFeaturePopup()" aria-label="Close"></button>
-                </div>
-                ${props.notes ? `<p class="text-muted mb-3">${props.notes}</p>` : ''}
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editPropertyFeature(${props.id})">
-                        <i class="fas fa-edit me-1"></i>Edit
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deletePropertyFeature(${props.id})">
-                        <i class="fas fa-trash me-1"></i>Delete
-                    </button>
+        
+        // Remove any existing feature modal
+        const existingModal = document.getElementById('featureDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalHtml = `
+            <div class="modal fade" id="featureDetailsModal" tabindex="-1" aria-labelledby="featureDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="featureDetailsModalLabel">
+                                <i class="fas fa-map-marker-alt me-2"></i>Property Feature Details
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h4 class="text-primary mb-3">${props.name}</h4>
+                                    ${props.notes ? `
+                                        <div class="mb-4">
+                                            <h6 class="text-muted mb-2">
+                                                <i class="fas fa-sticky-note me-2"></i>Notes
+                                            </h6>
+                                            <p class="text-muted">${props.notes}</p>
+                                        </div>
+                                    ` : ''}
+                                    <div class="mb-3">
+                                        <h6 class="text-muted mb-2">
+                                            <i class="fas fa-map me-2"></i>Location
+                                        </h6>
+                                        <p class="text-muted mb-1">
+                                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}
+                                        </p>
+                                        <p class="text-muted">
+                                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <i class="fas fa-map-marker-alt fa-3x text-primary"></i>
+                                            </div>
+                                            <h6 class="card-title">${props.name}</h6>
+                                            <p class="card-text text-muted small">
+                                                ${props.notes ? 'Has notes' : 'No notes'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); bootstrap.Modal.getInstance(document.getElementById('featureDetailsModal')).hide();">
+                                <i class="fas fa-edit me-1"></i>Edit Feature
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); bootstrap.Modal.getInstance(document.getElementById('featureDetailsModal')).hide();">
+                                <i class="fas fa-trash me-1"></i>Delete Feature
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
 
-        const popup = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            maxWidth: '500px'
-        })
-            .setLngLat(lngLat)
-            .setHTML(popupHtml)
-            .addTo(m);
+        // Add modal to DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
         
-        // Store popup reference globally for potential cleanup
-        window.App._currentFeaturePopup = popup;
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('featureDetailsModal'));
+        modal.show();
+
+        // Clean up after modal is hidden
+        document.getElementById('featureDetailsModal').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('featureDetailsModal').remove();
+        });
+        
+        // Store modal reference globally for potential cleanup
+        window.App._currentFeatureModal = modal;
     }
 
-    // Function to close feature popup
+    // Function to close feature modal
     window.App.closeFeaturePopup = function() {
+        if (window.App._currentFeatureModal) {
+            window.App._currentFeatureModal.hide();
+            window.App._currentFeatureModal = null;
+        }
+        
+        // Also handle legacy popup cleanup if any exists
         if (window.App._currentFeaturePopup) {
             window.App._currentFeaturePopup.remove();
             window.App._currentFeaturePopup = null;
+        }
+        
+        // Clean up any existing modals in DOM
+        const existingModal = document.getElementById('featureDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+    };
+
+    // Function to close camera modal
+    window.App.closeCameraModal = function() {
+        if (window.App._currentCameraModal) {
+            window.App._currentCameraModal.hide();
+            window.App._currentCameraModal = null;
+        }
+        
+        // Clean up any existing camera modals in DOM
+        const existingModal = document.getElementById('cameraDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
         }
     };
 
     window.App.editPropertyFeature = function(featureId) {
         console.log('Edit feature:', featureId);
         
-        // Close any existing popup when entering edit mode
+        // Close any existing popup or modal when entering edit mode
         window.App.closeFeaturePopup();
         
         const m = map();
@@ -1799,6 +1959,10 @@ window.App = window.App || {};
     
     window.closeFeaturePopup = function() {
         window.App.closeFeaturePopup();
+    };
+
+    window.closeCameraModal = function() {
+        window.App.closeCameraModal();
     };
     
     window.disableGeometryEditing = function() {
