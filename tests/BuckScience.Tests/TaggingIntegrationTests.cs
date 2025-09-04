@@ -85,8 +85,9 @@ public class TaggingIntegrationTests
 
         // Create dummy camera for testing
         var cameraLocation = geometryFactory.CreatePoint(new Coordinate(-74.0060, 40.7128));
-        var camera = new Camera("Test Camera", "Test Brand", "Test Model", cameraLocation);
+        var camera = new Camera("Test Camera", "Test Brand", "Test Model");
         camera.PlaceInProperty(propertyId);
+        camera.PlaceAt(40.7128, -74.0060, 0f, DateTime.UtcNow);
         context.Cameras.Add(camera);
         await context.SaveChangesAsync();
 

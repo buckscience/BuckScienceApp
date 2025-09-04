@@ -22,6 +22,9 @@ public class CameraCreateVm
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
+    [Range(0, 360)]
+    public float DirectionDegrees { get; set; } = 0f;
+
     public bool IsActive { get; set; } = true;
 
     // Property coordinates for map centering (not editable by user)

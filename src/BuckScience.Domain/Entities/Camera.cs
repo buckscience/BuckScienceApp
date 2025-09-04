@@ -10,14 +10,12 @@ public class Camera
         string name,
         string brand,
         string? model,
-        Point location,
         bool isActive = true,
         DateTime? createdDate = null)
     {
         Rename(name);
         SetBrand(brand);
         SetModel(model);
-        SetLocation(location);
         IsActive = isActive;
         CreatedDate = createdDate ?? DateTime.UtcNow;
     }
@@ -27,13 +25,6 @@ public class Camera
     public string Name { get; private set; } = string.Empty;
     public string Brand { get; private set; } = string.Empty;
     public string? Model { get; private set; }
-
-    // Spatial point (WGS84). X = Longitude, Y = Latitude.
-    public Point Location { get; private set; } = default!;
-
-    // Convenience accessors (NTS uses X=Longitude, Y=Latitude)
-    public double Latitude => Location?.Y ?? 0d;
-    public double Longitude => Location?.X ?? 0d;
 
     public DateTime CreatedDate { get; private set; } = DateTime.UtcNow;
     public bool IsActive { get; private set; } = true;
@@ -46,6 +37,7 @@ public class Camera
     public virtual Property Property { get; private set; } = default!;
 
     public virtual ICollection<Photo> Photos { get; private set; } = new List<Photo>();
+    public virtual ICollection<CameraPlacementHistory> PlacementHistories { get; private set; } = new List<CameraPlacementHistory>();
 
     // Domain behavior
     public void PlaceInProperty(int propertyId)
@@ -70,21 +62,41 @@ public class Camera
         Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim();
     }
 
-    public void SetLocation(Point point)
+    public void PlaceAt(double latitude, double longitude, float directionDegrees, DateTime? placementTime = null)
     {
-        if (point is null) throw new ArgumentNullException(nameof(point));
-        if (point.SRID == 0) point.SRID = 4326;
-        Location = point;
+        var currentPlacement = GetCurrentPlacement();
+        var now = placementTime ?? DateTime.UtcNow;
+
+        // End current placement if exists
+        if (currentPlacement != null)
+        {
+            currentPlacement.EndPlacement(now);
+        }
+
+        // Create new placement
+        var newPlacement = new CameraPlacementHistory(Id, latitude, longitude, directionDegrees, now);
+        PlacementHistories.Add(newPlacement);
     }
 
-    public void Move(double latitude, double longitude)
+    public void Move(double latitude, double longitude, float directionDegrees)
     {
-        SetLocation(new Point(longitude, latitude) { SRID = 4326 });
+        PlaceAt(latitude, longitude, directionDegrees);
     }
+
+    public CameraPlacementHistory? GetCurrentPlacement()
+    {
+        return PlacementHistories.FirstOrDefault(p => p.IsCurrentPlacement);
+    }
+
+    // Convenience accessors for current location
+    public double Latitude => GetCurrentPlacement()?.Latitude ?? 0d;
+    public double Longitude => GetCurrentPlacement()?.Longitude ?? 0d;
+    public float DirectionDegrees => GetCurrentPlacement()?.DirectionDegrees ?? 0f;
+    public Point? Location => GetCurrentPlacement()?.Location;
 
     public void SetActive(bool active) => IsActive = active;
 
-    // Helper to set location from lat/lng
+    // Helper to set location from lat/lng (backwards compatibility)
     public static Point CreatePoint(double latitude, double longitude)
         => new Point(longitude, latitude) { SRID = 4326 };
 }

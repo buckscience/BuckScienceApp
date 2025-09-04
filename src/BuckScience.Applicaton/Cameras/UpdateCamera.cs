@@ -13,6 +13,7 @@ public static class UpdateCamera
         string? Model,
         double Latitude,
         double Longitude,
+        float DirectionDegrees,
         bool IsActive
     );
 
@@ -27,6 +28,7 @@ public static class UpdateCamera
     {
         // Use explicit join to avoid LINQ translation errors with navigation properties
         var camera = await db.Cameras
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == cmd.Id &&
                        x.Camera.PropertyId == propertyId &&
@@ -41,8 +43,17 @@ public static class UpdateCamera
         camera.SetBrand(cmd.Brand);
         camera.SetModel(cmd.Model);
 
-        var point = geometryFactory.CreatePoint(new Coordinate(cmd.Longitude, cmd.Latitude));
-        camera.SetLocation(point);
+        // Check if location or direction changed
+        var currentPlacement = camera.GetCurrentPlacement();
+        bool locationChanged = currentPlacement == null || 
+                              Math.Abs(currentPlacement.Latitude - cmd.Latitude) > 0.0001 ||
+                              Math.Abs(currentPlacement.Longitude - cmd.Longitude) > 0.0001 ||
+                              Math.Abs(currentPlacement.DirectionDegrees - cmd.DirectionDegrees) > 0.1;
+
+        if (locationChanged)
+        {
+            camera.Move(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees);
+        }
 
         camera.SetActive(cmd.IsActive);
 

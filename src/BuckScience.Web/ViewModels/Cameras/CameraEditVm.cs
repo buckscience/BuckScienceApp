@@ -25,5 +25,8 @@ public class CameraEditVm
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
+    [Range(0, 360)]
+    public float DirectionDegrees { get; set; }
+
     public bool IsActive { get; set; }
 }

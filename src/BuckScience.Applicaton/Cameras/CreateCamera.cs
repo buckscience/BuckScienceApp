@@ -13,6 +13,7 @@ public static class CreateCamera
         string? Model,
         double Latitude,
         double Longitude,
+        float DirectionDegrees = 0f,
         bool IsActive = true
     );
 
@@ -32,10 +33,9 @@ public static class CreateCamera
         if (property is null)
             throw new KeyNotFoundException("Property not found or not owned by user.");
 
-        var point = geometryFactory.CreatePoint(new Coordinate(cmd.Longitude, cmd.Latitude));
-
-        var camera = new Camera(cmd.Name, cmd.Brand, cmd.Model, point, cmd.IsActive, DateTime.UtcNow);
+        var camera = new Camera(cmd.Name, cmd.Brand, cmd.Model, cmd.IsActive, DateTime.UtcNow);
         camera.PlaceInProperty(propertyId);
+        camera.PlaceAt(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees, DateTime.UtcNow);
 
         db.Cameras.Add(camera);
         await db.SaveChangesAsync(ct);
