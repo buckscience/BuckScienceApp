@@ -405,7 +405,7 @@ public class CamerasController : Controller
             }
 
             var photoIds = await UploadPhotos.HandleAsync(
-                new UploadPhotos.Command(vm.CameraId, fileDataList, vm.Caption),
+                new UploadPhotos.Command(vm.CameraId, fileDataList),
                 _db,
                 _currentUser.Id.Value,
                 _blobStorageService,
