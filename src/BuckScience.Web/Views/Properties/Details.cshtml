@@ -54,9 +54,9 @@
                                                     </span>
                                                 </div>
                                                 <div class="d-flex gap-1 mt-2">
-                                                    <a href="/cameras/@camera.Id/details" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation()">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
                                                         <i class="fas fa-eye"></i>
-                                                    </a>
+                                                    </button>
                                                     <a href="/cameras/@camera.Id/photos" class="btn btn-outline-secondary btn-sm flex-fill" onclick="event.stopPropagation()">
                                                         <i class="fas fa-images"></i>
                                                     </a>
@@ -317,7 +317,28 @@
     <script>
         function navigateToCamera(cameraId) {
             if (window.App && window.App.loadSidebar) {
-                window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+                // Find the camera data to get coordinates
+                const camera = @Html.Raw(Json.Serialize(Model.Cameras));
+                const targetCamera = camera.find(c => c.id === cameraId);
+                
+                if (targetCamera) {
+                    // Load camera details in sidebar
+                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true })
+                        .then(() => {
+                            // After sidebar loads, pan to camera location
+                            if (window.App && window.App.panToCameraLocation) {
+                                setTimeout(() => {
+                                    window.App.panToCameraLocation(targetCamera.longitude, targetCamera.latitude);
+                                }, 300); // Small delay to ensure sidebar is fully loaded
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Error loading camera details:', error);
+                        });
+                } else {
+                    console.error('Camera not found:', cameraId);
+                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+                }
             } else {
                 console.log('Navigate to camera:', cameraId);
             }
