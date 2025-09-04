@@ -1,4 +1,5 @@
 using BuckScience.Web.ViewModels.Cameras;
+using BuckScience.Web.Helpers;
 
 namespace BuckScience.Tests
 {
@@ -69,6 +70,54 @@ namespace BuckScience.Tests
             Assert.Equal(201, vm.Model.Length);
             Assert.Equal(-91, vm.Latitude);
             Assert.Equal(-181, vm.Longitude);
+        }
+
+        [Fact]
+        public void CameraEditVm_SyncDirectionFromSelection_ShouldUpdateDirectionDegrees()
+        {
+            // Arrange
+            var vm = new CameraEditVm
+            {
+                DirectionSelection = DirectionHelper.CompassDirection.W // West = 270°
+            };
+
+            // Act
+            vm.SyncDirectionFromSelection();
+
+            // Assert
+            Assert.Equal(270f, vm.DirectionDegrees);
+        }
+
+        [Fact]
+        public void CameraEditVm_SyncSelectionFromDirection_ShouldUpdateDirectionSelection()
+        {
+            // Arrange
+            var vm = new CameraEditVm
+            {
+                DirectionDegrees = 45f // Northeast
+            };
+
+            // Act
+            vm.SyncSelectionFromDirection();
+
+            // Assert
+            Assert.Equal(DirectionHelper.CompassDirection.NE, vm.DirectionSelection);
+        }
+
+        [Fact]
+        public void CameraEditVm_SyncSelectionFromDirection_ShouldFindClosestDirection()
+        {
+            // Arrange - test with a value close to northeast (45°)
+            var vm = new CameraEditVm
+            {
+                DirectionDegrees = 50f // Should map to NE (45°)
+            };
+
+            // Act
+            vm.SyncSelectionFromDirection();
+
+            // Assert
+            Assert.Equal(DirectionHelper.CompassDirection.NE, vm.DirectionSelection);
         }
     }
 }

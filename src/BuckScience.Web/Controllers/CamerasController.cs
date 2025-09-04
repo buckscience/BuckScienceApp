@@ -123,7 +123,7 @@ public class CamerasController : Controller
         if (property is null) return NotFound();
 
         ViewBag.PropertyId = propertyId;
-        return View(new CameraCreateVm 
+        var vm = new CameraCreateVm 
         { 
             PropertyId = propertyId,
             PropertyLatitude = property.Latitude,
@@ -131,7 +131,11 @@ public class CamerasController : Controller
             // Initialize camera coordinates to property center
             Latitude = property.Latitude,
             Longitude = property.Longitude
-        });
+        };
+        // Sync selection from degrees (defaults to North)
+        vm.SyncSelectionFromDirection();
+        
+        return View(vm);
     }
 
     // CREATE: POST /properties/{propertyId}/cameras/add
@@ -140,6 +144,9 @@ public class CamerasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int propertyId, CameraCreateVm vm, CancellationToken ct)
     {
+        // Sync direction from selection before validation
+        vm.SyncDirectionFromSelection();
+        
         if (!ModelState.IsValid)
         {
             ViewBag.PropertyId = propertyId;
@@ -210,6 +217,9 @@ public class CamerasController : Controller
             DirectionDegrees = result.CurrentPlacement?.DirectionDegrees ?? 0f,
             IsActive = result.Camera.IsActive
         };
+        
+        // Sync selection from degrees
+        vm.SyncSelectionFromDirection();
 
         return View(vm);
     }
@@ -220,6 +230,9 @@ public class CamerasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int propertyId, int id, CameraEditVm vm, CancellationToken ct)
     {
+        // Sync direction from selection before validation
+        vm.SyncDirectionFromSelection();
+        
         if (!ModelState.IsValid)
         {
             ViewBag.PropertyId = propertyId;

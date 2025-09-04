@@ -42,10 +42,20 @@
             <span asp-validation-for="Longitude" class="text-danger"></span>
         </div>
         <div class="col-md-4">
-            <label asp-for="DirectionDegrees" class="form-label">Direction (0°=North)</label>
-            <input asp-for="DirectionDegrees" class="form-control" type="number" min="0" max="360" step="1" />
-            <span asp-validation-for="DirectionDegrees" class="text-danger"></span>
-            <div class="form-text">Enter direction in degrees (0=North, 90=East, 180=South, 270=West)</div>
+            <label asp-for="DirectionSelection" class="form-label">Direction</label>
+            <select asp-for="DirectionSelection" class="form-select">
+                <option value="N">North (0°)</option>
+                <option value="NE">Northeast (45°)</option>
+                <option value="E">East (90°)</option>
+                <option value="SE">Southeast (135°)</option>
+                <option value="S">South (180°)</option>
+                <option value="SW">Southwest (225°)</option>
+                <option value="W">West (270°)</option>
+                <option value="NW">Northwest (315°)</option>
+            </select>
+            <span asp-validation-for="DirectionSelection" class="text-danger"></span>
+            <div class="form-text">Choose the direction the camera is pointing</div>
+            <input asp-for="DirectionDegrees" type="hidden" />
         </div>
     </div>
 
