@@ -21,7 +21,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="camerasHeading">
                 <button class="accordion-button flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
-                    <i class="fas fa-camera me-2"></i>
+                    <i class="fas fa-camera fa-lg me-2"></i>
                     Cameras <span class="badge badge-custom-primary ms-2">@Model.Cameras.Count</span>
                 </button>
             </h2>
@@ -38,7 +38,7 @@
                                             <div class="card-body">
                                                 <h6 class="card-title mb-2">@camera.Name</h6>
                                                 <p class="card-text text-muted small mb-2">
-                                                    <span>Brand/Model: @camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
+                                                    <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
                                                 </p>
                                                 <p class="card-text text-muted small mb-2">
                                                     <i class="fas fa-map-marker-alt me-1"></i>
@@ -55,9 +55,9 @@
                                                 </div>
                                                 <div class="d-flex gap-1 mt-2">
                                                     <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
-                                                        <i class="fas fa-eye"></i>
+                                                        <i class="fas fa-circle-info"></i>
                                                     </button>
-                                                    <a href="/cameras/@camera.Id/photos" class="btn btn-outline-secondary btn-sm flex-fill" onclick="event.stopPropagation()">
+                                                    <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill" onclick="event.stopPropagation()">
                                                         <i class="fas fa-images"></i>
                                                     </a>
                                                 </div>
@@ -87,7 +87,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="profilesHeading">
                 <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
-                    <i class="fas fa-crosshairs me-2"></i>
+                    <i class="fas fa-crosshairs fa-lg me-2"></i>
                     Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
                 </button>
             </h2>
@@ -135,7 +135,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header" id="featuresHeading">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#featuresCollapse" aria-expanded="false" aria-controls="featuresCollapse">
-                    <i class="fas fa-map-marked-alt me-2"></i>
+                    <i class="fas fa-map-marked-alt fa-lg me-2"></i>
                     Features <span class="badge badge-custom-primary ms-2">@Model.Features.Count</span>
                 </button>
             </h2>
@@ -143,7 +143,7 @@
                 <div class="accordion-body">
                     <div class="mb-3">
                         <button type="button" class="btn btn-custom-primary btn-sm" onclick="startDrawingFeature()">
-                            <i class="fas fa-plus me-1"></i> Add Feature
+                            <i class="fas fa-crosshairs fa-lg me-1"></i> Add Feature
                         </button>
                         <small class="text-muted ms-2">Use the drawing tools on the map to add property features</small>
                     </div>
@@ -269,10 +269,10 @@
     {
         return category switch
         {
-            BuckScience.Domain.Enums.FeatureCategory.Topographical => "fas fa-mountain",
-            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "fas fa-wheat",
-            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "fas fa-water",
-            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "fas fa-trees",
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "fas fa-2x fa-route",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "fas fa-2x fa-wheat-awn",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "fas fa-2x fa-water",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "fas fa-2x fa-tree",
             BuckScience.Domain.Enums.FeatureCategory.Other => "fas fa-circle-question",
             _ => "fas fa-circle-question"
         };
