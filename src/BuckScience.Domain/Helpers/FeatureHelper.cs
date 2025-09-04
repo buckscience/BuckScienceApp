@@ -256,6 +256,18 @@ namespace BuckScience.Domain.Helpers
         };
 
         /// <summary>
+        /// Category icons for display
+        /// </summary>
+        public static readonly Dictionary<FeatureCategory, string> CategoryIcons = new()
+        {
+            [FeatureCategory.Topographical] = "fas fa-mountain",
+            [FeatureCategory.ResourceFood] = "fas fa-wheat",
+            [FeatureCategory.ResourceWater] = "fas fa-water",
+            [FeatureCategory.ResourceBedding] = "fas fa-trees",
+            [FeatureCategory.Other] = "fas fa-circle-question"
+        };
+
+        /// <summary>
         /// Gets the category for a classification type
         /// </summary>
         public static FeatureCategory GetCategory(ClassificationType type)
@@ -301,6 +313,14 @@ namespace BuckScience.Domain.Helpers
         public static string GetCategoryDescription(FeatureCategory category)
         {
             return CategoryDescriptions.TryGetValue(category, out var description) ? description : $"Features in the {category} category";
+        }
+
+        /// <summary>
+        /// Gets the icon for a feature category
+        /// </summary>
+        public static string GetCategoryIcon(FeatureCategory category)
+        {
+            return CategoryIcons.TryGetValue(category, out var icon) ? icon : "fas fa-circle-question";
         }
     }
 }
