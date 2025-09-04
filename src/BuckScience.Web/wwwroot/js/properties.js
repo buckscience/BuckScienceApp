@@ -259,8 +259,10 @@ window.App = window.App || {};
         // Center map on property and fit to include cameras/features
         centerMapOnProperty();
 
-        // Display cameras on the map
-        displayCamerasOnMap();
+        // Display cameras on the map (with a small delay to ensure DOM is ready)
+        setTimeout(() => {
+            displayCamerasOnMap();
+        }, 100);
 
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
@@ -820,6 +822,7 @@ window.App = window.App || {};
 
         try {
             // Add source
+            console.log('About to add cameras source with data:', geojson);
             m.addSource('property-cameras', {
                 type: 'geojson',
                 data: geojson
@@ -828,6 +831,7 @@ window.App = window.App || {};
             console.log('Cameras source added successfully');
 
             // Add camera points layer with different styling for active/inactive
+            console.log('Adding camera points layer...');
             m.addLayer({
                 id: 'property-cameras-points',
                 type: 'circle',
@@ -844,8 +848,10 @@ window.App = window.App || {};
                     'circle-stroke-width': 3
                 }
             });
+            console.log('Camera points layer added successfully');
 
             // Add camera labels layer
+            console.log('Adding camera labels layer...');
             m.addLayer({
                 id: 'property-cameras-labels',
                 type: 'symbol',
@@ -860,8 +866,9 @@ window.App = window.App || {};
                     'text-color': '#ffffff'
                 }
             });
+            console.log('Camera labels layer added successfully');
 
-            console.log('Camera layers added successfully');
+            console.log('All camera layers added successfully');
 
             // Add click handlers for cameras
             cameraLayerIds.forEach(layerId => {
@@ -885,6 +892,9 @@ window.App = window.App || {};
 
         } catch (error) {
             console.error('Error adding cameras to map:', error);
+            console.error('Stack trace:', error.stack);
+            console.error('Camera data that failed:', cameras);
+            console.error('GeoJSON that failed:', geojson);
         }
     }
 
