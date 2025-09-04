@@ -792,18 +792,18 @@ window.App = window.App || {};
                             return directions[closest];
                         }
 
-                        // Create marker element with Font Awesome camera icon and direction indicator
+                        // Create marker element with Font Awesome camera icon and directional beacon
                         const markerElement = document.createElement('div');
                         markerElement.className = 'camera-marker';
                         
                         const compassDirection = getCompassDirection(camera.directionDegrees);
                         
                         markerElement.innerHTML = `
+                            <div class="camera-direction-beacon" style="transform: rotate(${camera.directionDegrees}deg);">
+                                <div class="direction-cone"></div>
+                            </div>
                             <div class="camera-marker-inner ${camera.isActive ? 'active' : 'inactive'}">
                                 <i class="fas fa-camera"></i>
-                            </div>
-                            <div class="camera-direction-indicator">
-                                ${compassDirection}
                             </div>
                         `;
                         
@@ -811,9 +811,12 @@ window.App = window.App || {};
                         const style = `
                             .camera-marker {
                                 cursor: pointer;
-                                width: 30px;
-                                height: 30px;
+                                width: 60px;
+                                height: 60px;
                                 position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
                             }
                             .camera-marker-inner {
                                 width: 30px;
@@ -827,6 +830,8 @@ window.App = window.App || {};
                                 font-size: 14px;
                                 color: #ffffff;
                                 transition: transform 0.2s ease;
+                                z-index: 2;
+                                position: relative;
                             }
                             .camera-marker-inner:hover {
                                 transform: scale(1.1);
@@ -837,23 +842,26 @@ window.App = window.App || {};
                             .camera-marker-inner.inactive {
                                 background-color: #999999;
                             }
-                            .camera-direction-indicator {
+                            .camera-direction-beacon {
                                 position: absolute;
-                                top: -8px;
-                                right: -8px;
-                                background-color: #2c3e50;
-                                color: white;
-                                border: 2px solid #ffffff;
-                                border-radius: 50%;
-                                width: 20px;
-                                height: 20px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 10px;
-                                font-weight: bold;
-                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                                top: 50%;
+                                left: 50%;
+                                transform-origin: center center;
                                 z-index: 1;
+                                pointer-events: none;
+                            }
+                            .direction-cone {
+                                width: 0;
+                                height: 0;
+                                border-left: 15px solid transparent;
+                                border-right: 15px solid transparent;
+                                border-bottom: 40px solid rgba(255, 107, 53, 0.7);
+                                transform: translate(-50%, -100%);
+                                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+                            }
+                            .camera-marker-inner.inactive + .camera-direction-beacon .direction-cone,
+                            .camera-marker:has(.camera-marker-inner.inactive) .direction-cone {
+                                border-bottom-color: rgba(153, 153, 153, 0.7);
                             }
                         `;
 
