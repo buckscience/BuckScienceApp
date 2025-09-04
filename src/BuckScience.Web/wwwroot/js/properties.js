@@ -794,6 +794,29 @@ window.App = window.App || {};
 
         if (cameras.length === 0) {
             console.log('No cameras to display');
+            
+            // For debugging: Try to add a test camera at the property location to verify the map layer system works
+            const propertyCoords = window.App?.propertyCoords;
+            if (propertyCoords) {
+                console.log('Adding test camera at property location for debugging');
+                const testCamera = {
+                    name: 'Test Camera',
+                    lat: propertyCoords.lat,
+                    lng: propertyCoords.lng,
+                    isActive: true,
+                    photoCount: 0,
+                    brandModel: 'Test'
+                };
+                
+                // Try adding the test camera temporarily
+                setTimeout(() => {
+                    try {
+                        addTestCamera(testCamera);
+                    } catch (e) {
+                        console.error('Failed to add test camera:', e);
+                    }
+                }, 500);
+            }
             return;
         }
 
@@ -926,6 +949,27 @@ window.App = window.App || {};
             .setLngLat(lngLat)
             .setHTML(popupContent)
             .addTo(map());
+    }
+
+    function addTestCamera(testCamera) {
+        const m = map();
+        if (!m) return;
+        
+        console.log('Adding test camera:', testCamera);
+        
+        // Create a simple marker as a test
+        const marker = new mapboxgl.Marker({ color: '#FF6B35' })
+            .setLngLat([testCamera.lng, testCamera.lat])
+            .setPopup(new mapboxgl.Popup().setHTML(`<div><strong>Test Camera</strong><br>This is a test marker to verify camera display works.</div>`))
+            .addTo(m);
+            
+        console.log('Test camera marker added successfully');
+        
+        // Remove after 10 seconds
+        setTimeout(() => {
+            marker.remove();
+            console.log('Test camera marker removed');
+        }, 10000);
     }
 
     function setupFeatureDrawing(propertyId) {
