@@ -903,113 +903,80 @@ window.App = window.App || {};
     function showCameraPopup(camera, lngLat) {
         const properties = camera.properties;
         
-        // Remove any existing camera modal
-        const existingModal = document.getElementById('cameraDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
+        // Remove any existing camera panel
+        const existingPanel = document.getElementById('cameraDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
         }
 
-        const modalHtml = `
-            <div class="modal fade" id="cameraDetailsModal" tabindex="-1" aria-labelledby="cameraDetailsModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark">
-                            <h5 class="modal-title" id="cameraDetailsModalLabel">
-                                <i class="fas fa-camera me-2"></i>Camera Details
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <h4 class="text-warning mb-4">${properties.name}</h4>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-muted mb-2">
-                                                <i class="fas fa-cogs me-2"></i>Equipment
-                                            </h6>
-                                            <p class="mb-1"><strong>Brand/Model:</strong></p>
-                                            <p class="text-muted">${properties.brandModel}</p>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-muted mb-2">
-                                                <i class="fas fa-power-off me-2"></i>Status
-                                            </h6>
-                                            <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'} fs-6 px-3 py-2">
-                                                ${properties.isActive ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-muted mb-2">
-                                                <i class="fas fa-images me-2"></i>Photo Count
-                                            </h6>
-                                            <p class="h5 text-primary">${properties.photoCount} photos</p>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <h6 class="text-muted mb-2">
-                                                <i class="fas fa-map-marker-alt me-2"></i>Location
-                                            </h6>
-                                            <p class="text-muted mb-1">
-                                                <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}
-                                            </p>
-                                            <p class="text-muted">
-                                                <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card bg-light">
-                                        <div class="card-body text-center">
-                                            <div class="mb-3">
-                                                <i class="fas fa-camera fa-4x ${properties.isActive ? 'text-success' : 'text-secondary'}"></i>
-                                            </div>
-                                            <h6 class="card-title">${properties.name}</h6>
-                                            <p class="card-text">
-                                                <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
-                                                    ${properties.isActive ? 'Active' : 'Inactive'}
-                                                </span>
-                                            </p>
-                                            <p class="card-text text-muted small">
-                                                ${properties.photoCount} photos captured
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-primary" onclick="window.location.href='/cameras/${properties.id}/details'">
-                                <i class="fas fa-eye me-1"></i>View Details
-                            </button>
-                            <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
-                                <i class="fas fa-images me-1"></i>View Photos
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="cameraDetailsPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Camera Details</h5>
+                    <button type="button" class="btn-close" onclick="closeCameraDetailsPanel()"></button>
+                </div>
+                
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-camera me-2"></i>
+                    <strong>${properties.name}</strong>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Equipment</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">Brand/Model: ${properties.brandModel}</small>
                     </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <div class="p-2 border rounded">
+                        <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
+                            ${properties.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Photo Count</label>
+                    <div class="p-2 border rounded bg-light">
+                        <strong class="text-primary">${properties.photoCount}</strong> photos
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}<br>
+                            <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-column">
+                    <button type="button" class="btn btn-outline-primary" onclick="panToCameraLocation(${lngLat.lng}, ${lngLat.lat}); closeCameraDetailsPanel();">
+                        <i class="fas fa-crosshairs me-1"></i>Focus on Map
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/cameras/${properties.id}/details'">
+                        <i class="fas fa-eye me-1"></i>View Details Page
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
+                        <i class="fas fa-images me-1"></i>View Photos
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCameraDetailsPanel()">
+                        Close
+                    </button>
                 </div>
             </div>
         `;
 
-        // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
         
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('cameraDetailsModal'));
-        modal.show();
-
-        // Clean up after modal is hidden
-        document.getElementById('cameraDetailsModal').addEventListener('hidden.bs.modal', () => {
-            document.getElementById('cameraDetailsModal').remove();
-        });
-        
-        // Store modal reference globally for potential cleanup
-        window.App._currentCameraModal = modal;
+        // Store panel reference globally for potential cleanup
+        window.App._currentCameraPanel = document.getElementById('cameraDetailsPanel');
     }
 
     function setupFeatureDrawing(propertyId) {
@@ -1174,92 +1141,66 @@ window.App = window.App || {};
     function showFeaturePopup(feature, lngLat) {
         const props = feature.properties;
         
-        // Remove any existing feature modal
-        const existingModal = document.getElementById('featureDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
+        // Remove any existing feature panel
+        const existingPanel = document.getElementById('featureDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
         }
 
-        const modalHtml = `
-            <div class="modal fade" id="featureDetailsModal" tabindex="-1" aria-labelledby="featureDetailsModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title" id="featureDetailsModalLabel">
-                                <i class="fas fa-map-marker-alt me-2"></i>Property Feature Details
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <h4 class="text-primary mb-3">${props.name}</h4>
-                                    ${props.notes ? `
-                                        <div class="mb-4">
-                                            <h6 class="text-muted mb-2">
-                                                <i class="fas fa-sticky-note me-2"></i>Notes
-                                            </h6>
-                                            <p class="text-muted">${props.notes}</p>
-                                        </div>
-                                    ` : ''}
-                                    <div class="mb-3">
-                                        <h6 class="text-muted mb-2">
-                                            <i class="fas fa-map me-2"></i>Location
-                                        </h6>
-                                        <p class="text-muted mb-1">
-                                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}
-                                        </p>
-                                        <p class="text-muted">
-                                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="card bg-light">
-                                        <div class="card-body text-center">
-                                            <div class="mb-3">
-                                                <i class="fas fa-map-marker-alt fa-3x text-primary"></i>
-                                            </div>
-                                            <h6 class="card-title">${props.name}</h6>
-                                            <p class="card-text text-muted small">
-                                                ${props.notes ? 'Has notes' : 'No notes'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); bootstrap.Modal.getInstance(document.getElementById('featureDetailsModal')).hide();">
-                                <i class="fas fa-edit me-1"></i>Edit Feature
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); bootstrap.Modal.getInstance(document.getElementById('featureDetailsModal')).hide();">
-                                <i class="fas fa-trash me-1"></i>Delete Feature
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureDetailsPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Property Feature</h5>
+                    <button type="button" class="btn-close" onclick="closeFeatureDetailsPanel()"></button>
+                </div>
+                
+                <div class="alert alert-primary" role="alert">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    <strong>${props.name}</strong>
+                </div>
+                
+                ${props.notes ? `
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <div class="p-2 border rounded bg-light">
+                            <small class="text-muted">${props.notes}</small>
                         </div>
                     </div>
+                ` : ''}
+                
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}<br>
+                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-column">
+                    <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); closeFeatureDetailsPanel();">
+                        <i class="fas fa-edit me-1"></i>Edit Feature
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); closeFeatureDetailsPanel();">
+                        <i class="fas fa-trash me-1"></i>Delete Feature
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeFeatureDetailsPanel()">
+                        Close
+                    </button>
                 </div>
             </div>
         `;
 
-        // Add modal to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
         
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('featureDetailsModal'));
-        modal.show();
-
-        // Clean up after modal is hidden
-        document.getElementById('featureDetailsModal').addEventListener('hidden.bs.modal', () => {
-            document.getElementById('featureDetailsModal').remove();
-        });
-        
-        // Store modal reference globally for potential cleanup
-        window.App._currentFeatureModal = modal;
+        // Store panel reference globally for potential cleanup
+        window.App._currentFeaturePanel = document.getElementById('featureDetailsPanel');
     }
 
-    // Function to close feature modal
+    // Function to close feature panel
     window.App.closeFeaturePopup = function() {
         if (window.App._currentFeatureModal) {
             window.App._currentFeatureModal.hide();
@@ -1277,9 +1218,20 @@ window.App = window.App || {};
         if (existingModal) {
             existingModal.remove();
         }
+        
+        // Clean up new panel
+        if (window.App._currentFeaturePanel) {
+            window.App._currentFeaturePanel.remove();
+            window.App._currentFeaturePanel = null;
+        }
+        
+        const existingPanel = document.getElementById('featureDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
     };
 
-    // Function to close camera modal
+    // Function to close camera modal/panel
     window.App.closeCameraModal = function() {
         if (window.App._currentCameraModal) {
             window.App._currentCameraModal.hide();
@@ -1291,6 +1243,42 @@ window.App = window.App || {};
         if (existingModal) {
             existingModal.remove();
         }
+        
+        // Clean up new panel
+        if (window.App._currentCameraPanel) {
+            window.App._currentCameraPanel.remove();
+            window.App._currentCameraPanel = null;
+        }
+        
+        const existingPanel = document.getElementById('cameraDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+    };
+
+    // Function to pan to camera location (similar to focusPropertyFeature)
+    window.App.panToCameraLocation = function(lng, lat) {
+        console.log('Panning to camera location:', lng, lat);
+        
+        const m = map();
+        if (!m) {
+            console.error('Map not available for panning to camera');
+            return;
+        }
+        
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+            console.error('Invalid camera coordinates:', lng, lat);
+            return;
+        }
+        
+        // Pan to camera location with appropriate zoom
+        m.flyTo({
+            center: [lng, lat],
+            zoom: Math.max(m.getZoom(), 17), // Zoom in closer for camera location
+            duration: 1500
+        });
+        
+        console.log('Panning to camera complete');
     };
 
     window.App.editPropertyFeature = function(featureId) {
@@ -1961,8 +1949,24 @@ window.App = window.App || {};
         window.App.closeFeaturePopup();
     };
 
+    window.closeFeaturePopup = function() {
+        window.App.closeFeaturePopup();
+    };
+
     window.closeCameraModal = function() {
         window.App.closeCameraModal();
+    };
+    
+    window.closeFeatureDetailsPanel = function() {
+        window.App.closeFeaturePopup();
+    };
+
+    window.closeCameraDetailsPanel = function() {
+        window.App.closeCameraModal();
+    };
+    
+    window.panToCameraLocation = function(lng, lat) {
+        window.App.panToCameraLocation(lng, lat);
     };
     
     window.disableGeometryEditing = function() {
