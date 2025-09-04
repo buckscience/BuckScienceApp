@@ -1045,6 +1045,11 @@ window.App = window.App || {};
                         <div class="modal-body">
                             <form id="featureForm">
                                 <div class="mb-3">
+                                    <label for="featureName" class="form-label">Feature Name (optional)</label>
+                                    <input type="text" class="form-control" id="featureName" placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" maxlength="100">
+                                    <small class="text-muted">Leave blank to use the default feature type name</small>
+                                </div>
+                                <div class="mb-3">
                                     <label for="featureType" class="form-label">Feature Type</label>
                                     <select class="form-select" id="featureType" required>
                                         ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml() : '<option value="99">Other</option>'}
@@ -1089,6 +1094,7 @@ window.App = window.App || {};
         const propertyId = window.App._tempPropertyId;
         const mode = window.App._tempMode;
 
+        const featureName = document.getElementById('featureName').value.trim() || null;
         const featureType = parseInt(document.getElementById('featureType').value);
         const notes = document.getElementById('featureNotes').value.trim() || null;
 
@@ -1098,6 +1104,7 @@ window.App = window.App || {};
         const data = {
             classificationType: featureType,
             geometryWkt: geometryWkt,
+            name: featureName,
             notes: notes
         };
 
@@ -1350,6 +1357,11 @@ window.App = window.App || {};
                 </div>
                 <form id="featureEditForm">
                     <div class="mb-3">
+                        <label for="editFeatureName" class="form-label">Feature Name</label>
+                        <input type="text" class="form-control" id="editFeatureName" placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" value="${props.name || ''}" maxlength="100">
+                        <small class="text-muted">Leave blank to use the default feature type name</small>
+                    </div>
+                    <div class="mb-3">
                         <label for="editFeatureType" class="form-label">Feature Type</label>
                         <select class="form-select" id="editFeatureType" required>
                             ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml(props.classificationType) : '<option value="99">Other</option>'}
@@ -1463,6 +1475,7 @@ window.App = window.App || {};
             return;
         }
 
+        const featureName = document.getElementById('editFeatureName').value.trim() || null;
         const featureType = parseInt(document.getElementById('editFeatureType').value);
         const notes = document.getElementById('editFeatureNotes').value.trim() || null;
         let geometryWkt = geometryToWKT(feature.geometry); // Default to original geometry
@@ -1485,6 +1498,7 @@ window.App = window.App || {};
         const data = {
             classificationType: featureType,
             geometryWkt: geometryWkt,
+            name: featureName,
             notes: notes
         };
 

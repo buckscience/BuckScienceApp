@@ -11,6 +11,7 @@ public static class GetPropertyFeature
         int PropertyId,
         ClassificationType ClassificationType,
         string GeometryWkt,
+        string? Name,
         string? Notes,
         int? CreatedBy,
         DateTime CreatedAt);
@@ -30,6 +31,7 @@ public static class GetPropertyFeature
                 pf.PropertyId,
                 pf.ClassificationType,
                 pf.Geometry.AsText(),
+                pf.Name,
                 pf.Notes,
                 pf.CreatedBy,
                 pf.CreatedAt))

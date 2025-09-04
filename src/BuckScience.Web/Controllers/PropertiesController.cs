@@ -179,7 +179,8 @@ public class PropertiesController : Controller
             Id = pf.Id,
             Type = pf.ClassificationType,
             Category = FeatureHelper.GetCategory(pf.ClassificationType),
-            Name = GetFeatureName(pf.ClassificationType),
+            Name = pf.Name ?? GetFeatureName(pf.ClassificationType), // Use custom name if provided, fallback to type name
+            TypeName = GetFeatureName(pf.ClassificationType), // Always show the feature type name
             Description = GetFeatureDescription(pf.ClassificationType),
             Icon = GetFeatureIcon(pf.ClassificationType),
             GeometryWkt = pf.GeometryWkt,

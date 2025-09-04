@@ -13,6 +13,7 @@ public static class CreatePropertyFeature
         int PropertyId,
         ClassificationType ClassificationType,
         string GeometryWkt,
+        string? Name = null,
         string? Notes = null);
 
     public static async Task<int> HandleAsync(
@@ -45,6 +46,7 @@ public static class CreatePropertyFeature
             cmd.PropertyId,
             cmd.ClassificationType,
             geometry,
+            cmd.Name,
             cmd.Notes,
             userId);
 
