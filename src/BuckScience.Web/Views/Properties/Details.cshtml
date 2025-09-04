@@ -142,46 +142,74 @@
                     
                     @if (Model.Features.Any())
                     {
-                        <div class="row g-3">
-                            @foreach (var feature in Model.Features)
-                            {
-                                <div class="col-12">
-                                    <div class="card feature-card">
-                                        <div class="card-body d-flex align-items-start">
-                                            <div class="feature-icon me-3">
-                                                <i class="@feature.Icon fa-2x text-custom-primary"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <h6 class="card-title mb-1">@feature.Name</h6>
-                                                        @if (!string.IsNullOrEmpty(feature.Notes))
-                                                        {
-                                                            <p class="card-text text-muted small mb-1">@feature.Notes</p>
-                                                        }
-                                                        @if (feature.CreatedAt.HasValue)
-                                                        {
-                                                            <small class="text-muted">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
-                                                        }
+                        <!-- Category Filter -->
+                        <div class="mb-3">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <label class="form-label mb-0 me-2">Filter by Category:</label>
+                                <button class="btn btn-outline-secondary btn-sm feature-category-filter active" data-category="all">
+                                    All (@Model.Features.Count)
+                                </button>
+                                @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                                {
+                                    <button class="btn btn-outline-secondary btn-sm feature-category-filter" data-category="@((int)categoryGroup.Key)">
+                                        @GetCategoryDisplayName(categoryGroup.Key) (@categoryGroup.Count())
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
+                        <!-- Features grouped by category -->
+                        @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                        {
+                            <div class="feature-category-group" data-category="@((int)categoryGroup.Key)">
+                                <h6 class="text-muted mb-3">
+                                    <i class="fas fa-layer-group me-1"></i>
+                                    @GetCategoryDisplayName(categoryGroup.Key) 
+                                    <span class="badge badge-custom-secondary ms-1">@categoryGroup.Count()</span>
+                                </h6>
+                                <div class="row g-3 mb-4">
+                                    @foreach (var feature in categoryGroup)
+                                    {
+                                        <div class="col-12">
+                                            <div class="card feature-card">
+                                                <div class="card-body d-flex align-items-start">
+                                                    <div class="feature-icon me-3">
+                                                        <i class="@feature.Icon fa-2x text-custom-primary"></i>
                                                     </div>
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div>
+                                                                <h6 class="card-title mb-1">@feature.Name</h6>
+                                                                <small class="text-muted">@feature.Description</small>
+                                                                @if (!string.IsNullOrEmpty(feature.Notes))
+                                                                {
+                                                                    <p class="card-text text-muted small mb-1 mt-1">@feature.Notes</p>
+                                                                }
+                                                                @if (feature.CreatedAt.HasValue)
+                                                                {
+                                                                    <small class="text-muted d-block">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                }
+                                                            </div>
+                                                            <div class="btn-group" role="group">
+                                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    }
                                 </div>
-                            }
-                        </div>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -207,6 +235,19 @@
             BuckScience.Domain.Enums.ProfileStatus.HitList => "badge-custom-warning",
             BuckScience.Domain.Enums.ProfileStatus.Harvested => "badge-custom-success",
             _ => "badge-custom-secondary"
+        };
+    }
+
+    private string GetCategoryDisplayName(BuckScience.Domain.Enums.FeatureCategory category)
+    {
+        return category switch
+        {
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "Topographical",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "Food Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "Water Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "Bedding & Cover",
+            BuckScience.Domain.Enums.FeatureCategory.Other => "Other",
+            _ => category.ToString()
         };
     }
 }
@@ -341,5 +382,31 @@
         window.focusPropertyFeature = focusPropertyFeature;
         window.editFeature = editFeature;
         window.deleteFeature = deleteFeature;
+
+        // Feature category filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.feature-category-filter');
+            const categoryGroups = document.querySelectorAll('.feature-category-group');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetCategory = this.getAttribute('data-category');
+                    
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show/hide category groups
+                    if (targetCategory === 'all') {
+                        categoryGroups.forEach(group => group.style.display = 'block');
+                    } else {
+                        categoryGroups.forEach(group => {
+                            const groupCategory = group.getAttribute('data-category');
+                            group.style.display = groupCategory === targetCategory ? 'block' : 'none';
+                        });
+                    }
+                });
+            });
+        });
     </script>
 }

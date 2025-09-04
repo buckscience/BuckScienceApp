@@ -897,13 +897,7 @@ window.App = window.App || {};
                                 <div class="mb-3">
                                     <label for="featureType" class="form-label">Feature Type</label>
                                     <select class="form-select" id="featureType" required>
-                                        <option value="1">Bedding Area</option>
-                                        <option value="2">Food Source</option>
-                                        <option value="3">Travel Corridor</option>
-                                        <option value="4">Pinch Point/Funnel</option>
-                                        <option value="5">Water Source</option>
-                                        <option value="6">Security Cover</option>
-                                        <option value="7">Other</option>
+                                        ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml() : '<option value="99">Other</option>'}
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -1090,13 +1084,7 @@ window.App = window.App || {};
                     <div class="mb-3">
                         <label for="editFeatureType" class="form-label">Feature Type</label>
                         <select class="form-select" id="editFeatureType" required>
-                            <option value="1" ${props.classificationType === 1 ? 'selected' : ''}>Bedding Area</option>
-                            <option value="2" ${props.classificationType === 2 ? 'selected' : ''}>Food Source</option>
-                            <option value="3" ${props.classificationType === 3 ? 'selected' : ''}>Travel Corridor</option>
-                            <option value="4" ${props.classificationType === 4 ? 'selected' : ''}>Pinch Point/Funnel</option>
-                            <option value="5" ${props.classificationType === 5 ? 'selected' : ''}>Water Source</option>
-                            <option value="6" ${props.classificationType === 6 ? 'selected' : ''}>Security Cover</option>
-                            <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
+                            ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml(props.classificationType) : '<option value="99">Other</option>'}
                         </select>
                     </div>
                     <div class="mb-3" style="display: none;">
@@ -1598,29 +1586,11 @@ window.App = window.App || {};
     }
 
     function getFeatureName(classificationType) {
-        const names = {
-            1: 'Bedding Area',
-            2: 'Food Source',
-            3: 'Travel Corridor',
-            4: 'Pinch Point/Funnel',
-            5: 'Water Source',
-            6: 'Security Cover',
-            7: 'Other'
-        };
-        return names[classificationType] || 'Unknown';
+        return window.FeatureUtils ? window.FeatureUtils.getFeatureName(classificationType) : 'Unknown';
     }
 
     function getFeatureColor(classificationType) {
-        const colors = {
-            1: '#8B4513', // Brown for bedding
-            2: '#32CD32', // Green for feeding
-            3: '#FF6347', // Red for travel corridor
-            4: '#FF8C00', // Orange for pinch points
-            5: '#1E90FF', // Blue for water
-            6: '#228B22', // Dark green for cover
-            7: '#9370DB'  // Purple for other
-        };
-        return colors[classificationType] || '#999999';
+        return window.FeatureUtils ? window.FeatureUtils.getFeatureColor(classificationType) : '#999999';
     }
 
     // Function to temporarily highlight a feature
