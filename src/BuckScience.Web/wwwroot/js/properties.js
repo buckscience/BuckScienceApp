@@ -614,11 +614,11 @@ window.App = window.App || {};
                 }
             });
 
-            // Get camera data from map source if available
-            const cameraSource = m.getSource('property-cameras');
-            if (cameraSource && cameraSource._data && cameraSource._data.features) {
-                cameraSource._data.features.forEach(cameraFeature => {
-                    bounds.extend(cameraFeature.geometry.coordinates);
+            // Get camera data from markers if available
+            if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
+                window.App._cameraMarkers.forEach(marker => {
+                    const lngLat = marker.getLngLat();
+                    bounds.extend([lngLat.lng, lngLat.lat]);
                 });
             }
 
@@ -646,26 +646,14 @@ window.App = window.App || {};
 
         console.log('Loading cameras for property:', propertyId);
 
-        // Remove existing camera layers and source
-        const cameraLayerIds = ['property-cameras-points', 'property-cameras-labels'];
-        cameraLayerIds.forEach(layerId => {
-            if (m.getLayer(layerId)) {
-                console.log('Removing existing camera layer:', layerId);
-                try {
-                    m.removeLayer(layerId);
-                } catch (e) {
-                    console.warn('Error removing camera layer:', layerId, e);
-                }
-            }
-        });
-
-        if (m.getSource('property-cameras')) {
-            console.log('Removing existing cameras source');
-            try {
-                m.removeSource('property-cameras');
-            } catch (e) {
-                console.warn('Error removing cameras source:', e);
-            }
+        // Remove existing camera markers
+        if (window.App._cameraMarkers) {
+            window.App._cameraMarkers.forEach(marker => {
+                marker.remove();
+            });
+            window.App._cameraMarkers = [];
+        } else {
+            window.App._cameraMarkers = [];
         }
 
         // Fetch camera data from API
@@ -690,100 +678,97 @@ window.App = window.App || {};
                     return;
                 }
 
-                // Convert cameras to GeoJSON
-                const cameraFeatures = cameras.map((camera, index) => ({
-                    type: 'Feature',
-                    properties: {
-                        id: camera.id,
-                        name: camera.name,
-                        isActive: camera.isActive,
-                        photoCount: camera.photoCount,
-                        brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : '')
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [camera.longitude, camera.latitude]
-                    }
-                }));
+                console.log('Adding camera markers to map with', cameras.length, 'cameras');
 
-                const geojson = {
-                    type: 'FeatureCollection',
-                    features: cameraFeatures
-                };
-
-                console.log('Adding cameras source to map with', cameraFeatures.length, 'cameras');
-
-                try {
-                    // Add source
-                    m.addSource('property-cameras', {
-                        type: 'geojson',
-                        data: geojson
-                    });
-
-                    console.log('Cameras source added successfully');
-
-                    // Add camera points layer with different styling for active/inactive
-                    m.addLayer({
-                        id: 'property-cameras-points',
-                        type: 'circle',
-                        source: 'property-cameras',
-                        paint: {
-                            'circle-color': [
-                                'case',
-                                ['get', 'isActive'],
-                                '#FF6B35', // Orange for active cameras
-                                '#999999'  // Gray for inactive cameras
-                            ],
-                            'circle-radius': 12,
-                            'circle-stroke-color': '#ffffff',
-                            'circle-stroke-width': 3
-                        }
-                    });
-
-                    // Add camera labels layer
-                    m.addLayer({
-                        id: 'property-cameras-labels',
-                        type: 'symbol',
-                        source: 'property-cameras',
-                        layout: {
-                            'text-field': '📷', // Camera emoji
-                            'text-size': 16,
-                            'text-allow-overlap': true,
-                            'text-ignore-placement': true
-                        },
-                        paint: {
-                            'text-color': '#ffffff'
-                        }
-                    });
-
-                    console.log('Camera layers added successfully');
-
-                    // Add click handlers for cameras
-                    cameraLayerIds.forEach(layerId => {
-                        m.off('click', layerId); // Remove existing handlers
-                        m.on('click', layerId, (e) => {
-                            if (e.features && e.features.length > 0) {
-                                const camera = e.features[0];
-                                showCameraPopup(camera, e.lngLat);
+                // Create individual markers for each camera
+                cameras.forEach((camera, index) => {
+                    try {
+                        // Create marker element with Font Awesome camera icon
+                        const markerElement = document.createElement('div');
+                        markerElement.className = 'camera-marker';
+                        markerElement.innerHTML = `
+                            <div class="camera-marker-inner ${camera.isActive ? 'active' : 'inactive'}">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                        `;
+                        
+                        // Add CSS styles for the marker
+                        const style = `
+                            .camera-marker {
+                                cursor: pointer;
+                                width: 30px;
+                                height: 30px;
                             }
+                            .camera-marker-inner {
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                border: 3px solid #ffffff;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                font-size: 14px;
+                                color: #ffffff;
+                                transition: transform 0.2s ease;
+                            }
+                            .camera-marker-inner:hover {
+                                transform: scale(1.1);
+                            }
+                            .camera-marker-inner.active {
+                                background-color: #FF6B35;
+                            }
+                            .camera-marker-inner.inactive {
+                                background-color: #999999;
+                            }
+                        `;
+
+                        // Add styles if not already added
+                        if (!document.getElementById('camera-marker-styles')) {
+                            const styleSheet = document.createElement('style');
+                            styleSheet.id = 'camera-marker-styles';
+                            styleSheet.type = 'text/css';
+                            styleSheet.innerText = style;
+                            document.head.appendChild(styleSheet);
+                        }
+
+                        // Create marker
+                        const marker = new mapboxgl.Marker({
+                            element: markerElement,
+                            anchor: 'center'
+                        })
+                        .setLngLat([camera.longitude, camera.latitude])
+                        .addTo(m);
+
+                        // Add click event to marker
+                        markerElement.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            showCameraPopup({
+                                properties: {
+                                    id: camera.id,
+                                    name: camera.name,
+                                    isActive: camera.isActive,
+                                    photoCount: camera.photoCount,
+                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : '')
+                                }
+                            }, { lng: camera.longitude, lat: camera.latitude });
                         });
 
-                        // Change cursor on hover
-                        m.on('mouseenter', layerId, () => {
-                            m.getCanvas().style.cursor = 'pointer';
-                        });
+                        // Store marker reference for cleanup
+                        window.App._cameraMarkers.push(marker);
 
-                        m.on('mouseleave', layerId, () => {
-                            m.getCanvas().style.cursor = '';
-                        });
-                    });
+                        console.log(`Added camera marker ${index + 1}: ${camera.name}`);
 
-                    // Update map bounds to include cameras and property
-                    updateMapBoundsWithCameras(cameras);
+                    } catch (error) {
+                        console.error(`Error creating marker for camera ${camera.name}:`, error);
+                    }
+                });
 
-                } catch (error) {
-                    console.error('Error adding cameras to map:', error);
-                }
+                console.log('All camera markers added successfully');
+
+                // Update map bounds to include cameras and property
+                updateMapBoundsWithCameras(cameras);
+
             })
             .catch(error => {
                 console.error('Error loading cameras:', error);
