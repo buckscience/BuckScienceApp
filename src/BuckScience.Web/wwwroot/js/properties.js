@@ -1095,22 +1095,27 @@ window.App = window.App || {};
 
         const props = feature.properties;
         const popupHtml = `
-            <div style="max-width: 350px;">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="mb-0">${props.name}</h6>
-                    <button type="button" class="btn-close btn-sm" onclick="closeFeaturePopup()" aria-label="Close" style="font-size: 0.6rem; padding: 0.1rem;"></button>
+            <div style="min-width: 400px; max-width: 500px;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="mb-0">${props.name}</h5>
+                    <button type="button" class="btn-close" onclick="closeFeaturePopup()" aria-label="Close"></button>
                 </div>
-                ${props.notes ? `<p class="small text-muted mb-2">${props.notes}</p>` : ''}
-                <div class="d-flex gap-2 mt-2">
-                    <button class="btn btn-xs btn-outline-primary px-2 py-1" style="font-size: 0.75rem;" onclick="editPropertyFeature(${props.id})">Edit</button>
-                    <button class="btn btn-xs btn-outline-danger px-2 py-1" style="font-size: 0.75rem;" onclick="deletePropertyFeature(${props.id})">Delete</button>
+                ${props.notes ? `<p class="text-muted mb-3">${props.notes}</p>` : ''}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editPropertyFeature(${props.id})">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deletePropertyFeature(${props.id})">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
                 </div>
             </div>
         `;
 
         const popup = new mapboxgl.Popup({
-            closeButton: true,
-            closeOnClick: false
+            closeButton: false,
+            closeOnClick: false,
+            maxWidth: '500px'
         })
             .setLngLat(lngLat)
             .setHTML(popupHtml)
