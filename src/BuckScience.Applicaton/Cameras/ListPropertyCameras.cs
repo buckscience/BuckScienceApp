@@ -12,6 +12,7 @@ public static class ListPropertyCameras
         string? Model,
         double Latitude,
         double Longitude,
+        float DirectionDegrees,
         bool IsActive,
         int PhotoCount,
         DateTime CreatedDate
@@ -27,17 +28,26 @@ public static class ListPropertyCameras
         // ownership enforced via property join using explicit joins to avoid LINQ translation errors
         return await db.Cameras
             .AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
             .GroupJoin(db.Photos, x => x.Camera.Id, photo => photo.CameraId, (x, photos) => new { x.Camera, x.Property, PhotoCount = photos.Count() })
             .OrderBy(x => x.Camera.Name)
+            .Select(x => new {
+                Camera = x.Camera,
+                PhotoCount = x.PhotoCount,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .Select(x => new Result(
                 x.Camera.Id,
                 x.Camera.Name,
                 x.Camera.Brand,
                 x.Camera.Model,
-                x.Camera.Latitude,
-                x.Camera.Longitude,
+                x.CurrentPlacement != null ? x.CurrentPlacement.Latitude : 0d,
+                x.CurrentPlacement != null ? x.CurrentPlacement.Longitude : 0d,
+                x.CurrentPlacement != null ? x.CurrentPlacement.DirectionDegrees : 0f,
                 x.Camera.IsActive,
                 x.PhotoCount,
                 x.Camera.CreatedDate))

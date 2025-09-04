@@ -70,6 +70,7 @@ public class CamerasController : Controller
             Model = x.Model,
             Latitude = x.Latitude,
             Longitude = x.Longitude,
+            DirectionDegrees = x.DirectionDegrees,
             IsActive = x.IsActive,
             PhotoCount = x.PhotoCount,
             CreatedDate = x.CreatedDate
@@ -101,6 +102,7 @@ public class CamerasController : Controller
             model = x.Model,
             latitude = x.Latitude,
             longitude = x.Longitude,
+            directionDegrees = x.DirectionDegrees,
             isActive = x.IsActive,
             photoCount = x.PhotoCount,
             createdDate = x.CreatedDate
@@ -177,10 +179,18 @@ public class CamerasController : Controller
 
         // Use explicit join to avoid LINQ translation errors with navigation properties
         var result = await _db.Cameras.AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == id &&
                        x.Camera.PropertyId == propertyId &&
                        x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .Select(x => new {
+                Camera = x.Camera,
+                Property = x.Property,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(ct);
 
         if (result is null) return NotFound();
@@ -195,8 +205,9 @@ public class CamerasController : Controller
             Name = result.Camera.Name,
             Brand = result.Camera.Brand,
             Model = result.Camera.Model,
-            Latitude = result.Camera.Latitude,
-            Longitude = result.Camera.Longitude,
+            Latitude = result.CurrentPlacement?.Latitude ?? 0d,
+            Longitude = result.CurrentPlacement?.Longitude ?? 0d,
+            DirectionDegrees = result.CurrentPlacement?.DirectionDegrees ?? 0f,
             IsActive = result.Camera.IsActive
         };
 
@@ -443,6 +454,11 @@ public class CamerasController : Controller
             Model = camera.Model,
             Latitude = camera.Latitude,
             Longitude = camera.Longitude,
+            DirectionDegrees = camera.DirectionDegrees,
+            CurrentPlacementStartDate = camera.CurrentPlacementStartDate,
+            TimeAtCurrentLocation = camera.CurrentPlacementStartDate.HasValue 
+                ? DateTime.UtcNow - camera.CurrentPlacementStartDate.Value 
+                : null,
             IsActive = camera.IsActive,
             PhotoCount = camera.PhotoCount,
             CreatedDate = camera.CreatedDate,
