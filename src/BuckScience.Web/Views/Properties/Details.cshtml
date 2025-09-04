@@ -161,52 +161,61 @@
                         <!-- Features grouped by category -->
                         @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
                         {
+                            var categoryId = $"featureCategory{(int)categoryGroup.Key}";
                             <div class="feature-category-group" data-category="@((int)categoryGroup.Key)">
-                                <h6 class="text-muted mb-3">
-                                    <i class="fas fa-layer-group me-1"></i>
-                                    @GetCategoryDisplayName(categoryGroup.Key) 
-                                    <span class="badge badge-custom-secondary ms-1">@categoryGroup.Count()</span>
-                                </h6>
-                                <div class="row g-3 mb-4">
-                                    @foreach (var feature in categoryGroup)
-                                    {
-                                        <div class="col-12">
-                                            <div class="card feature-card">
-                                                <div class="card-body d-flex align-items-start">
-                                                    <div class="feature-icon me-3">
-                                                        <i class="@feature.Icon fa-2x text-custom-primary"></i>
-                                                    </div>
-                                                    <div class="flex-grow-1">
-                                                        <div class="d-flex justify-content-between align-items-start">
-                                                            <div>
-                                                                <h6 class="card-title mb-1">@feature.Name</h6>
-                                                                <small class="text-muted">@feature.Description</small>
-                                                                @if (!string.IsNullOrEmpty(feature.Notes))
-                                                                {
-                                                                    <p class="card-text text-muted small mb-1 mt-1">@feature.Notes</p>
-                                                                }
-                                                                @if (feature.CreatedAt.HasValue)
-                                                                {
-                                                                    <small class="text-muted d-block">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
-                                                                }
-                                                            </div>
-                                                            <div class="btn-group" role="group">
-                                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
-                                                                    <i class="fas fa-eye"></i>
-                                                                </button>
-                                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
-                                                                    <i class="fas fa-edit"></i>
-                                                                </button>
-                                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-muted mb-0 flex-grow-1">
+                                        <i class="fas fa-layer-group me-1"></i>
+                                        @GetCategoryDisplayName(categoryGroup.Key) 
+                                        <span class="badge badge-custom-secondary ms-1">@categoryGroup.Count()</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#@categoryId" aria-expanded="true" aria-controls="@categoryId">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div class="collapse show" id="@categoryId">
+                                    <div class="row g-3 mb-4">
+                                        @foreach (var feature in categoryGroup)
+                                        {
+                                            <div class="col-12">
+                                                <div class="card feature-card">
+                                                    <div class="card-body d-flex align-items-start">
+                                                        <div class="feature-icon me-3">
+                                                            <i class="@feature.Icon fa-2x text-custom-primary"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <h6 class="card-title mb-1">@feature.Name</h6>
+                                                                    <small class="text-muted">@feature.Description</small>
+                                                                    @if (!string.IsNullOrEmpty(feature.Notes))
+                                                                    {
+                                                                        <p class="card-text text-muted small mb-1 mt-1">@feature.Notes</p>
+                                                                    }
+                                                                    @if (feature.CreatedAt.HasValue)
+                                                                    {
+                                                                        <small class="text-muted d-block">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                    }
+                                                                </div>
+                                                                <div class="btn-group" role="group">
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    }
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         }
@@ -272,6 +281,26 @@
             .col-sm-6 {
                 min-width: 220px; /* Minimum width for small screens */
             }
+        }
+
+        /* Feature category collapse styling */
+        .feature-category-group .collapse {
+            transition: all 0.3s ease;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] {
+            border: none;
+            background: transparent;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"]:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] i {
+            transition: transform 0.2s ease;
         }
     </style>
 }
@@ -404,6 +433,28 @@
                             const groupCategory = group.getAttribute('data-category');
                             group.style.display = groupCategory === targetCategory ? 'block' : 'none';
                         });
+                    }
+                });
+            });
+
+            // Handle collapse button icon rotation
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        // Toggle rotation class after a small delay to let Bootstrap process the collapse
+                        setTimeout(() => {
+                            const target = document.querySelector(this.getAttribute('data-bs-target'));
+                            if (target) {
+                                if (target.classList.contains('show')) {
+                                    icon.classList.remove('fa-chevron-down');
+                                    icon.classList.add('fa-chevron-up');
+                                } else {
+                                    icon.classList.remove('fa-chevron-up');
+                                    icon.classList.add('fa-chevron-down');
+                                }
+                            }
+                        }, 200);
                     }
                 });
             });

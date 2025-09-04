@@ -256,21 +256,94 @@ window.App = window.App || {};
         // Store the current property ID
         window.App._currentPropertyId = propertyId;
 
-        // Center map on property 
-        centerMapOnProperty();
+        // Load and display existing features for this property
+        loadPropertyFeatures(propertyId);
 
         // Display cameras on the map 
         displayCamerasOnMap();
-
-        // Load and display existing features for this property
-        loadPropertyFeatures(propertyId);
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
             setupFeatureDrawing(propertyId);
             window.App._featureDrawingSetup = true;
         }
+
+        // After a short delay, calculate comprehensive bounds including all elements
+        setTimeout(() => {
+            calculateComprehensiveBounds();
+        }, 1500); // Wait for features and cameras to load
     };
+
+    function calculateComprehensiveBounds() {
+        const m = map();
+        if (!m) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        console.log('Calculating comprehensive bounds for map');
+
+        // Create bounds and always include property location
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
+        let hasAdditionalPoints = false;
+
+        // Add all camera markers to bounds
+        if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
+            console.log('Adding', window.App._cameraMarkers.length, 'cameras to bounds');
+            window.App._cameraMarkers.forEach(marker => {
+                const lngLat = marker.getLngLat();
+                bounds.extend([lngLat.lng, lngLat.lat]);
+                hasAdditionalPoints = true;
+            });
+        }
+
+        // Add all features to bounds
+        const featuresSource = m.getSource('property-features');
+        if (featuresSource && featuresSource._data && featuresSource._data.features) {
+            const features = featuresSource._data.features;
+            console.log('Adding', features.length, 'features to bounds');
+            
+            features.forEach(feature => {
+                if (feature.geometry.type === 'Point') {
+                    bounds.extend(feature.geometry.coordinates);
+                    hasAdditionalPoints = true;
+                } else if (feature.geometry.type === 'LineString') {
+                    feature.geometry.coordinates.forEach(coord => {
+                        bounds.extend(coord);
+                        hasAdditionalPoints = true;
+                    });
+                } else if (feature.geometry.type === 'Polygon') {
+                    feature.geometry.coordinates[0].forEach(coord => {
+                        bounds.extend(coord);
+                        hasAdditionalPoints = true;
+                    });
+                }
+            });
+        }
+
+        // Apply bounds or center on property
+        if (hasAdditionalPoints) {
+            console.log('Fitting bounds to include all cameras and features');
+            m.fitBounds(bounds, {
+                padding: {
+                    top: 60,
+                    bottom: 60,
+                    left: 60,
+                    right: 60
+                },
+                maxZoom: 16, // Don't zoom in too far
+                duration: 1500
+            });
+        } else {
+            console.log('No additional points found, centering on property');
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1500
+            });
+        }
+    }
 
     function centerMapOnProperty() {
         const m = map();
@@ -585,25 +658,17 @@ window.App = window.App || {};
 
     function updateBoundsWithFeatures(geojsonFeatures) {
         const m = map();
-        if (!m || geojsonFeatures.length === 0) return;
+        if (!m) return;
 
         const propertyCoords = window.App?.propertyCoords;
         if (!propertyCoords) return;
 
-        // Only update bounds if we haven't moved from the property center yet
-        const currentCenter = m.getCenter();
-        const propertyCenter = [propertyCoords.lng, propertyCoords.lat];
-        const distance = Math.sqrt(
-            Math.pow(currentCenter.lng - propertyCenter[0], 2) + 
-            Math.pow(currentCenter.lat - propertyCenter[1], 2)
-        );
+        // Create bounds and always include property location
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
 
-        // If we're still close to the property center (haven't manually panned), include features in bounds
-        if (distance < 0.01) { // Small threshold for "close to property center"
-            let bounds = new mapboxgl.LngLatBounds();
-            bounds.extend(propertyCenter);
-
-            // Add feature geometries to bounds
+        // Add all feature geometries to bounds
+        if (geojsonFeatures && geojsonFeatures.length > 0) {
             geojsonFeatures.forEach(feature => {
                 if (feature.geometry.type === 'Point') {
                     bounds.extend(feature.geometry.coordinates);
@@ -613,20 +678,38 @@ window.App = window.App || {};
                     feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
                 }
             });
+        }
 
-            // Get camera data from markers if available
-            if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
-                window.App._cameraMarkers.forEach(marker => {
-                    const lngLat = marker.getLngLat();
-                    bounds.extend([lngLat.lng, lngLat.lat]);
-                });
-            }
+        // Add all camera markers to bounds
+        if (window.App._cameraMarkers && window.App._cameraMarkers.length > 0) {
+            window.App._cameraMarkers.forEach(marker => {
+                const lngLat = marker.getLngLat();
+                bounds.extend([lngLat.lng, lngLat.lat]);
+            });
+        }
 
-            // Fit to bounds with cameras and features
+        // Only update bounds if we have more than just the property location
+        const boundsArray = bounds.toArray();
+        const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+        
+        if (hasMultiplePoints) {
+            // Fit to bounds with all elements included
             m.fitBounds(bounds, {
-                padding: 50,
-                maxZoom: 18,
-                duration: 800
+                padding: {
+                    top: 50,
+                    bottom: 50,
+                    left: 50,
+                    right: 50
+                },
+                maxZoom: 16, // Don't zoom in too far
+                duration: 1200
+            });
+        } else {
+            // If only property location, use a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1200
             });
         }
     }
@@ -791,12 +874,30 @@ window.App = window.App || {};
             bounds.extend([camera.longitude, camera.latitude]);
         });
 
-        // Fit to bounds with cameras and property
-        m.fitBounds(bounds, {
-            padding: 50,
-            maxZoom: 18,
-            duration: 1200
-        });
+        // Check if we have more than just the property location
+        const boundsArray = bounds.toArray();
+        const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+        
+        if (hasMultiplePoints) {
+            // Fit to bounds with cameras and property
+            m.fitBounds(bounds, {
+                padding: {
+                    top: 50,
+                    bottom: 50, 
+                    left: 50,
+                    right: 50
+                },
+                maxZoom: 16, // Don't zoom in too far
+                duration: 1200
+            });
+        } else {
+            // If only property location, use a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1200
+            });
+        }
     }
 
     function showCameraPopup(camera, lngLat) {
@@ -995,8 +1096,11 @@ window.App = window.App || {};
         const props = feature.properties;
         const popupHtml = `
             <div style="max-width: 350px;">
-                <h6>${props.name}</h6>
-                ${props.notes ? `<p class="small text-muted">${props.notes}</p>` : ''}
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">${props.name}</h6>
+                    <button type="button" class="btn-close btn-sm" onclick="closeFeaturePopup()" aria-label="Close" style="font-size: 0.6rem; padding: 0.1rem;"></button>
+                </div>
+                ${props.notes ? `<p class="small text-muted mb-2">${props.notes}</p>` : ''}
                 <div class="d-flex gap-2 mt-2">
                     <button class="btn btn-xs btn-outline-primary px-2 py-1" style="font-size: 0.75rem;" onclick="editPropertyFeature(${props.id})">Edit</button>
                     <button class="btn btn-xs btn-outline-danger px-2 py-1" style="font-size: 0.75rem;" onclick="deletePropertyFeature(${props.id})">Delete</button>
@@ -1004,7 +1108,10 @@ window.App = window.App || {};
             </div>
         `;
 
-        const popup = new mapboxgl.Popup()
+        const popup = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: false
+        })
             .setLngLat(lngLat)
             .setHTML(popupHtml)
             .addTo(m);
@@ -1013,14 +1120,19 @@ window.App = window.App || {};
         window.App._currentFeaturePopup = popup;
     }
 
-    window.App.editPropertyFeature = function(featureId) {
-        console.log('Edit feature:', featureId);
-        
-        // Close any existing popup when entering edit mode
+    // Function to close feature popup
+    window.App.closeFeaturePopup = function() {
         if (window.App._currentFeaturePopup) {
             window.App._currentFeaturePopup.remove();
             window.App._currentFeaturePopup = null;
         }
+    };
+
+    window.App.editPropertyFeature = function(featureId) {
+        console.log('Edit feature:', featureId);
+        
+        // Close any existing popup when entering edit mode
+        window.App.closeFeaturePopup();
         
         const m = map();
         if (!m) {
@@ -1678,6 +1790,10 @@ window.App = window.App || {};
     
     window.cancelFeatureEdit = function() {
         window.App.cancelFeatureEdit();
+    };
+    
+    window.closeFeaturePopup = function() {
+        window.App.closeFeaturePopup();
     };
     
     window.disableGeometryEditing = function() {
