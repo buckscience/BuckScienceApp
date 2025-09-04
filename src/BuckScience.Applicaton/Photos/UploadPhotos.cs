@@ -20,8 +20,7 @@ public static class UploadPhotos
 
     public sealed record Command(
         int CameraId,
-        IList<FileData> Files,
-        string? Caption = null
+        IList<FileData> Files
     );
 
     public static async Task<List<int>> HandleAsync(
