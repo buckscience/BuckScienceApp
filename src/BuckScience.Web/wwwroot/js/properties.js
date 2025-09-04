@@ -1287,6 +1287,9 @@ window.App = window.App || {};
         // Close any existing popup or modal when entering edit mode
         window.App.closeFeaturePopup();
         
+        // Close sidebar if it's open
+        closeSidebarIfOpen();
+        
         const m = map();
         if (!m) {
             console.error('Map not available for editing feature');
@@ -1856,6 +1859,34 @@ window.App = window.App || {};
 
     function getFeatureColor(classificationType) {
         return window.FeatureUtils ? window.FeatureUtils.getFeatureColor(classificationType) : '#999999';
+    }
+
+    // Function to close sidebar if it's open
+    function closeSidebarIfOpen() {
+        const aside = document.getElementById('sidebar');
+        if (aside && !aside.classList.contains('collapsed')) {
+            console.log('Closing sidebar for feature editing');
+            
+            // Trigger the collapse similar to how the toggle button works
+            aside.classList.add('collapsed');
+            aside.style.transform = 'translateX(-100%)';
+            
+            // Update the toggle button icon if present
+            const btn = document.getElementById('sidebar-toggle');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-chevron-right';
+                }
+            }
+            
+            // Update toggle position after animation
+            setTimeout(() => {
+                if (window.updateTogglePosition) {
+                    window.updateTogglePosition();
+                }
+            }, 300);
+        }
     }
 
     // Function to temporarily highlight a feature
