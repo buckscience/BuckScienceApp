@@ -78,6 +78,37 @@ public class CamerasController : Controller
         return View(vms);
     }
 
+    // API: GET /properties/{propertyId}/cameras/api
+    [HttpGet]
+    [Route("/properties/{propertyId:int}/cameras/api")]
+    public async Task<IActionResult> ApiIndex(int propertyId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify property ownership
+        var prop = await _db.Properties.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        if (prop is null) return NotFound();
+
+        // Get cameras for this property
+        var items = await ListPropertyCameras.HandleAsync(_db, _currentUser.Id.Value, propertyId, ct);
+
+        var cameras = items.Select(x => new
+        {
+            id = x.Id,
+            name = x.Name,
+            brand = x.Brand,
+            model = x.Model,
+            latitude = x.Latitude,
+            longitude = x.Longitude,
+            isActive = x.IsActive,
+            photoCount = x.PhotoCount,
+            createdDate = x.CreatedDate
+        }).ToList();
+
+        return Json(cameras);
+    }
+
     // CREATE: GET /properties/{propertyId}/cameras/add
     [HttpGet]
     [Route("/properties/{propertyId:int}/cameras/add")]

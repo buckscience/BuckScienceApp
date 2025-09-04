@@ -256,13 +256,11 @@ window.App = window.App || {};
         // Store the current property ID
         window.App._currentPropertyId = propertyId;
 
-        // Center map on property and fit to include cameras/features
+        // Center map on property 
         centerMapOnProperty();
 
-        // Display cameras on the map (with a small delay to ensure DOM is ready)
-        setTimeout(() => {
-            displayCamerasOnMap();
-        }, 100);
+        // Display cameras on the map 
+        displayCamerasOnMap();
 
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
@@ -281,133 +279,12 @@ window.App = window.App || {};
         const propertyCoords = window.App?.propertyCoords;
         if (!propertyCoords) return;
 
-        // Create a bounding box to include property location, cameras, and features
-        let bounds = new mapboxgl.LngLatBounds();
-        
-        // Add property center to bounds
-        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
-
-        // Add camera locations to bounds if available
-        const cameras = getCameraData();
-        cameras.forEach(camera => {
-            bounds.extend([camera.lng, camera.lat]);
+        // Center on property with a reasonable zoom level
+        m.flyTo({
+            center: [propertyCoords.lng, propertyCoords.lat],
+            zoom: 16,
+            duration: 1200
         });
-
-        // If we have a valid bounds with multiple points, fit to bounds
-        // Otherwise, just center on the property
-        if (cameras.length > 0) {
-            m.fitBounds(bounds, {
-                padding: 50,
-                maxZoom: 18,
-                duration: 1200
-            });
-        } else {
-            // Just center on property with a reasonable zoom level
-            m.flyTo({
-                center: [propertyCoords.lng, propertyCoords.lat],
-                zoom: 16,
-                duration: 1200
-            });
-        }
-    }
-
-    function getCameraLocations() {
-        // Try to extract camera coordinates from the DOM
-        const cameras = [];
-        document.querySelectorAll('.camera-card').forEach(card => {
-            const coordsText = card.querySelector('.card-text:has(.fa-map-marker-alt)')?.textContent;
-            if (coordsText) {
-                const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                if (match) {
-                    cameras.push({
-                        lat: parseFloat(match[1]),
-                        lng: parseFloat(match[2])
-                    });
-                }
-            }
-        });
-        return cameras;
-    }
-
-    function getCameraData() {
-        // Extract detailed camera information from the DOM for map display
-        const cameras = [];
-        const cameraCards = document.querySelectorAll('.camera-card');
-        console.log('Found camera cards:', cameraCards.length);
-        
-        cameraCards.forEach((card, index) => {
-            console.log(`Processing camera card ${index + 1}:`, card);
-            
-            // Get camera name from card title
-            const nameElement = card.querySelector('.card-title');
-            
-            // Get coordinates from the paragraph containing the map icon
-            // Structure: <p class="card-text ..."><i class="fas fa-map-marker-alt ..."></i>lat, lng</p>
-            const coordsIcon = card.querySelector('.fa-map-marker-alt');
-            const coordsText = coordsIcon ? coordsIcon.parentElement.textContent.trim() : null;
-            
-            // Get brand/model from first card-text paragraph  
-            // Structure: <p class="card-text ..."><span>Brand/Model: ...</span></p>
-            const brandModelParagraph = card.querySelector('.card-text:first-of-type');
-            const brandModelText = brandModelParagraph ? brandModelParagraph.textContent.trim() : null;
-            
-            // Get active status from badge
-            // Structure: <span class="badge ...">Active/Inactive</span>
-            const badgeElement = card.querySelector('.badge');
-            
-            // Get photo count from strong element
-            // Structure: <strong>123</strong> photos
-            const photoCountElement = card.querySelector('strong');
-            
-            console.log(`Camera ${index + 1} elements:`, {
-                nameElement: nameElement?.textContent,
-                coordsText: coordsText,
-                brandModelText: brandModelText,
-                badgeElement: badgeElement?.textContent,
-                photoCountElement: photoCountElement?.textContent
-            });
-            
-            if (coordsText && nameElement) {
-                // Extract coordinates from text like "lat, lng"
-                const match = coordsText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                console.log(`Camera ${index + 1} coordinates match:`, match);
-                
-                if (match) {
-                    const camera = {
-                        name: nameElement.textContent.trim(),
-                        lat: parseFloat(match[1]),
-                        lng: parseFloat(match[2]),
-                        isActive: badgeElement?.textContent.trim() === 'Active',
-                        photoCount: photoCountElement ? parseInt(photoCountElement.textContent) || 0 : 0
-                    };
-                    
-                    // Extract brand/model if available
-                    if (brandModelText) {
-                        const brandMatch = brandModelText.match(/Brand\/Model:\s*(.+)$/);
-                        if (brandMatch) {
-                            camera.brandModel = brandMatch[1].trim();
-                        } else {
-                            camera.brandModel = 'Unknown';
-                        }
-                    } else {
-                        camera.brandModel = 'Unknown';
-                    }
-                    
-                    console.log(`Adding camera ${index + 1}:`, camera);
-                    cameras.push(camera);
-                } else {
-                    console.warn(`Camera ${index + 1} coordinates not found in text:`, coordsText);
-                }
-            } else {
-                console.warn(`Camera ${index + 1} missing required elements:`, {
-                    hasCoords: !!coordsText,
-                    hasName: !!nameElement
-                });
-            }
-        });
-        
-        console.log('Final camera data:', cameras);
-        return cameras;
     }
 
     function loadPropertyFeatures(propertyId) {
@@ -726,12 +603,6 @@ window.App = window.App || {};
             let bounds = new mapboxgl.LngLatBounds();
             bounds.extend(propertyCenter);
 
-            // Add camera locations
-            const cameras = getCameraData();
-            cameras.forEach(camera => {
-                bounds.extend([camera.lng, camera.lat]);
-            });
-
             // Add feature geometries to bounds
             geojsonFeatures.forEach(feature => {
                 if (feature.geometry.type === 'Point') {
@@ -742,6 +613,14 @@ window.App = window.App || {};
                     feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
                 }
             });
+
+            // Get camera data from map source if available
+            const cameraSource = m.getSource('property-cameras');
+            if (cameraSource && cameraSource._data && cameraSource._data.features) {
+                cameraSource._data.features.forEach(cameraFeature => {
+                    bounds.extend(cameraFeature.geometry.coordinates);
+                });
+            }
 
             // Fit to bounds with cameras and features
             m.fitBounds(bounds, {
@@ -759,16 +638,13 @@ window.App = window.App || {};
             return;
         }
 
-        // Get camera data from DOM
-        const cameras = getCameraData();
-        console.log('Displaying cameras on map. Total cameras:', cameras.length);
-        console.log('Camera data extracted:', cameras);
-
-        // Remove existing camera markers
-        if (window.App._cameraMarkers) {
-            window.App._cameraMarkers.forEach(marker => marker.remove());
+        const propertyId = window.App._currentPropertyId;
+        if (!propertyId) {
+            console.error('Property ID not available for loading cameras');
+            return;
         }
-        window.App._cameraMarkers = [];
+
+        console.log('Loading cameras for property:', propertyId);
 
         // Remove existing camera layers and source
         const cameraLayerIds = ['property-cameras-points', 'property-cameras-labels'];
@@ -792,133 +668,150 @@ window.App = window.App || {};
             }
         }
 
-        if (cameras.length === 0) {
-            console.log('No cameras to display');
-            
-            // For debugging: Try to add a test camera at the property location to verify the map layer system works
-            const propertyCoords = window.App?.propertyCoords;
-            if (propertyCoords) {
-                console.log('Adding test camera at property location for debugging');
-                const testCamera = {
-                    name: 'Test Camera',
-                    lat: propertyCoords.lat,
-                    lng: propertyCoords.lng,
-                    isActive: true,
-                    photoCount: 0,
-                    brandModel: 'Test'
-                };
+        // Fetch camera data from API
+        fetch(`/properties/${propertyId}/cameras/api`)
+            .then(response => {
+                console.log('Cameras API response status:', response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`Cameras API failed with status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(cameras => {
+                console.log('Loaded cameras from API:', cameras);
                 
-                // Try adding the test camera temporarily
-                setTimeout(() => {
-                    try {
-                        addTestCamera(testCamera);
-                    } catch (e) {
-                        console.error('Failed to add test camera:', e);
-                    }
-                }, 500);
-            }
-            return;
-        }
-
-        // Convert cameras to GeoJSON
-        const cameraFeatures = cameras.map((camera, index) => ({
-            type: 'Feature',
-            properties: {
-                id: `camera-${index}`,
-                name: camera.name,
-                isActive: camera.isActive,
-                photoCount: camera.photoCount,
-                brandModel: camera.brandModel || 'Unknown'
-            },
-            geometry: {
-                type: 'Point',
-                coordinates: [camera.lng, camera.lat]
-            }
-        }));
-
-        const geojson = {
-            type: 'FeatureCollection',
-            features: cameraFeatures
-        };
-
-        console.log('Adding cameras source to map with', cameraFeatures.length, 'cameras');
-
-        try {
-            // Add source
-            console.log('About to add cameras source with data:', geojson);
-            m.addSource('property-cameras', {
-                type: 'geojson',
-                data: geojson
-            });
-
-            console.log('Cameras source added successfully');
-
-            // Add camera points layer with different styling for active/inactive
-            console.log('Adding camera points layer...');
-            m.addLayer({
-                id: 'property-cameras-points',
-                type: 'circle',
-                source: 'property-cameras',
-                paint: {
-                    'circle-color': [
-                        'case',
-                        ['get', 'isActive'],
-                        '#FF6B35', // Orange for active cameras
-                        '#999999'  // Gray for inactive cameras
-                    ],
-                    'circle-radius': 12,
-                    'circle-stroke-color': '#ffffff',
-                    'circle-stroke-width': 3
+                if (!Array.isArray(cameras)) {
+                    console.error('Cameras response is not an array:', cameras);
+                    return;
                 }
-            });
-            console.log('Camera points layer added successfully');
 
-            // Add camera labels layer
-            console.log('Adding camera labels layer...');
-            m.addLayer({
-                id: 'property-cameras-labels',
-                type: 'symbol',
-                source: 'property-cameras',
-                layout: {
-                    'text-field': '📷', // Camera emoji
-                    'text-size': 16,
-                    'text-allow-overlap': true,
-                    'text-ignore-placement': true
-                },
-                paint: {
-                    'text-color': '#ffffff'
+                if (cameras.length === 0) {
+                    console.log('No cameras to display');
+                    return;
                 }
-            });
-            console.log('Camera labels layer added successfully');
 
-            console.log('All camera layers added successfully');
-
-            // Add click handlers for cameras
-            cameraLayerIds.forEach(layerId => {
-                m.off('click', layerId); // Remove existing handlers
-                m.on('click', layerId, (e) => {
-                    if (e.features && e.features.length > 0) {
-                        const camera = e.features[0];
-                        showCameraPopup(camera, e.lngLat);
+                // Convert cameras to GeoJSON
+                const cameraFeatures = cameras.map((camera, index) => ({
+                    type: 'Feature',
+                    properties: {
+                        id: camera.id,
+                        name: camera.name,
+                        isActive: camera.isActive,
+                        photoCount: camera.photoCount,
+                        brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : '')
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [camera.longitude, camera.latitude]
                     }
-                });
+                }));
 
-                // Change cursor on hover
-                m.on('mouseenter', layerId, () => {
-                    m.getCanvas().style.cursor = 'pointer';
-                });
+                const geojson = {
+                    type: 'FeatureCollection',
+                    features: cameraFeatures
+                };
 
-                m.on('mouseleave', layerId, () => {
-                    m.getCanvas().style.cursor = '';
-                });
+                console.log('Adding cameras source to map with', cameraFeatures.length, 'cameras');
+
+                try {
+                    // Add source
+                    m.addSource('property-cameras', {
+                        type: 'geojson',
+                        data: geojson
+                    });
+
+                    console.log('Cameras source added successfully');
+
+                    // Add camera points layer with different styling for active/inactive
+                    m.addLayer({
+                        id: 'property-cameras-points',
+                        type: 'circle',
+                        source: 'property-cameras',
+                        paint: {
+                            'circle-color': [
+                                'case',
+                                ['get', 'isActive'],
+                                '#FF6B35', // Orange for active cameras
+                                '#999999'  // Gray for inactive cameras
+                            ],
+                            'circle-radius': 12,
+                            'circle-stroke-color': '#ffffff',
+                            'circle-stroke-width': 3
+                        }
+                    });
+
+                    // Add camera labels layer
+                    m.addLayer({
+                        id: 'property-cameras-labels',
+                        type: 'symbol',
+                        source: 'property-cameras',
+                        layout: {
+                            'text-field': '📷', // Camera emoji
+                            'text-size': 16,
+                            'text-allow-overlap': true,
+                            'text-ignore-placement': true
+                        },
+                        paint: {
+                            'text-color': '#ffffff'
+                        }
+                    });
+
+                    console.log('Camera layers added successfully');
+
+                    // Add click handlers for cameras
+                    cameraLayerIds.forEach(layerId => {
+                        m.off('click', layerId); // Remove existing handlers
+                        m.on('click', layerId, (e) => {
+                            if (e.features && e.features.length > 0) {
+                                const camera = e.features[0];
+                                showCameraPopup(camera, e.lngLat);
+                            }
+                        });
+
+                        // Change cursor on hover
+                        m.on('mouseenter', layerId, () => {
+                            m.getCanvas().style.cursor = 'pointer';
+                        });
+
+                        m.on('mouseleave', layerId, () => {
+                            m.getCanvas().style.cursor = '';
+                        });
+                    });
+
+                    // Update map bounds to include cameras and property
+                    updateMapBoundsWithCameras(cameras);
+
+                } catch (error) {
+                    console.error('Error adding cameras to map:', error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading cameras:', error);
             });
+    }
 
-        } catch (error) {
-            console.error('Error adding cameras to map:', error);
-            console.error('Stack trace:', error.stack);
-            console.error('Camera data that failed:', cameras);
-            console.error('GeoJSON that failed:', geojson);
-        }
+    function updateMapBoundsWithCameras(cameras) {
+        const m = map();
+        if (!m) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        // Create bounds that include property and cameras
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
+
+        // Add camera locations to bounds
+        cameras.forEach(camera => {
+            bounds.extend([camera.longitude, camera.latitude]);
+        });
+
+        // Fit to bounds with cameras and property
+        m.fitBounds(bounds, {
+            padding: 50,
+            maxZoom: 18,
+            duration: 1200
+        });
     }
 
     function showCameraPopup(camera, lngLat) {
@@ -949,27 +842,6 @@ window.App = window.App || {};
             .setLngLat(lngLat)
             .setHTML(popupContent)
             .addTo(map());
-    }
-
-    function addTestCamera(testCamera) {
-        const m = map();
-        if (!m) return;
-        
-        console.log('Adding test camera:', testCamera);
-        
-        // Create a simple marker as a test
-        const marker = new mapboxgl.Marker({ color: '#FF6B35' })
-            .setLngLat([testCamera.lng, testCamera.lat])
-            .setPopup(new mapboxgl.Popup().setHTML(`<div><strong>Test Camera</strong><br>This is a test marker to verify camera display works.</div>`))
-            .addTo(m);
-            
-        console.log('Test camera marker added successfully');
-        
-        // Remove after 10 seconds
-        setTimeout(() => {
-            marker.remove();
-            console.log('Test camera marker removed');
-        }, 10000);
     }
 
     function setupFeatureDrawing(propertyId) {
