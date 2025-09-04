@@ -837,24 +837,33 @@ window.App = window.App || {};
 
         const props = feature.properties;
         const popupHtml = `
-            <div style="max-width: 200px;">
+            <div style="max-width: 350px;">
                 <h6>${props.name}</h6>
                 ${props.notes ? `<p class="small text-muted">${props.notes}</p>` : ''}
                 <div class="d-flex gap-2 mt-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editPropertyFeature(${props.id})">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deletePropertyFeature(${props.id})">Delete</button>
+                    <button class="btn btn-xs btn-outline-primary px-2 py-1" style="font-size: 0.75rem;" onclick="editPropertyFeature(${props.id})">Edit</button>
+                    <button class="btn btn-xs btn-outline-danger px-2 py-1" style="font-size: 0.75rem;" onclick="deletePropertyFeature(${props.id})">Delete</button>
                 </div>
             </div>
         `;
 
-        new mapboxgl.Popup()
+        const popup = new mapboxgl.Popup()
             .setLngLat(lngLat)
             .setHTML(popupHtml)
             .addTo(m);
+        
+        // Store popup reference globally for potential cleanup
+        window.App._currentFeaturePopup = popup;
     }
 
     window.App.editPropertyFeature = function(featureId) {
         console.log('Edit feature:', featureId);
+        
+        // Close any existing popup when entering edit mode
+        if (window.App._currentFeaturePopup) {
+            window.App._currentFeaturePopup.remove();
+            window.App._currentFeaturePopup = null;
+        }
         
         const m = map();
         if (!m) {
@@ -927,7 +936,7 @@ window.App = window.App || {};
                             <option value="7" ${props.classificationType === 7 ? 'selected' : ''}>Other</option>
                         </select>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" style="display: none;">
                         <label class="form-label">Geometry Type</label>
                         <div class="p-2 border rounded bg-light">
                             <small class="text-muted">${feature.geometry.type}</small>
