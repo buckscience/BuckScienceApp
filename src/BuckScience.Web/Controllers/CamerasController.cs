@@ -215,7 +215,9 @@ public class CamerasController : Controller
             Latitude = result.CurrentPlacement?.Latitude ?? 0d,
             Longitude = result.CurrentPlacement?.Longitude ?? 0d,
             DirectionDegrees = result.CurrentPlacement?.DirectionDegrees ?? 0f,
-            IsActive = result.Camera.IsActive
+            IsActive = result.Camera.IsActive,
+            PropertyLatitude = result.Property.Latitude,
+            PropertyLongitude = result.Property.Longitude
         };
         
         // Sync selection from degrees
@@ -270,6 +272,15 @@ public class CamerasController : Controller
         if (!ok) return NotFound();
 
         TempData["UpdatedId"] = id;
+        
+        // Check if this is an AJAX/sidebar request
+        if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            // For AJAX requests (sidebar), redirect to camera details
+            return RedirectToAction("Details", "Cameras", new { id });
+        }
+        
+        // For regular requests, redirect to camera list
         return RedirectToAction(nameof(Index), new { propertyId });
     }
 
