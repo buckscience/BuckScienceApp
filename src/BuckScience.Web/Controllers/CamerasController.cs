@@ -70,6 +70,7 @@ public class CamerasController : Controller
             Model = x.Model,
             Latitude = x.Latitude,
             Longitude = x.Longitude,
+            DirectionDegrees = x.DirectionDegrees,
             IsActive = x.IsActive,
             PhotoCount = x.PhotoCount,
             CreatedDate = x.CreatedDate
@@ -101,6 +102,7 @@ public class CamerasController : Controller
             model = x.Model,
             latitude = x.Latitude,
             longitude = x.Longitude,
+            directionDegrees = x.DirectionDegrees,
             isActive = x.IsActive,
             photoCount = x.PhotoCount,
             createdDate = x.CreatedDate
@@ -121,7 +123,7 @@ public class CamerasController : Controller
         if (property is null) return NotFound();
 
         ViewBag.PropertyId = propertyId;
-        return View(new CameraCreateVm 
+        var vm = new CameraCreateVm 
         { 
             PropertyId = propertyId,
             PropertyLatitude = property.Latitude,
@@ -129,7 +131,11 @@ public class CamerasController : Controller
             // Initialize camera coordinates to property center
             Latitude = property.Latitude,
             Longitude = property.Longitude
-        });
+        };
+        // Sync selection from degrees (defaults to North)
+        vm.SyncSelectionFromDirection();
+        
+        return View(vm);
     }
 
     // CREATE: POST /properties/{propertyId}/cameras/add
@@ -138,6 +144,9 @@ public class CamerasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int propertyId, CameraCreateVm vm, CancellationToken ct)
     {
+        // Sync direction from selection before validation
+        vm.SyncDirectionFromSelection();
+        
         if (!ModelState.IsValid)
         {
             ViewBag.PropertyId = propertyId;
@@ -156,6 +165,7 @@ public class CamerasController : Controller
                 vm.Model,
                 vm.Latitude,
                 vm.Longitude,
+                vm.DirectionDegrees,
                 vm.IsActive),
             _db,
             _geometryFactory,
@@ -176,10 +186,18 @@ public class CamerasController : Controller
 
         // Use explicit join to avoid LINQ translation errors with navigation properties
         var result = await _db.Cameras.AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == id &&
                        x.Camera.PropertyId == propertyId &&
                        x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .Select(x => new {
+                Camera = x.Camera,
+                Property = x.Property,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(ct);
 
         if (result is null) return NotFound();
@@ -194,10 +212,14 @@ public class CamerasController : Controller
             Name = result.Camera.Name,
             Brand = result.Camera.Brand,
             Model = result.Camera.Model,
-            Latitude = result.Camera.Latitude,
-            Longitude = result.Camera.Longitude,
+            Latitude = result.CurrentPlacement?.Latitude ?? 0d,
+            Longitude = result.CurrentPlacement?.Longitude ?? 0d,
+            DirectionDegrees = result.CurrentPlacement?.DirectionDegrees ?? 0f,
             IsActive = result.Camera.IsActive
         };
+        
+        // Sync selection from degrees
+        vm.SyncSelectionFromDirection();
 
         return View(vm);
     }
@@ -208,6 +230,9 @@ public class CamerasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int propertyId, int id, CameraEditVm vm, CancellationToken ct)
     {
+        // Sync direction from selection before validation
+        vm.SyncDirectionFromSelection();
+        
         if (!ModelState.IsValid)
         {
             ViewBag.PropertyId = propertyId;
@@ -234,6 +259,7 @@ public class CamerasController : Controller
                 vm.Model,
                 vm.Latitude,
                 vm.Longitude,
+                vm.DirectionDegrees,
                 vm.IsActive),
             _db,
             _geometryFactory,
@@ -441,6 +467,11 @@ public class CamerasController : Controller
             Model = camera.Model,
             Latitude = camera.Latitude,
             Longitude = camera.Longitude,
+            DirectionDegrees = camera.DirectionDegrees,
+            CurrentPlacementStartDate = camera.CurrentPlacementStartDate,
+            TimeAtCurrentLocation = camera.CurrentPlacementStartDate.HasValue 
+                ? DateTime.UtcNow - camera.CurrentPlacementStartDate.Value 
+                : null,
             IsActive = camera.IsActive,
             PhotoCount = camera.PhotoCount,
             CreatedDate = camera.CreatedDate,

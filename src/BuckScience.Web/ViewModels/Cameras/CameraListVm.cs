@@ -11,6 +11,7 @@ public class CameraListItemVm
     public string? Model { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+    public float DirectionDegrees { get; set; }
     public bool IsActive { get; set; }
     public int PhotoCount { get; set; }
     public DateTime CreatedDate { get; set; }

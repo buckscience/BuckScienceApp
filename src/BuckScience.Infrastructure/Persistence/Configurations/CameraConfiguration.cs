@@ -14,11 +14,6 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.Property(c => c.Brand).HasMaxLength(100);
             entity.Property(c => c.Model).HasMaxLength(100);
 
-            // Match Property's spatial approach: SQL Server geometry with SRID 4326
-            entity.Property(c => c.Location)
-                  .HasColumnType("geometry")
-                  .IsRequired();
-
             entity.Property(c => c.CreatedDate)
                   .HasDefaultValueSql("GETUTCDATE()");
 
@@ -40,14 +35,17 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
                   .HasForeignKey(p => p.CameraId)
                   .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasMany(c => c.PlacementHistories)
+                  .WithOne(cph => cph.Camera)
+                  .HasForeignKey(cph => cph.CameraId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
             // Not persisted / computed
             entity.Ignore(c => c.PhotoCount);
             entity.Ignore(c => c.Latitude);
             entity.Ignore(c => c.Longitude);
-
-            // Spatial index must be created via raw SQL in a migration (optional)
-            // Example:
-            // migrationBuilder.Sql("CREATE SPATIAL INDEX IX_Cameras_Location ON dbo.Cameras(Location)");
+            entity.Ignore(c => c.DirectionDegrees);
+            entity.Ignore(c => c.Location);
         }
     }
 }

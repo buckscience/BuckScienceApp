@@ -766,12 +766,62 @@ window.App = window.App || {};
                 // Create individual markers for each camera
                 cameras.forEach((camera, index) => {
                     try {
-                        // Create marker element with Font Awesome camera icon
+                        // Function to convert degrees to compass direction
+                        function getCompassDirection(degrees) {
+                            const directions = {
+                                0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
+                                180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
+                            };
+                            
+                            // Normalize degrees
+                            degrees = degrees % 360;
+                            if (degrees < 0) degrees += 360;
+                            
+                            // Find closest direction
+                            let closest = 0;
+                            let minDiff = Math.abs(degrees - 0);
+                            
+                            for (const deg in directions) {
+                                const diff = Math.abs(degrees - parseFloat(deg));
+                                if (diff < minDiff) {
+                                    minDiff = diff;
+                                    closest = parseFloat(deg);
+                                }
+                            }
+                            
+                            return directions[closest];
+                        }
+
+                        // Function to calculate direction indicator position
+                        function calculateDirectionPosition(degrees) {
+                            // Normalize degrees
+                            degrees = degrees % 360;
+                            if (degrees < 0) degrees += 360;
+                            
+                            // Convert to radians (0° = North = top)
+                            const radians = degrees * (Math.PI / 180);
+                            
+                            // Calculate position around a circle with radius 18px
+                            const radius = 18;
+                            const x = radius * Math.sin(radians);
+                            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
+                            
+                            return { x, y };
+                        }
+
+                        // Create marker element with Font Awesome camera icon and direction indicator
                         const markerElement = document.createElement('div');
                         markerElement.className = 'camera-marker';
+                        
+                        const compassDirection = getCompassDirection(camera.directionDegrees);
+                        const directionPos = calculateDirectionPosition(camera.directionDegrees);
+                        
                         markerElement.innerHTML = `
                             <div class="camera-marker-inner ${camera.isActive ? 'active' : 'inactive'}">
                                 <i class="fas fa-camera"></i>
+                            </div>
+                            <div class="camera-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
+                                ${compassDirection}
                             </div>
                         `;
                         
@@ -781,6 +831,7 @@ window.App = window.App || {};
                                 cursor: pointer;
                                 width: 30px;
                                 height: 30px;
+                                position: relative;
                             }
                             .camera-marker-inner {
                                 width: 30px;
@@ -803,6 +854,23 @@ window.App = window.App || {};
                             }
                             .camera-marker-inner.inactive {
                                 background-color: #999999;
+                            }
+                            .camera-direction-indicator {
+                                position: absolute;
+                                background-color: #2c3e50;
+                                color: white;
+                                border: 2px solid #ffffff;
+                                border-radius: 50%;
+                                width: 20px;
+                                height: 20px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 10px;
+                                font-weight: bold;
+                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                                z-index: 1;
+                                transform: translate(-50%, -50%);
                             }
                         `;
 
@@ -832,7 +900,9 @@ window.App = window.App || {};
                                     name: camera.name,
                                     isActive: camera.isActive,
                                     photoCount: camera.photoCount,
-                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : '')
+                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : ''),
+                                    directionDegrees: camera.directionDegrees,
+                                    directionText: compassDirection
                                 }
                             }, { lng: camera.longitude, lat: camera.latitude });
                         });
@@ -942,6 +1012,16 @@ window.App = window.App || {};
                     <label class="form-label">Photo Count</label>
                     <div class="p-2 border rounded bg-light">
                         <strong class="text-primary">${properties.photoCount}</strong> photos
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Direction</label>
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted">
+                            <i class="fas fa-compass me-1"></i>
+                            <strong>${properties.directionDegrees ? properties.directionDegrees.toFixed(0) : '0'}° (${properties.directionText || 'N'})</strong>
+                        </span>
                     </div>
                 </div>
                 

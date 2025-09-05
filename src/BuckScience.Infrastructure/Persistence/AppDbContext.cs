@@ -15,6 +15,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<PropertyFeature> PropertyFeatures => Set<PropertyFeature>();
 
     public DbSet<Camera> Cameras => Set<Camera>();
+    public DbSet<CameraPlacementHistory> CameraPlacementHistories => Set<CameraPlacementHistory>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PhotoTag> PhotoTags => Set<PhotoTag>();
     public DbSet<PropertyTag> PropertyTags => Set<PropertyTag>();

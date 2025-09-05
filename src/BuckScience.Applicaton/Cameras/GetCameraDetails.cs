@@ -12,6 +12,8 @@ public static class GetCameraDetails
         string? Model,
         double Latitude,
         double Longitude,
+        float DirectionDegrees,
+        DateTime? CurrentPlacementStartDate,
         bool IsActive,
         int PhotoCount,
         DateTime CreatedDate,
@@ -28,23 +30,36 @@ public static class GetCameraDetails
         // Verify camera ownership through property and get camera details using explicit joins
         var camera = await db.Cameras
             .AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .GroupJoin(db.Photos, x => x.Camera.Id, photo => photo.CameraId, (x, photos) => new { x.Camera, x.Property, PhotoCount = photos.Count() })
             .Where(x => x.Camera.Id == cameraId && x.Property.ApplicationUserId == userId)
-            .Select(x => new Result(
-                x.Camera.Id,
-                x.Camera.Name,
-                x.Camera.Brand,
-                x.Camera.Model,
-                x.Camera.Latitude,
-                x.Camera.Longitude,
-                x.Camera.IsActive,
-                x.PhotoCount,
-                x.Camera.CreatedDate,
-                x.Camera.PropertyId,
-                x.Property.Name))
+            .Select(x => new {
+                Camera = x.Camera,
+                Property = x.Property,
+                PhotoCount = x.PhotoCount,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(ct);
 
-        return camera;
+        if (camera == null)
+            return null;
+
+        return new Result(
+            camera.Camera.Id,
+            camera.Camera.Name,
+            camera.Camera.Brand,
+            camera.Camera.Model,
+            camera.CurrentPlacement?.Latitude ?? 0d,
+            camera.CurrentPlacement?.Longitude ?? 0d,
+            camera.CurrentPlacement?.DirectionDegrees ?? 0f,
+            camera.CurrentPlacement?.StartDateTime,
+            camera.Camera.IsActive,
+            camera.PhotoCount,
+            camera.Camera.CreatedDate,
+            camera.Camera.PropertyId,
+            camera.Property.Name);
     }
 }

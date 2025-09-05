@@ -1,6 +1,23 @@
 @model BuckScience.Web.ViewModels.Cameras.CameraDetailsVm
 @{
     ViewData["Title"] = $"{Model.Name} - Camera Details";
+    
+    string GetDirectionName(float degrees)
+    {
+        var directions = new[] { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
+        var index = (int)Math.Round(degrees / 22.5) % 16;
+        return directions[index];
+    }
+    
+    string GetDurationString(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{(int)duration.TotalDays} day{((int)duration.TotalDays == 1 ? "" : "s")}, {duration.Hours}h";
+        else if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        else
+            return $"{(int)duration.TotalMinutes} minute{((int)duration.TotalMinutes == 1 ? "" : "s")}";
+    }
 }
 
 <div class="camera-details">
@@ -35,8 +52,32 @@
                     </p>
                 </div>
                 <div class="col-md-6">
+                    <label class="text-muted small d-block">Direction</label>
+                    <p class="mb-0 small">
+                        <i class="fas fa-compass text-custom-primary me-1"></i>
+                        @Model.DirectionDegrees.ToString("F0")° (@GetDirectionName(Model.DirectionDegrees))
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
                     <label class="text-muted small d-block">Brand/Model</label>
                     <p class="mb-0 small">@Model.Brand/@(string.IsNullOrEmpty(Model.Model) ? "-" : Model.Model)</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small d-block">Time at Current Location</label>
+                    <p class="mb-0 small">
+                        <i class="fas fa-clock text-custom-primary me-1"></i>
+                        @if (Model.TimeAtCurrentLocation.HasValue)
+                        {
+                            @GetDurationString(Model.TimeAtCurrentLocation.Value)
+                        }
+                        else
+                        {
+                            <span class="text-muted">Unknown</span>
+                        }
+                    </p>
                 </div>
             </div>
 
