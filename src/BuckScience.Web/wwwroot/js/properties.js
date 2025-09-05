@@ -2081,4 +2081,19 @@ window.App = window.App || {};
 
     // Expose wireCameraForm function
     window.App.wireCameraForm = wireCameraForm;
+
+    // Function to edit camera using sidebar loading
+    window.App.editCamera = function(propertyId, cameraId) {
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
+        }
+    };
+
+    // Expose editCamera function globally
+    window.editCamera = function(propertyId, cameraId) {
+        window.App.editCamera(propertyId, cameraId);
+    };
 })();

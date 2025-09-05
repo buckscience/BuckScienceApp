@@ -142,15 +142,7 @@
             }
         };
 
-        // Function to edit camera using sidebar loading
-        window.editCamera = function(propertyId, cameraId) {
-            if (window.App && window.App.loadSidebar) {
-                window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
-            } else {
-                // Fallback to regular navigation
-                window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
-            }
-        };
+        // editCamera function is now defined globally in properties.js
 
         // Initialize camera details when page loads (for sidebar loads)
         document.addEventListener('DOMContentLoaded', function() {
