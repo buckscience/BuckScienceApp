@@ -1278,115 +1278,15 @@ window.App = window.App || {};
         // Close any existing popup or modal when entering edit mode
         window.App.closeFeaturePopup();
         
-        // Close sidebar if it's open
-        closeSidebarIfOpen();
-        
-        const m = map();
-        if (!m) {
-            console.error('Map not available for editing feature');
-            return;
+        // Load feature edit form in sidebar instead of floating panel
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+        } else {
+            console.error('Sidebar loading not available');
+            // Fallback to regular navigation
+            window.location.href = `/features/${featureId}/edit`;
         }
-        
-        // Get the features source
-        const source = m.getSource('property-features');
-        if (!source) {
-            console.error('Property features source not found on map');
-            window.App.showModal("Error", 'Features not loaded on map. Please refresh and try again.', "error");
-            return;
-        }
-        
-        // Get the feature data
-        const sourceData = source._data;
-        if (!sourceData || !sourceData.features) {
-            console.error('No feature data available');
-            window.App.showModal("Error", 'No feature data available. Please refresh and try again.', "error");
-            return;
-        }
-        
-        // Find the feature with the specified ID
-        const targetFeature = sourceData.features.find(f => f.properties.id === featureId);
-        if (!targetFeature) {
-            console.error('Feature not found:', featureId);
-            window.App.showModal("Error", 'Feature not found on map. Please refresh and try again.', "error");
-            return;
-        }
-        
-        console.log('Found target feature for editing:', targetFeature);
-        
-        // Check if we have the drawing control available
-        const draw = window.App._draw;
-        if (!draw) {
-            console.warn('MapboxDraw control not available');
-            window.App.showModal("Error", 'Drawing tools not available. Please refresh the page and try again.', "error");
-            return;
-        }
-        
-        // Show edit modal with current feature data
-        showFeatureEditModal(targetFeature, featureId);
     };
-
-    function showFeatureEditModal(feature, featureId) {
-        const props = feature.properties;
-        
-        const modalHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureEditPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Edit Property Feature</h5>
-                    <button type="button" class="btn-close" onclick="cancelFeatureEdit()"></button>
-                </div>
-                <div class="alert alert-success" role="alert">
-                    <i class="fas fa-edit me-2"></i>
-                    <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
-                </div>
-                <form id="featureEditForm">
-                    <div class="mb-3">
-                        <label for="editFeatureName" class="form-label">Feature Name</label>
-                        <input type="text" class="form-control" id="editFeatureName" placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" value="${props.name || ''}" maxlength="100">
-                        <small class="text-muted">Leave blank to use the default feature type name</small>
-                    </div>
-                    <div class="mb-3">
-                        <label for="editFeatureType" class="form-label">Feature Type</label>
-                        <select class="form-select" id="editFeatureType" required>
-                            ${window.FeatureUtils ? window.FeatureUtils.generateFeatureOptionsHtml(props.classificationType) : '<option value="99">Other</option>'}
-                        </select>
-                    </div>
-                    <div class="mb-3" style="display: none;">
-                        <label class="form-label">Geometry Type</label>
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted">${feature.geometry.type}</small>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="editFeatureNotes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="editFeatureNotes" rows="3" placeholder="Add any notes about this feature...">${props.notes || ''}</textarea>
-                    </div>
-                </form>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary flex-fill" onclick="cancelFeatureEdit()">Cancel</button>
-                    <button type="button" class="btn btn-success flex-fill" onclick="saveFeatureEdit(${featureId})">
-                        <i class="fas fa-save me-1"></i>Save Changes
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Remove existing panel if any
-        const existingPanel = document.getElementById('featureEditPanel');
-        if (existingPanel) {
-            existingPanel.remove();
-        }
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        // Store feature data for saving
-        window.App._editingFeature = feature;
-        window.App._editingFeatureId = featureId;
-        
-        // Automatically enable geometry editing when panel opens
-        enableGeometryEditing(feature);
-    }
 
     function enableGeometryEditing(feature) {
         const draw = window.App._draw;
@@ -1443,13 +1343,21 @@ window.App = window.App || {};
         window.App._editingFeature = null;
         window.App._editingFeatureId = null;
         
-        // Remove the edit panel
-        const panel = document.getElementById('featureEditPanel');
-        if (panel) {
-            panel.remove();
-        }
-        
         console.log('Feature editing cancelled');
+        
+        // Go back in history to return to previous sidebar view
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            // If no history, close sidebar
+            if (window.App && window.App.loadSidebar) {
+                // Load empty or default sidebar content
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar && sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        }
     };
 
     window.App.saveFeatureEdit = function(featureId) {
@@ -1499,12 +1407,6 @@ window.App = window.App || {};
         })
         .then(response => {
             if (response.ok) {
-                // Close panel
-                const panel = document.getElementById('featureEditPanel');
-                if (panel) {
-                    panel.remove();
-                }
-                
                 // Clean up editing state
                 disableGeometryEditing();
                 window.App._editingFeature = null;
@@ -1517,6 +1419,16 @@ window.App = window.App || {};
                 }
 
                 console.log('Feature updated successfully');
+
+                // Go back to feature details view in sidebar
+                if (window.App && window.App.loadSidebar) {
+                    window.App.loadSidebar(`/features/${featureId}/details`, { push: true });
+                } else {
+                    // Fallback: go back in history
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    }
+                }
             } else {
                 throw new Error('Failed to update feature');
             }
@@ -2270,4 +2182,8 @@ window.App = window.App || {};
             window.resetUploadButton();
         });
     };
+
+    // Export geometry editing functions globally for use in sidebar views
+    window.enableGeometryEditing = enableGeometryEditing;
+    window.disableGeometryEditing = disableGeometryEditing;
 })();

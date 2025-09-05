@@ -1,0 +1,151 @@
+@model BuckScience.Web.ViewModels.Properties.PropertyFeatureVm
+@{
+    ViewData["Title"] = $"Edit {Model.Name} - Feature";
+}
+
+<div class="feature-edit">
+    <!-- Header with Cancel Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">Edit Feature</h2>
+        <button type="button" class="btn btn-custom-cancel btn-sm" onclick="cancelFeatureEdit()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    </div>
+    <hr class="sidebar-title-separator mb-4" />
+
+    <!-- Instructions Alert -->
+    <div class="alert alert-success" role="alert">
+        <i class="fas fa-edit me-2"></i>
+        <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
+    </div>
+
+    <!-- Edit Form -->
+    <form id="featureEditForm">
+        <div class="mb-3">
+            <label for="editFeatureName" class="form-label">Feature Name</label>
+            <input type="text" class="form-control" id="editFeatureName" 
+                   placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" 
+                   value="@(Model.Name != Model.TypeName ? Model.Name : "")" 
+                   maxlength="100">
+            <small class="text-muted">Leave blank to use the default feature type name</small>
+        </div>
+
+        <div class="mb-3">
+            <label for="editFeatureType" class="form-label">Feature Type</label>
+            <select class="form-select" id="editFeatureType" required>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+        </div>
+
+        <div class="mb-3" style="display: none;">
+            <label class="form-label">Geometry Type</label>
+            <div class="p-2 border rounded bg-light">
+                <small class="text-muted" id="geometryTypeDisplay">@Model.GeometryWkt?.Split('(')[0]</small>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="editFeatureNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="editFeatureNotes" rows="3" 
+                      placeholder="Add any notes about this feature...">@Model.Notes</textarea>
+        </div>
+    </form>
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-2 mt-4">
+        <button type="button" class="btn btn-secondary flex-fill" onclick="cancelFeatureEdit()">
+            Cancel
+        </button>
+        <button type="button" class="btn btn-success flex-fill" onclick="saveFeatureEdit(@Model.Id)">
+            <i class="fas fa-save me-1"></i>Save Changes
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Initialize feature edit when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus on the feature being edited
+            if (window.App && window.App.focusPropertyFeature) {
+                window.App.focusPropertyFeature(@Model.Id);
+            }
+
+            // Populate feature type options
+            if (window.FeatureUtils && window.FeatureUtils.generateFeatureOptionsHtml) {
+                const selectElement = document.getElementById('editFeatureType');
+                if (selectElement) {
+                    selectElement.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(@((int)Model.Type));
+                }
+            }
+
+            // Get the feature data from the map source
+            const m = window.App && window.App.map ? window.App.map() : null;
+            if (m) {
+                const source = m.getSource('property-features');
+                if (source && source._data && source._data.features) {
+                    const targetFeature = source._data.features.find(f => f.properties.id === @Model.Id);
+                    if (targetFeature) {
+                        // Store feature data for editing
+                        window.App._editingFeature = targetFeature;
+                        window.App._editingFeatureId = @Model.Id;
+
+                        // Update geometry type display
+                        const geometryDisplay = document.getElementById('geometryTypeDisplay');
+                        if (geometryDisplay && targetFeature.geometry) {
+                            geometryDisplay.textContent = targetFeature.geometry.type;
+                        }
+
+                        // Enable geometry editing for the feature
+                        setTimeout(() => {
+                            if (typeof window.enableGeometryEditing === 'function') {
+                                window.enableGeometryEditing(targetFeature);
+                            }
+                        }, 500);
+                    }
+                }
+            }
+
+            // Fallback: Create feature object from server data
+            if (!window.App._editingFeature) {
+                window.App._editingFeature = {
+                    properties: {
+                        id: @Model.Id,
+                        name: '@Html.Raw(Model.Name?.Replace("'", "\\'"))',
+                        classificationType: @((int)Model.Type),
+                        notes: '@Html.Raw(Model.Notes?.Replace("'", "\\'"))'
+                    },
+                    geometry: {
+                        type: '@(Model.GeometryWkt?.Split('(')[0] ?? "Unknown")'
+                    }
+                };
+                window.App._editingFeatureId = @Model.Id;
+            }
+        });
+
+        // Handle sidebar load events
+        document.addEventListener('sidebar:loaded', function(event) {
+            // If this is a feature edit page loaded in sidebar, set up editing
+            if (event.detail && event.detail.url && event.detail.url.includes('/features/') && event.detail.url.includes('/edit')) {
+                setTimeout(() => {
+                    if (window.App && window.App.focusPropertyFeature) {
+                        window.App.focusPropertyFeature(@Model.Id);
+                    }
+                    
+                    // Get the feature data and enable geometry editing
+                    const m = window.App && window.App.map ? window.App.map() : null;
+                    if (m) {
+                        const source = m.getSource('property-features');
+                        if (source && source._data && source._data.features) {
+                            const targetFeature = source._data.features.find(f => f.properties.id === @Model.Id);
+                            if (targetFeature && typeof window.enableGeometryEditing === 'function') {
+                                window.App._editingFeature = targetFeature;
+                                window.enableGeometryEditing(targetFeature);
+                            }
+                        }
+                    }
+                }, 300);
+            }
+        });
+    </script>
+}
