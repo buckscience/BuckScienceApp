@@ -98,83 +98,82 @@
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const form = this;
-            const formData = new FormData(form);
-            const uploadBtn = document.getElementById('uploadBtn');
-            const uploadSpinner = document.getElementById('uploadSpinner');
-            const uploadText = document.getElementById('uploadText');
-            const errorContainer = document.getElementById('errorContainer');
-            
-            // Show loading state
-            uploadBtn.disabled = true;
-            uploadSpinner.classList.remove('d-none');
-            uploadText.textContent = 'Uploading...';
-            errorContainer.classList.add('d-none');
-            
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success modal
-                    const message = data.photoCount === 1 
-                        ? `${data.photoCount} photo uploaded successfully!`
-                        : `${data.photoCount} photos uploaded successfully!`;
-                    document.getElementById('uploadMessage').textContent = message;
-                    
-                    // Set up modal buttons
-                    document.getElementById('viewPhotosBtn').onclick = function() {
-                        window.location.href = `/cameras/${data.cameraId}/photos`;
-                    };
-                    
-                    document.getElementById('uploadMoreBtn').onclick = function() {
-                        // Reset form and hide modal
-                        form.reset();
+            // Use the global upload form handler
+            if (window.handleUploadFormSubmission) {
+                window.handleUploadFormSubmission(this);
+            } else {
+                console.error('Global upload handler not available');
+                // Fallback to original behavior
+                const form = this;
+                const formData = new FormData(form);
+                const uploadBtn = document.getElementById('uploadBtn');
+                const uploadSpinner = document.getElementById('uploadSpinner');
+                const uploadText = document.getElementById('uploadText');
+                const errorContainer = document.getElementById('errorContainer');
+                
+                // Show loading state
+                uploadBtn.disabled = true;
+                uploadSpinner.classList.remove('d-none');
+                uploadText.textContent = 'Uploading...';
+                errorContainer.classList.add('d-none');
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success modal
+                        const message = data.photoCount === 1 
+                            ? `${data.photoCount} photo uploaded successfully!`
+                            : `${data.photoCount} photos uploaded successfully!`;
+                        document.getElementById('uploadMessage').textContent = message;
+                        
+                        // Set up modal buttons
+                        document.getElementById('viewPhotosBtn').onclick = function() {
+                            window.location.href = `/cameras/${data.cameraId}/photos`;
+                        };
+                        
+                        document.getElementById('uploadMoreBtn').onclick = function() {
+                            // Reset form and hide modal
+                            form.reset();
+                            const modalElement = document.getElementById('successModal');
+                            const modal = bootstrap.Modal.getInstance(modalElement);
+                            modal.hide();
+                            if (window.resetUploadButton) {
+                                window.resetUploadButton();
+                            }
+                        };
+                        
+                        // Move modal to body to ensure it appears above sidebar
                         const modalElement = document.getElementById('successModal');
-                        const modal = bootstrap.Modal.getInstance(modalElement);
-                        modal.hide();
-                        resetUploadButton();
-                    };
-                    
-                    // Move modal to body to ensure it appears above sidebar
-                    const modalElement = document.getElementById('successModal');
-                    document.body.appendChild(modalElement);
-                    
-                    // Show modal
-                    const modal = new bootstrap.Modal(modalElement);
-                    modal.show();
-                } else {
-                    // Show error
-                    document.getElementById('errorMessage').textContent = data.error || 'Upload failed. Please try again.';
+                        document.body.appendChild(modalElement);
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    } else {
+                        // Show error
+                        document.getElementById('errorMessage').textContent = data.error || 'Upload failed. Please try again.';
+                        errorContainer.classList.remove('d-none');
+                        if (window.resetUploadButton) {
+                            window.resetUploadButton();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Upload error:', error);
+                    document.getElementById('errorMessage').textContent = 'Upload failed. Please try again.';
                     errorContainer.classList.remove('d-none');
-                    resetUploadButton();
-                }
-            })
-            .catch(error => {
-                console.error('Upload error:', error);
-                document.getElementById('errorMessage').textContent = 'Upload failed. Please try again.';
-                errorContainer.classList.remove('d-none');
-                resetUploadButton();
-            });
+                    if (window.resetUploadButton) {
+                        window.resetUploadButton();
+                    }
+                });
+            }
         });
-        
-        function resetUploadButton() {
-            const uploadBtn = document.getElementById('uploadBtn');
-            const uploadSpinner = document.getElementById('uploadSpinner');
-            const uploadText = document.getElementById('uploadText');
-            
-            uploadBtn.disabled = false;
-            if (uploadSpinner) {
-                uploadSpinner.classList.add('d-none');
-            }
-            if (uploadText) {
-                uploadText.textContent = 'Upload';
-            }
-        }
     </script>
 }
