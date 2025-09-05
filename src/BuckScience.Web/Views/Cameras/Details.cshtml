@@ -97,42 +97,6 @@
 
 @section Scripts {
     <script>
-        // Ensure panToCameraLocation function is available
-        window.panToCameraLocation = function(lng, lat) {
-            if (window.App && window.App.panToCameraLocation) {
-                window.App.panToCameraLocation(lng, lat);
-            } else {
-                console.log('Pan to camera location:', lng, lat);
-            }
-        };
-
-        // Robust editCamera function that will always be available
-        window.handleEditCamera = function(propertyId, cameraId) {
-            console.log('Edit camera clicked:', propertyId, cameraId);
-            
-            // Try to use the global editCamera function first
-            if (typeof window.editCamera === 'function') {
-                window.editCamera(propertyId, cameraId);
-                return;
-            }
-            
-            // Fallback: use App.editCamera if available
-            if (window.App && typeof window.App.editCamera === 'function') {
-                window.App.editCamera(propertyId, cameraId);
-                return;
-            }
-            
-            // Final fallback: use sidebar loading directly
-            if (window.App && typeof window.App.loadSidebar === 'function') {
-                window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
-                return;
-            }
-            
-            // Ultimate fallback: regular navigation
-            console.warn('No sidebar loading available, using regular navigation');
-            window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
-        };
-
         // Initialize camera details when page loads (for sidebar loads)
         document.addEventListener('DOMContentLoaded', function() {
             // If this is loaded via sidebar, pan to camera location automatically
@@ -141,8 +105,8 @@
             
             // Small delay to ensure everything is initialized
             setTimeout(() => {
-                if (window.App && window.App.panToCameraLocation) {
-                    window.App.panToCameraLocation(cameraLng, cameraLat);
+                if (window.panToCameraLocation) {
+                    window.panToCameraLocation(cameraLng, cameraLat);
                 }
             }, 100);
         });
@@ -155,8 +119,8 @@
                 const cameraLng = @Model.Longitude;
                 
                 setTimeout(() => {
-                    if (window.App && window.App.panToCameraLocation) {
-                        window.App.panToCameraLocation(cameraLng, cameraLat);
+                    if (window.panToCameraLocation) {
+                        window.panToCameraLocation(cameraLng, cameraLat);
                     }
                 }, 300);
             }

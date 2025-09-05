@@ -2125,8 +2125,52 @@ window.App = window.App || {};
         }
     };
 
-    // Expose editCamera function globally
+    // Camera-related global functions
+    
+    // Robust editCamera function that will always be available
+    window.handleEditCamera = function(propertyId, cameraId) {
+        console.log('Edit camera clicked:', propertyId, cameraId);
+        
+        // Try to use the App.editCamera function first
+        if (window.App && typeof window.App.editCamera === 'function') {
+            window.App.editCamera(propertyId, cameraId);
+            return;
+        }
+        
+        // Fallback: use sidebar loading directly
+        if (window.App && typeof window.App.loadSidebar === 'function') {
+            window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+            return;
+        }
+        
+        // Ultimate fallback: regular navigation
+        console.warn('No sidebar loading available, using regular navigation');
+        window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
+    };
+
+    // Function to cancel camera edit and return to camera details
+    window.cancelCameraEdit = function(cameraId) {
+        console.log('Cancel camera edit clicked:', cameraId);
+        
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/cameras/${cameraId}/details`;
+        }
+    };
+
+    // Pan to camera location function
+    window.panToCameraLocation = function(lng, lat) {
+        if (window.App && window.App.panToCameraLocation) {
+            window.App.panToCameraLocation(lng, lat);
+        } else {
+            console.log('Pan to camera location:', lng, lat);
+        }
+    };
+
+    // Expose editCamera function globally for backwards compatibility
     window.editCamera = function(propertyId, cameraId) {
-        window.App.editCamera(propertyId, cameraId);
+        window.handleEditCamera(propertyId, cameraId);
     };
 })();
