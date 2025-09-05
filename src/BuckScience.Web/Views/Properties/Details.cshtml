@@ -421,10 +421,6 @@
         function editFeature(featureId, event) {
             console.log('=== DETAILS EDIT FEATURE DEBUG START ===');
             console.log('editFeature called with featureId:', featureId);
-            console.log('Event:', event);
-            console.log('window.App available:', !!window.App);
-            console.log('window.App.editPropertyFeature available:', !!(window.App && window.App.editPropertyFeature));
-            console.log('window.App.loadSidebar available:', !!(window.App && window.App.loadSidebar));
             
             // Prevent any default behavior or event propagation
             if (event) {
@@ -433,40 +429,14 @@
                 event.stopPropagation();
             }
             
-            if (window.App && window.App.editPropertyFeature) {
-                console.log('Calling window.App.editPropertyFeature');
-                window.App.editPropertyFeature(featureId);
+            // Use the standardized global edit function to ensure consistent behavior
+            if (window.editPropertyFeature) {
+                console.log('Calling global editPropertyFeature function');
+                window.editPropertyFeature(featureId, event);
             } else {
-                console.log('window.App.editPropertyFeature not available, featureId:', featureId);
-                // Fallback: try to load sidebar directly
-                if (window.App && window.App.loadSidebar) {
-                    console.log('Using direct sidebar loading fallback');
-                    const editUrl = `/features/${featureId}/edit`;
-                    try {
-                        const loadPromise = window.App.loadSidebar(editUrl, { push: true });
-                        console.log('Direct sidebar call completed, promise:', loadPromise);
-                        
-                        if (loadPromise && typeof loadPromise.then === 'function') {
-                            loadPromise.then(() => {
-                                console.log('Direct sidebar loaded successfully');
-                                console.log('=== DETAILS EDIT FEATURE DEBUG SUCCESS ===');
-                            }).catch((error) => {
-                                console.error('Error with direct sidebar loading:', error);
-                                console.log('=== DETAILS EDIT FEATURE DEBUG ERROR ===');
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Exception with direct sidebar loading:', error);
-                        console.log('=== DETAILS EDIT FEATURE DEBUG EXCEPTION ===');
-                        // Ultimate fallback
-                        window.location.href = editUrl;
-                    }
-                } else {
-                    console.log('No sidebar loading available');
-                    console.log('=== DETAILS EDIT FEATURE DEBUG NO SIDEBAR ===');
-                    // Ultimate fallback
-                    window.location.href = `/features/${featureId}/edit`;
-                }
+                console.error('Global editPropertyFeature function not available');
+                // Emergency fallback
+                window.location.href = `/features/${featureId}/edit`;
             }
         }
 

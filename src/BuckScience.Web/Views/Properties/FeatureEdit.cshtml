@@ -86,10 +86,18 @@
         function populateForm(featureData) {
             console.log('Populating form with feature data:', featureData);
             
+            // Handle both camelCase (from JS) and PascalCase (from API) property names
+            const name = featureData.name || featureData.Name || '';
+            const classificationType = featureData.classificationType || featureData.ClassificationType;
+            const notes = featureData.notes || featureData.Notes || '';
+            const geometryWkt = featureData.geometryWkt || featureData.GeometryWkt || '';
+            
+            console.log('Extracted values:', { name, classificationType, notes, geometryWkt });
+            
             // Populate feature name - use custom name only, empty if none exists
             const nameInput = document.getElementById('editFeatureName');
             if (nameInput) {
-                nameInput.value = featureData.name || '';
+                nameInput.value = name;
                 console.log('Set feature name:', nameInput.value);
             } else {
                 console.error('editFeatureName input not found');
@@ -97,21 +105,21 @@
 
             // Populate feature type options and select current type
             const selectElement = document.getElementById('editFeatureType');
-            if (selectElement && window.FeatureUtils) {
-                selectElement.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(featureData.classificationType);
-                console.log('Populated feature type options, selected:', featureData.classificationType);
-            } else if (selectElement) {
+            if (selectElement && window.FeatureUtils && classificationType) {
+                selectElement.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(classificationType);
+                console.log('Populated feature type options, selected:', classificationType);
+            } else if (selectElement && classificationType) {
                 // Fallback if FeatureUtils not available
-                selectElement.innerHTML = `<option value="${featureData.classificationType}" selected>Feature Type ${featureData.classificationType}</option>`;
+                selectElement.innerHTML = `<option value="${classificationType}" selected>Feature Type ${classificationType}</option>`;
                 console.warn('FeatureUtils not available, using fallback option');
             } else {
-                console.error('editFeatureType select not found');
+                console.error('editFeatureType select not found or classificationType missing');
             }
 
             // Populate notes
             const notesTextarea = document.getElementById('editFeatureNotes');
             if (notesTextarea) {
-                notesTextarea.value = featureData.notes || '';
+                notesTextarea.value = notes;
                 console.log('Set feature notes:', notesTextarea.value);
             } else {
                 console.error('editFeatureNotes textarea not found');
@@ -119,8 +127,8 @@
 
             // Update geometry type display
             const geometryDisplay = document.getElementById('geometryTypeDisplay');
-            if (geometryDisplay && featureData.geometryWkt) {
-                const geometryType = featureData.geometryWkt.split('(')[0] || 'Unknown';
+            if (geometryDisplay && geometryWkt) {
+                const geometryType = geometryWkt.split('(')[0] || 'Unknown';
                 geometryDisplay.textContent = geometryType;
             }
         }
@@ -152,7 +160,14 @@
             // Enable geometry editing for the feature
             setTimeout(() => {
                 if (typeof window.enableGeometryEditing === 'function' && featureData) {
-                    window.enableGeometryEditing(featureData);
+                    // Create a normalized feature object for the geometry editing function
+                    const normalizedFeature = {
+                        ...featureData,
+                        // Ensure both camelCase and PascalCase properties are available
+                        geometryWkt: featureData.geometryWkt || featureData.GeometryWkt,
+                        geometry: featureData.geometry // May not exist, that's ok
+                    };
+                    window.enableGeometryEditing(normalizedFeature);
                     console.log('Enabled geometry editing');
                 }
             }, 500);
