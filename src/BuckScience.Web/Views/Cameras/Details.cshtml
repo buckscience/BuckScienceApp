@@ -82,7 +82,7 @@
             </div>
 
             <div class="d-flex gap-2 mt-2">
-                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="editCamera(@Model.PropertyId, @Model.Id)">
+                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="handleEditCamera(@Model.PropertyId, @Model.Id)">
                     <i class="fas fa-edit me-1"></i> Edit Camera
                 </button>
                 <a href="/cameras/@Model.Id/upload" class="btn btn-sm btn-custom-primary flex-fill">
@@ -142,7 +142,32 @@
             }
         };
 
-        // editCamera function is now defined globally in properties.js
+        // Robust editCamera function that will always be available
+        window.handleEditCamera = function(propertyId, cameraId) {
+            console.log('Edit camera clicked:', propertyId, cameraId);
+            
+            // Try to use the global editCamera function first
+            if (typeof window.editCamera === 'function') {
+                window.editCamera(propertyId, cameraId);
+                return;
+            }
+            
+            // Fallback: use App.editCamera if available
+            if (window.App && typeof window.App.editCamera === 'function') {
+                window.App.editCamera(propertyId, cameraId);
+                return;
+            }
+            
+            // Final fallback: use sidebar loading directly
+            if (window.App && typeof window.App.loadSidebar === 'function') {
+                window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+                return;
+            }
+            
+            // Ultimate fallback: regular navigation
+            console.warn('No sidebar loading available, using regular navigation');
+            window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
+        };
 
         // Initialize camera details when page loads (for sidebar loads)
         document.addEventListener('DOMContentLoaded', function() {

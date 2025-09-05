@@ -135,20 +135,53 @@ window.App = window.App || {};
                 const action = form.getAttribute('action') || location.pathname;
                 const method = (form.getAttribute('method') || 'GET').toUpperCase();
                 const body = method === 'GET' ? null : new FormData(form);
+                
+                // Show loading state
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+                }
+                
                 try {
                     const resp = await fetch(action, {
                         method,
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body
                     });
-                    if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-                    const html = await resp.text();
-                    document.getElementById('sidebar-content').innerHTML = html;
-                    document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url: action } }));
-                    history.pushState({ url: action }, '', action);
+                    
+                    if (!resp.ok) {
+                        throw new Error(`Failed: ${resp.status} ${resp.statusText}`);
+                    }
+                    
+                    // Check if this is a redirect response
+                    const contentType = resp.headers.get('content-type');
+                    if (resp.redirected || (resp.url && resp.url !== action)) {
+                        // Handle redirected response by loading the redirected URL in sidebar
+                        const redirectUrl = resp.url;
+                        console.log('Form submission redirected to:', redirectUrl);
+                        if (window.App && window.App.loadSidebar) {
+                            await window.App.loadSidebar(redirectUrl, { push: true });
+                        } else {
+                            window.location.href = redirectUrl;
+                        }
+                    } else {
+                        // Handle regular response by replacing content
+                        const html = await resp.text();
+                        document.getElementById('sidebar-content').innerHTML = html;
+                        document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url: action } }));
+                        history.pushState({ url: action }, '', action);
+                    }
                 } catch (err) {
-                    console.error(err);
-                    window.App.showModal('Error', 'Failed to submit form.', 'error');
+                    console.error('Form submission error:', err);
+                    window.App.showModal('Error', 'Failed to submit form: ' + err.message, 'error');
+                } finally {
+                    // Restore button state
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
                 }
             });
         });
