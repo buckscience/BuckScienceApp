@@ -2173,4 +2173,101 @@ window.App = window.App || {};
     window.editCamera = function(propertyId, cameraId) {
         window.handleEditCamera(propertyId, cameraId);
     };
+
+    // Upload-related global functions
+    
+    // Function to handle upload photos using sidebar loading
+    window.handleUploadPhotos = function(cameraId) {
+        console.log('Upload photos clicked:', cameraId);
+        
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${cameraId}/upload`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/cameras/${cameraId}/upload`;
+        }
+    };
+
+    // Function to reset upload button state
+    window.resetUploadButton = function() {
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadSpinner = document.getElementById('uploadSpinner');
+        const uploadText = document.getElementById('uploadText');
+        
+        if (uploadBtn) uploadBtn.disabled = false;
+        if (uploadSpinner) uploadSpinner.classList.add('d-none');
+        if (uploadText) uploadText.textContent = 'Upload';
+    };
+
+    // Function to handle upload form submission with proper sidebar integration
+    window.handleUploadFormSubmission = function(form) {
+        const formData = new FormData(form);
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadSpinner = document.getElementById('uploadSpinner');
+        const uploadText = document.getElementById('uploadText');
+        const errorContainer = document.getElementById('errorContainer');
+        
+        // Show loading state
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (uploadSpinner) uploadSpinner.classList.remove('d-none');
+        if (uploadText) uploadText.textContent = 'Uploading...';
+        if (errorContainer) errorContainer.classList.add('d-none');
+        
+        return fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success modal
+                const message = data.photoCount === 1 
+                    ? `${data.photoCount} photo uploaded successfully!`
+                    : `${data.photoCount} photos uploaded successfully!`;
+                
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Upload Successful', message, 'success');
+                } else {
+                    alert(message);
+                }
+                
+                // Navigate back to camera photos view
+                if (window.App && window.App.loadSidebar) {
+                    window.App.loadSidebar(`/cameras/${data.cameraId}/photos`, { push: true });
+                } else {
+                    window.location.href = `/cameras/${data.cameraId}/photos`;
+                }
+            } else {
+                // Show error
+                const errorMessage = data.error || 'Upload failed. Please try again.';
+                if (errorContainer) {
+                    const errorMessageElement = document.getElementById('errorMessage');
+                    if (errorMessageElement) errorMessageElement.textContent = errorMessage;
+                    errorContainer.classList.remove('d-none');
+                } else if (window.App && window.App.showModal) {
+                    window.App.showModal('Upload Error', errorMessage, 'error');
+                } else {
+                    alert('Error: ' + errorMessage);
+                }
+                window.resetUploadButton();
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            const errorMessage = 'Upload failed. Please try again.';
+            if (errorContainer) {
+                const errorMessageElement = document.getElementById('errorMessage');
+                if (errorMessageElement) errorMessageElement.textContent = errorMessage;
+                errorContainer.classList.remove('d-none');
+            } else if (window.App && window.App.showModal) {
+                window.App.showModal('Upload Error', errorMessage, 'error');
+            } else {
+                alert('Error: ' + errorMessage);
+            }
+            window.resetUploadButton();
+        });
+    };
 })();

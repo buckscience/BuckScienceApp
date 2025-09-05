@@ -8,10 +8,9 @@
         <h1>Photos from @Model.CameraName</h1>
     </div>
     <div>
-        <a href="/cameras/@Model.CameraId/upload" 
-           class="btn btn-primary">
+        <button type="button" class="btn btn-primary" onclick="handleUploadPhotos(@Model.CameraId)">
             <i class="fas fa-upload me-2"></i>Upload Photos
-        </a>
+        </button>
     </div>
 </div>
 
@@ -63,10 +62,9 @@ else
         </div>
         <h3 class="text-muted">No photos yet</h3>
         <p class="text-muted mb-4">Upload some photos from this camera to get started.</p>
-        <a href="/cameras/@Model.CameraId/upload" 
-           class="btn btn-primary">
+        <button type="button" class="btn btn-primary" onclick="handleUploadPhotos(@Model.CameraId)">
             <i class="fas fa-upload me-2"></i>Upload Your First Photos
-        </a>
+        </button>
     </div>
 }
 
