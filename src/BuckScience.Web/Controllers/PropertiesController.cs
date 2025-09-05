@@ -527,7 +527,7 @@ public class PropertiesController : Controller
             Id = feature.Id,
             Type = feature.ClassificationType,
             Category = FeatureHelper.GetCategory(feature.ClassificationType),
-            Name = feature.Name ?? GetFeatureName(feature.ClassificationType),
+            Name = feature.Name ?? string.Empty, // Use custom name only, empty if no custom name
             TypeName = GetFeatureName(feature.ClassificationType),
             Description = GetFeatureDescription(feature.ClassificationType),
             Icon = GetFeatureIcon(feature.ClassificationType),

@@ -3,7 +3,7 @@
     ViewData["Title"] = $"Edit {Model.Name} - Feature";
 }
 
-<div class="feature-edit">
+<div class="feature-edit" style="max-width: 350px;">
     <!-- Header with Cancel Button -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="sidebar-title">Edit Feature</h2>
@@ -64,7 +64,15 @@
 @section Scripts {
     <script>
         function initializeFeatureEdit() {
+            console.log('=== INITIALIZING FEATURE EDIT ===');
             console.log('Initializing feature edit for ID:', @Model.Id);
+            console.log('Model data available:', {
+                id: @Model.Id,
+                name: '@(Html.Raw(Model.Name?.Replace("'", "\\'").Replace("\"", "\\\"") ?? ""))',
+                type: @((int)Model.Type),
+                notes: '@(Html.Raw(Model.Notes?.Replace("'", "\\'").Replace("\"", "\\\"") ?? ""))',
+                geometryWkt: '@(Model.GeometryWkt ?? "Unknown")'
+            });
             
             // Focus on the feature being edited
             if (window.App && window.App.focusPropertyFeature) {
@@ -91,9 +99,9 @@
                 featureData = {
                     properties: {
                         id: @Model.Id,
-                        name: '@Html.Raw(Model.Name?.Replace("'", "\\'"))',
+                        name: '@(Html.Raw(Model.Name?.Replace("'", "\\'").Replace("\"", "\\\"") ?? ""))',
                         classificationType: @((int)Model.Type),
-                        notes: '@Html.Raw(Model.Notes?.Replace("'", "\\'"))'
+                        notes: '@(Html.Raw(Model.Notes?.Replace("'", "\\'").Replace("\"", "\\\"") ?? ""))'
                     },
                     geometry: {
                         type: '@(Model.GeometryWkt?.Split('(')[0] ?? "Unknown")'
@@ -108,14 +116,15 @@
 
             // Populate form fields with feature data
             const props = featureData.properties;
+            console.log('Populating form with props:', props);
             
-            // Populate feature name (use name if different from type name, otherwise empty)
+            // Populate feature name (use custom name if provided, otherwise empty)
             const nameInput = document.getElementById('editFeatureName');
             if (nameInput) {
-                // Get the default type name for comparison
-                const defaultTypeName = window.FeatureUtils ? window.FeatureUtils.getFeatureName(props.classificationType) : '';
-                nameInput.value = (props.name && props.name !== defaultTypeName) ? props.name : '';
+                nameInput.value = props.name || '';
                 console.log('Set feature name:', nameInput.value);
+            } else {
+                console.error('editFeatureName input not found');
             }
 
             // Populate feature type options and select current type
@@ -127,6 +136,8 @@
                 // Fallback if FeatureUtils not available
                 selectElement.innerHTML = `<option value="${props.classificationType}" selected>Feature Type ${props.classificationType}</option>`;
                 console.warn('FeatureUtils not available, using fallback option');
+            } else {
+                console.error('editFeatureType select not found');
             }
 
             // Populate notes
@@ -134,6 +145,8 @@
             if (notesTextarea) {
                 notesTextarea.value = props.notes || '';
                 console.log('Set feature notes:', notesTextarea.value);
+            } else {
+                console.error('editFeatureNotes textarea not found');
             }
 
             // Update geometry type display
@@ -149,17 +162,38 @@
                     console.log('Enabled geometry editing');
                 }
             }, 500);
+            
+            console.log('=== FEATURE EDIT INITIALIZATION COMPLETE ===');
         }
 
         // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', initializeFeatureEdit);
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded - calling initializeFeatureEdit');
+            initializeFeatureEdit();
+        });
 
         // Handle sidebar load events - re-initialize when loaded in sidebar
         document.addEventListener('sidebar:loaded', function(event) {
+            console.log('sidebar:loaded event received:', event.detail);
             if (event.detail && event.detail.url && event.detail.url.includes('/features/@Model.Id/edit')) {
                 console.log('Feature edit loaded in sidebar, re-initializing...');
-                setTimeout(initializeFeatureEdit, 300);
+                setTimeout(function() {
+                    console.log('Re-initializing feature edit after sidebar load delay');
+                    initializeFeatureEdit();
+                }, 300);
             }
         });
+
+        // Also initialize immediately if this script runs after DOM is ready
+        if (document.readyState === 'loading') {
+            // DOM not ready yet, wait for DOMContentLoaded
+            console.log('DOM still loading, waiting for DOMContentLoaded');
+        } else {
+            // DOM is ready, initialize immediately
+            console.log('DOM already ready, initializing immediately');
+            setTimeout(function() {
+                initializeFeatureEdit();
+            }, 100);
+        }
     </script>
 }
