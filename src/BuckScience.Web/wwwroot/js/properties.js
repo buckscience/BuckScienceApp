@@ -1953,14 +1953,6 @@ window.App = window.App || {};
         window.App.closeCameraModal();
     };
     
-    window.closeFeatureDetailsPanel = function() {
-        window.App.closeFeaturePopup();
-    };
-
-    window.closeCameraDetailsPanel = function() {
-        window.App.closeCameraModal();
-    };
-    
     window.panToCameraLocation = function(lng, lat) {
         window.App.panToCameraLocation(lng, lat);
     };
