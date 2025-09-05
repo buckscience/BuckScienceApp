@@ -73,16 +73,6 @@
     <partial name="_ValidationScriptsPartial" />
     
     <script>
-        // Function to cancel camera edit and return to camera details
-        window.cancelCameraEdit = function(cameraId) {
-            if (window.App && window.App.loadSidebar) {
-                window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
-            } else {
-                // Fallback to regular navigation
-                window.location.href = `/cameras/${cameraId}/details`;
-            }
-        };
-
         // Set up property coordinates for camera form wiring (required by wireCameraForm)
         document.addEventListener('DOMContentLoaded', function() {
             // Set property coordinates from the model
