@@ -16,7 +16,7 @@
     <!-- Instructions Alert -->
     <div class="alert alert-success mb-4" role="alert">
         <i class="fas fa-edit me-2"></i>
-        <strong>Click and drag</strong> the feature on the map to modify its shape or move it. Make changes below and click "Save Changes" when done.
+        <strong>Drag</strong> to modify shape. Make changes and save.
     </div>
 
     <!-- Edit Form -->
@@ -24,10 +24,10 @@
         <div class="mb-3">
             <label for="editFeatureName" class="form-label">Feature Name</label>
             <input type="text" class="form-control" id="editFeatureName" 
-                   placeholder="Enter a custom name for this feature (e.g., 'SE Corner Bean Field')" 
+                   placeholder="Custom name (optional)" 
                    value="@(Model.Name != Model.TypeName ? Model.Name : "")" 
                    maxlength="100">
-            <small class="text-muted">Leave blank to use the default feature type name</small>
+            <small class="text-muted">Leave blank for default type name</small>
         </div>
 
         <div class="mb-3">
@@ -47,7 +47,7 @@
         <div class="mb-4">
             <label for="editFeatureNotes" class="form-label">Notes</label>
             <textarea class="form-control" id="editFeatureNotes" rows="3" 
-                      placeholder="Add any notes about this feature...">@Model.Notes</textarea>
+                      placeholder="Add notes...">@Model.Notes</textarea>
         </div>
     </form>
 

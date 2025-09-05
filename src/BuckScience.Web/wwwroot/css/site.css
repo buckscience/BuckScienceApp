@@ -608,6 +608,16 @@
     margin: 1rem 0 1.5rem 0;
 }
 
+/* Feature edit form - constrain width to match other edit forms */
+.feature-edit {
+    max-width: 350px;
+}
+
+.feature-edit .form-control,
+.feature-edit .form-select {
+    max-width: 100%;
+}
+
 /* Modal z-index fixes for sidebar - use higher values to ensure modals work */
 .modal {
     z-index: 1055 !important;
