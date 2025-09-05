@@ -13,8 +13,8 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250904223105_CameraPlacementHistory")]
-    partial class CameraPlacementHistory
+    [Migration("20250904225016_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
