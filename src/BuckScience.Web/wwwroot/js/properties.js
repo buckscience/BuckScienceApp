@@ -1345,13 +1345,34 @@ window.App = window.App || {};
             return;
         }
 
-        console.log('Enabling geometry editing for feature');
+        console.log('Enabling geometry editing for feature:', feature);
+        
+        // Get geometry from feature - handle both GeoJSON format and API response format
+        let geometry;
+        if (feature.geometry) {
+            // Already in GeoJSON format
+            geometry = feature.geometry;
+        } else if (feature.geometryWkt) {
+            // Convert from WKT to GeoJSON
+            try {
+                geometry = parseSimpleWKT(feature.geometryWkt);
+                console.log('Converted WKT to GeoJSON geometry:', geometry);
+            } catch (error) {
+                console.error('Failed to parse WKT geometry:', feature.geometryWkt, error);
+                window.App.showModal("Error", 'Failed to parse feature geometry. Cannot enable editing.', "error");
+                return;
+            }
+        } else {
+            console.error('Feature has no geometry or geometryWkt property:', feature);
+            window.App.showModal("Error", 'Feature has no geometry data. Cannot enable editing.', "error");
+            return;
+        }
         
         // Convert the feature to a format that MapboxDraw can understand
         const drawFeature = {
             type: 'Feature',
             properties: {},
-            geometry: feature.geometry
+            geometry: geometry
         };
         
         try {
