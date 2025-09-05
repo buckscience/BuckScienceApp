@@ -792,17 +792,35 @@ window.App = window.App || {};
                             return directions[closest];
                         }
 
+                        // Function to calculate direction indicator position
+                        function calculateDirectionPosition(degrees) {
+                            // Normalize degrees
+                            degrees = degrees % 360;
+                            if (degrees < 0) degrees += 360;
+                            
+                            // Convert to radians (0° = North = top)
+                            const radians = degrees * (Math.PI / 180);
+                            
+                            // Calculate position around a circle with radius 18px
+                            const radius = 18;
+                            const x = radius * Math.sin(radians);
+                            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
+                            
+                            return { x, y };
+                        }
+
                         // Create marker element with Font Awesome camera icon and direction indicator
                         const markerElement = document.createElement('div');
                         markerElement.className = 'camera-marker';
                         
                         const compassDirection = getCompassDirection(camera.directionDegrees);
+                        const directionPos = calculateDirectionPosition(camera.directionDegrees);
                         
                         markerElement.innerHTML = `
                             <div class="camera-marker-inner ${camera.isActive ? 'active' : 'inactive'}">
                                 <i class="fas fa-camera"></i>
                             </div>
-                            <div class="camera-direction-indicator">
+                            <div class="camera-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
                                 ${compassDirection}
                             </div>
                         `;
@@ -839,8 +857,6 @@ window.App = window.App || {};
                             }
                             .camera-direction-indicator {
                                 position: absolute;
-                                top: -8px;
-                                right: -8px;
                                 background-color: #2c3e50;
                                 color: white;
                                 border: 2px solid #ffffff;
@@ -854,6 +870,7 @@ window.App = window.App || {};
                                 font-weight: bold;
                                 box-shadow: 0 1px 4px rgba(0,0,0,0.3);
                                 z-index: 1;
+                                transform: translate(-50%, -50%);
                             }
                         `;
 
