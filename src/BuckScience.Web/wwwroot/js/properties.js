@@ -1273,31 +1273,68 @@ window.App = window.App || {};
     };
 
     window.App.editPropertyFeature = function(featureId) {
+        console.log('=== FEATURE EDIT DEBUG START ===');
         console.log('window.App.editPropertyFeature called with featureId:', featureId);
-        console.log('Sidebar loading function available:', !!(window.App && window.App.loadSidebar));
+        console.log('window.App exists:', !!(window.App));
+        console.log('window.App.loadSidebar exists:', !!(window.App && window.App.loadSidebar));
+        console.log('window.App.loadSidebar type:', typeof (window.App && window.App.loadSidebar));
         
         // Close any existing popup or modal when entering edit mode
-        window.App.closeFeaturePopup();
+        if (window.App.closeFeaturePopup) {
+            console.log('Closing any existing feature popup');
+            window.App.closeFeaturePopup();
+        } else {
+            console.log('window.App.closeFeaturePopup not available');
+        }
+        
+        // Prevent any default behavior or event propagation
+        if (event) {
+            console.log('Preventing event default and propagation');
+            event.preventDefault();
+            event.stopPropagation();
+        }
         
         // Load feature edit form in sidebar instead of floating panel
-        if (window.App && window.App.loadSidebar) {
-            console.log('Loading sidebar for feature edit:', `/features/${featureId}/edit`);
-            const loadPromise = window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+        if (window.App && typeof window.App.loadSidebar === 'function') {
+            const editUrl = `/features/${featureId}/edit`;
+            console.log('Loading sidebar for feature edit:', editUrl);
             
-            if (loadPromise && loadPromise.then) {
-                loadPromise.then(() => {
-                    console.log('Sidebar loaded successfully for feature edit');
-                }).catch((error) => {
-                    console.error('Error loading sidebar for feature edit:', error);
-                });
-            } else {
-                console.log('Sidebar loadSidebar function does not return a promise');
+            try {
+                const loadPromise = window.App.loadSidebar(editUrl, { push: true });
+                console.log('loadSidebar call completed, promise:', loadPromise);
+                
+                if (loadPromise && typeof loadPromise.then === 'function') {
+                    loadPromise.then(() => {
+                        console.log('Sidebar loaded successfully for feature edit');
+                        console.log('=== FEATURE EDIT DEBUG SUCCESS ===');
+                    }).catch((error) => {
+                        console.error('Error loading sidebar for feature edit:', error);
+                        console.log('=== FEATURE EDIT DEBUG ERROR ===');
+                        // Show error to user
+                        if (window.App.showModal) {
+                            window.App.showModal('Error', 'Failed to load feature editor. Please try again.', 'error');
+                        }
+                    });
+                } else {
+                    console.log('Sidebar loadSidebar function does not return a promise');
+                    console.log('=== FEATURE EDIT DEBUG NO PROMISE ===');
+                }
+            } catch (error) {
+                console.error('Exception calling loadSidebar:', error);
+                console.log('=== FEATURE EDIT DEBUG EXCEPTION ===');
+                // Fallback to regular navigation
+                console.log('Using fallback navigation due to exception');
+                window.location.href = editUrl;
             }
         } else {
-            console.error('Sidebar loading not available');
+            console.error('Sidebar loading not available - loadSidebar function missing');
+            console.log('Available App functions:', Object.keys(window.App || {}));
+            
             // Fallback to regular navigation
-            console.log('Using fallback navigation to:', `/features/${featureId}/edit`);
-            window.location.href = `/features/${featureId}/edit`;
+            const editUrl = `/features/${featureId}/edit`;
+            console.log('Using fallback navigation to:', editUrl);
+            console.log('=== FEATURE EDIT DEBUG FALLBACK ===');
+            window.location.href = editUrl;
         }
     };
 
@@ -1879,8 +1916,23 @@ window.App = window.App || {};
         window.App.savePropertyFeature();
     };
     
-    window.editPropertyFeature = function(featureId) {
-        window.App.editPropertyFeature(featureId);
+    window.editPropertyFeature = function(featureId, event) {
+        console.log('=== GLOBAL EDIT WRAPPER CALLED ===');
+        console.log('Global editPropertyFeature called with:', featureId);
+        console.log('Event:', event);
+        
+        // Set global event for debugging
+        window._debugEvent = event;
+        
+        if (window.App && typeof window.App.editPropertyFeature === 'function') {
+            console.log('Calling window.App.editPropertyFeature');
+            window.App.editPropertyFeature(featureId);
+        } else {
+            console.error('window.App.editPropertyFeature not available');
+            console.log('Available App functions:', Object.keys(window.App || {}));
+            // Emergency fallback
+            window.location.href = `/features/${featureId}/edit`;
+        }
     };
     
     window.deletePropertyFeature = function(featureId) {

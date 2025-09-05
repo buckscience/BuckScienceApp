@@ -223,7 +223,7 @@
                                                                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id, event); return false;" title="Edit feature">
                                                                         <i class="fas fa-edit"></i>
                                                                     </button>
                                                                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
@@ -418,11 +418,20 @@
             }
         }
 
-        function editFeature(featureId) {
+        function editFeature(featureId, event) {
+            console.log('=== DETAILS EDIT FEATURE DEBUG START ===');
             console.log('editFeature called with featureId:', featureId);
+            console.log('Event:', event);
             console.log('window.App available:', !!window.App);
             console.log('window.App.editPropertyFeature available:', !!(window.App && window.App.editPropertyFeature));
             console.log('window.App.loadSidebar available:', !!(window.App && window.App.loadSidebar));
+            
+            // Prevent any default behavior or event propagation
+            if (event) {
+                console.log('Preventing event default and propagation');
+                event.preventDefault();
+                event.stopPropagation();
+            }
             
             if (window.App && window.App.editPropertyFeature) {
                 console.log('Calling window.App.editPropertyFeature');
@@ -432,9 +441,31 @@
                 // Fallback: try to load sidebar directly
                 if (window.App && window.App.loadSidebar) {
                     console.log('Using direct sidebar loading fallback');
-                    window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+                    const editUrl = `/features/${featureId}/edit`;
+                    try {
+                        const loadPromise = window.App.loadSidebar(editUrl, { push: true });
+                        console.log('Direct sidebar call completed, promise:', loadPromise);
+                        
+                        if (loadPromise && typeof loadPromise.then === 'function') {
+                            loadPromise.then(() => {
+                                console.log('Direct sidebar loaded successfully');
+                                console.log('=== DETAILS EDIT FEATURE DEBUG SUCCESS ===');
+                            }).catch((error) => {
+                                console.error('Error with direct sidebar loading:', error);
+                                console.log('=== DETAILS EDIT FEATURE DEBUG ERROR ===');
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Exception with direct sidebar loading:', error);
+                        console.log('=== DETAILS EDIT FEATURE DEBUG EXCEPTION ===');
+                        // Ultimate fallback
+                        window.location.href = editUrl;
+                    }
                 } else {
                     console.log('No sidebar loading available');
+                    console.log('=== DETAILS EDIT FEATURE DEBUG NO SIDEBAR ===');
+                    // Ultimate fallback
+                    window.location.href = `/features/${featureId}/edit`;
                 }
             }
         }
