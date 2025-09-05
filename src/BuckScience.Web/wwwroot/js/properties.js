@@ -1273,17 +1273,30 @@ window.App = window.App || {};
     };
 
     window.App.editPropertyFeature = function(featureId) {
-        console.log('Edit feature:', featureId);
+        console.log('window.App.editPropertyFeature called with featureId:', featureId);
+        console.log('Sidebar loading function available:', !!(window.App && window.App.loadSidebar));
         
         // Close any existing popup or modal when entering edit mode
         window.App.closeFeaturePopup();
         
         // Load feature edit form in sidebar instead of floating panel
         if (window.App && window.App.loadSidebar) {
-            window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+            console.log('Loading sidebar for feature edit:', `/features/${featureId}/edit`);
+            const loadPromise = window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+            
+            if (loadPromise && loadPromise.then) {
+                loadPromise.then(() => {
+                    console.log('Sidebar loaded successfully for feature edit');
+                }).catch((error) => {
+                    console.error('Error loading sidebar for feature edit:', error);
+                });
+            } else {
+                console.log('Sidebar loadSidebar function does not return a promise');
+            }
         } else {
             console.error('Sidebar loading not available');
             // Fallback to regular navigation
+            console.log('Using fallback navigation to:', `/features/${featureId}/edit`);
             window.location.href = `/features/${featureId}/edit`;
         }
     };

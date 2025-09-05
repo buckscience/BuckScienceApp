@@ -419,10 +419,23 @@
         }
 
         function editFeature(featureId) {
+            console.log('editFeature called with featureId:', featureId);
+            console.log('window.App available:', !!window.App);
+            console.log('window.App.editPropertyFeature available:', !!(window.App && window.App.editPropertyFeature));
+            console.log('window.App.loadSidebar available:', !!(window.App && window.App.loadSidebar));
+            
             if (window.App && window.App.editPropertyFeature) {
+                console.log('Calling window.App.editPropertyFeature');
                 window.App.editPropertyFeature(featureId);
             } else {
-                console.log('Edit feature:', featureId);
+                console.log('window.App.editPropertyFeature not available, featureId:', featureId);
+                // Fallback: try to load sidebar directly
+                if (window.App && window.App.loadSidebar) {
+                    console.log('Using direct sidebar loading fallback');
+                    window.App.loadSidebar(`/features/${featureId}/edit`, { push: true });
+                } else {
+                    console.log('No sidebar loading available');
+                }
             }
         }
 
