@@ -135,20 +135,53 @@ window.App = window.App || {};
                 const action = form.getAttribute('action') || location.pathname;
                 const method = (form.getAttribute('method') || 'GET').toUpperCase();
                 const body = method === 'GET' ? null : new FormData(form);
+                
+                // Show loading state
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+                }
+                
                 try {
                     const resp = await fetch(action, {
                         method,
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body
                     });
-                    if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-                    const html = await resp.text();
-                    document.getElementById('sidebar-content').innerHTML = html;
-                    document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url: action } }));
-                    history.pushState({ url: action }, '', action);
+                    
+                    if (!resp.ok) {
+                        throw new Error(`Failed: ${resp.status} ${resp.statusText}`);
+                    }
+                    
+                    // Check if this is a redirect response
+                    const contentType = resp.headers.get('content-type');
+                    if (resp.redirected || (resp.url && resp.url !== action)) {
+                        // Handle redirected response by loading the redirected URL in sidebar
+                        const redirectUrl = resp.url;
+                        console.log('Form submission redirected to:', redirectUrl);
+                        if (window.App && window.App.loadSidebar) {
+                            await window.App.loadSidebar(redirectUrl, { push: true });
+                        } else {
+                            window.location.href = redirectUrl;
+                        }
+                    } else {
+                        // Handle regular response by replacing content
+                        const html = await resp.text();
+                        document.getElementById('sidebar-content').innerHTML = html;
+                        document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url: action } }));
+                        history.pushState({ url: action }, '', action);
+                    }
                 } catch (err) {
-                    console.error(err);
-                    window.App.showModal('Error', 'Failed to submit form.', 'error');
+                    console.error('Form submission error:', err);
+                    window.App.showModal('Error', 'Failed to submit form: ' + err.message, 'error');
+                } finally {
+                    // Restore button state
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
                 }
             });
         });
@@ -973,90 +1006,12 @@ window.App = window.App || {};
     function showCameraPopup(camera, lngLat) {
         const properties = camera.properties;
         
-        // Remove any existing camera panel
-        const existingPanel = document.getElementById('cameraDetailsPanel');
-        if (existingPanel) {
-            existingPanel.remove();
+        // Load camera details in sidebar instead of showing a modal
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${properties.id}/details`, { push: true });
+        } else {
+            console.error('Sidebar loading not available');
         }
-
-        const panelHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="cameraDetailsPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Camera Details</h5>
-                    <button type="button" class="btn-close" onclick="closeCameraDetailsPanel()"></button>
-                </div>
-                
-                <div class="alert alert-warning" role="alert">
-                    <i class="fas fa-camera me-2"></i>
-                    <strong>${properties.name}</strong>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Equipment</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">Brand/Model: ${properties.brandModel}</small>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Status</label>
-                    <div class="p-2 border rounded">
-                        <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
-                            ${properties.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Photo Count</label>
-                    <div class="p-2 border rounded bg-light">
-                        <strong class="text-primary">${properties.photoCount}</strong> photos
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Direction</label>
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted">
-                            <i class="fas fa-compass me-1"></i>
-                            <strong>${properties.directionDegrees ? properties.directionDegrees.toFixed(0) : '0'}° (${properties.directionText || 'N'})</strong>
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Location</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">
-                            <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}<br>
-                            <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="d-flex gap-2 flex-column">
-                    <button type="button" class="btn btn-outline-primary" onclick="panToCameraLocation(${lngLat.lng}, ${lngLat.lat}); closeCameraDetailsPanel();">
-                        <i class="fas fa-crosshairs me-1"></i>Focus on Map
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/cameras/${properties.id}/details'">
-                        <i class="fas fa-eye me-1"></i>View Details Page
-                    </button>
-                    <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
-                        <i class="fas fa-images me-1"></i>View Photos
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeCameraDetailsPanel()">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', panelHtml);
-        
-        // Store panel reference globally for potential cleanup
-        window.App._currentCameraPanel = document.getElementById('cameraDetailsPanel');
     }
 
     function setupFeatureDrawing(propertyId) {
@@ -1228,63 +1183,12 @@ window.App = window.App || {};
     function showFeaturePopup(feature, lngLat) {
         const props = feature.properties;
         
-        // Remove any existing feature panel
-        const existingPanel = document.getElementById('featureDetailsPanel');
-        if (existingPanel) {
-            existingPanel.remove();
+        // Load feature details in sidebar instead of showing a modal
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/features/${props.id}/details`, { push: true });
+        } else {
+            console.error('Sidebar loading not available');
         }
-
-        const panelHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureDetailsPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Property Feature</h5>
-                    <button type="button" class="btn-close" onclick="closeFeatureDetailsPanel()"></button>
-                </div>
-                
-                <div class="alert alert-primary" role="alert">
-                    <i class="fas fa-map-marker-alt me-2"></i>
-                    <strong>${props.name}</strong>
-                </div>
-                
-                ${props.notes ? `
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted">${props.notes}</small>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div class="mb-3">
-                    <label class="form-label">Location</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">
-                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}<br>
-                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="d-flex gap-2 flex-column">
-                    <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); closeFeatureDetailsPanel();">
-                        <i class="fas fa-edit me-1"></i>Edit Feature
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); closeFeatureDetailsPanel();">
-                        <i class="fas fa-trash me-1"></i>Delete Feature
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeFeatureDetailsPanel()">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', panelHtml);
-        
-        // Store panel reference globally for potential cleanup
-        window.App._currentFeaturePanel = document.getElementById('featureDetailsPanel');
     }
 
     // Function to close feature panel
@@ -2082,14 +1986,6 @@ window.App = window.App || {};
         window.App.closeCameraModal();
     };
     
-    window.closeFeatureDetailsPanel = function() {
-        window.App.closeFeaturePopup();
-    };
-
-    window.closeCameraDetailsPanel = function() {
-        window.App.closeCameraModal();
-    };
-    
     window.panToCameraLocation = function(lng, lat) {
         window.App.panToCameraLocation(lng, lat);
     };
@@ -2218,4 +2114,160 @@ window.App = window.App || {};
 
     // Expose wireCameraForm function
     window.App.wireCameraForm = wireCameraForm;
+
+    // Function to edit camera using sidebar loading
+    window.App.editCamera = function(propertyId, cameraId) {
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
+        }
+    };
+
+    // Camera-related global functions
+    
+    // Robust editCamera function that will always be available
+    window.handleEditCamera = function(propertyId, cameraId) {
+        console.log('Edit camera clicked:', propertyId, cameraId);
+        
+        // Try to use the App.editCamera function first
+        if (window.App && typeof window.App.editCamera === 'function') {
+            window.App.editCamera(propertyId, cameraId);
+            return;
+        }
+        
+        // Fallback: use sidebar loading directly
+        if (window.App && typeof window.App.loadSidebar === 'function') {
+            window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+            return;
+        }
+        
+        // Ultimate fallback: regular navigation
+        console.warn('No sidebar loading available, using regular navigation');
+        window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
+    };
+
+    // Function to cancel camera edit and return to camera details
+    window.cancelCameraEdit = function(cameraId) {
+        console.log('Cancel camera edit clicked:', cameraId);
+        
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/cameras/${cameraId}/details`;
+        }
+    };
+
+    // Pan to camera location function
+    window.panToCameraLocation = function(lng, lat) {
+        if (window.App && window.App.panToCameraLocation) {
+            window.App.panToCameraLocation(lng, lat);
+        } else {
+            console.log('Pan to camera location:', lng, lat);
+        }
+    };
+
+    // Expose editCamera function globally for backwards compatibility
+    window.editCamera = function(propertyId, cameraId) {
+        window.handleEditCamera(propertyId, cameraId);
+    };
+
+    // Upload-related global functions
+    
+    // Function to handle upload photos using sidebar loading
+    window.handleUploadPhotos = function(cameraId) {
+        console.log('Upload photos clicked:', cameraId);
+        
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${cameraId}/upload`, { push: true });
+        } else {
+            // Fallback to regular navigation
+            window.location.href = `/cameras/${cameraId}/upload`;
+        }
+    };
+
+    // Function to reset upload button state
+    window.resetUploadButton = function() {
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadSpinner = document.getElementById('uploadSpinner');
+        const uploadText = document.getElementById('uploadText');
+        
+        if (uploadBtn) uploadBtn.disabled = false;
+        if (uploadSpinner) uploadSpinner.classList.add('d-none');
+        if (uploadText) uploadText.textContent = 'Upload';
+    };
+
+    // Function to handle upload form submission with proper sidebar integration
+    window.handleUploadFormSubmission = function(form) {
+        const formData = new FormData(form);
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadSpinner = document.getElementById('uploadSpinner');
+        const uploadText = document.getElementById('uploadText');
+        const errorContainer = document.getElementById('errorContainer');
+        
+        // Show loading state
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (uploadSpinner) uploadSpinner.classList.remove('d-none');
+        if (uploadText) uploadText.textContent = 'Uploading...';
+        if (errorContainer) errorContainer.classList.add('d-none');
+        
+        return fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success modal
+                const message = data.photoCount === 1 
+                    ? `${data.photoCount} photo uploaded successfully!`
+                    : `${data.photoCount} photos uploaded successfully!`;
+                
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Upload Successful', message, 'success');
+                } else {
+                    alert(message);
+                }
+                
+                // Navigate back to camera photos view
+                if (window.App && window.App.loadSidebar) {
+                    window.App.loadSidebar(`/cameras/${data.cameraId}/photos`, { push: true });
+                } else {
+                    window.location.href = `/cameras/${data.cameraId}/photos`;
+                }
+            } else {
+                // Show error
+                const errorMessage = data.error || 'Upload failed. Please try again.';
+                if (errorContainer) {
+                    const errorMessageElement = document.getElementById('errorMessage');
+                    if (errorMessageElement) errorMessageElement.textContent = errorMessage;
+                    errorContainer.classList.remove('d-none');
+                } else if (window.App && window.App.showModal) {
+                    window.App.showModal('Upload Error', errorMessage, 'error');
+                } else {
+                    alert('Error: ' + errorMessage);
+                }
+                window.resetUploadButton();
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            const errorMessage = 'Upload failed. Please try again.';
+            if (errorContainer) {
+                const errorMessageElement = document.getElementById('errorMessage');
+                if (errorMessageElement) errorMessageElement.textContent = errorMessage;
+                errorContainer.classList.remove('d-none');
+            } else if (window.App && window.App.showModal) {
+                window.App.showModal('Upload Error', errorMessage, 'error');
+            } else {
+                alert('Error: ' + errorMessage);
+            }
+            window.resetUploadButton();
+        });
+    };
 })();

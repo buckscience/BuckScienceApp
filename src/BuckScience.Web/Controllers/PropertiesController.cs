@@ -487,7 +487,31 @@ public class PropertiesController : Controller
         return filters.HasAnyFilters ? filters : null;
     }
 
+    // FEATURE DETAILS: GET /features/{id}/details
+    [HttpGet("/features/{id:int}/details")]
+    public async Task<IActionResult> FeatureDetails([FromRoute] int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
 
+        var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(id, _db, _currentUser.Id.Value, ct);
+        if (feature is null) return NotFound();
+
+        var vm = new PropertyFeatureVm
+        {
+            Id = feature.Id,
+            Type = feature.ClassificationType,
+            Category = FeatureHelper.GetCategory(feature.ClassificationType),
+            Name = feature.Name ?? GetFeatureName(feature.ClassificationType),
+            TypeName = GetFeatureName(feature.ClassificationType),
+            Description = GetFeatureDescription(feature.ClassificationType),
+            Icon = GetFeatureIcon(feature.ClassificationType),
+            GeometryWkt = feature.GeometryWkt,
+            Notes = feature.Notes,
+            CreatedAt = feature.CreatedAt
+        };
+
+        return View("FeatureDetails", vm);
+    }
 
     private void PopulateTimeZones(PropertyCreateVm vm)
     {
