@@ -11,64 +11,53 @@
     
     string GetDurationString(TimeSpan duration)
     {
-        if (duration.TotalDays >= 1)
-            return $"{(int)duration.TotalDays} day{((int)duration.TotalDays == 1 ? "" : "s")}, {duration.Hours}h";
-        else if (duration.TotalHours >= 1)
-            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
-        else
-            return $"{(int)duration.TotalMinutes} minute{((int)duration.TotalMinutes == 1 ? "" : "s")}";
+        int days = (int)duration.TotalDays;
+        return $"{days} day{(days == 1 ? "" : "s")}";
     }
+
 }
 
 <div class="camera-details">
     <!-- Header with Back Button -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="sidebar-title">@Model.Name</h2>
         <a href="/properties/@Model.PropertyId/details" class="btn btn-custom-cancel btn-sm">
             <i class="fas fa-arrow-left"></i> Back to Property
         </a>
     </div>
-    <hr class="sidebar-title-separator mb-4" />
 
     <!-- Camera Summary Card -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-camera fa-lg text-custom-primary me-2"></i>
-                    <h5 class="mb-0">Camera Information</h5>
-                </div>
+
+            <!-- Camera Name & Status -->
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="card-title mb-0">@Model.Name</h2>
                 <span class="badge @(Model.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
                     @(Model.IsActive ? "Active" : "Inactive")
                 </span>
             </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="text-muted small d-block">Location</label>
-                    <p class="mb-0 small">
-                        <i class="fas fa-map-marker-alt text-custom-primary me-1"></i>
-                        @Model.Latitude.ToString("F4"), @Model.Longitude.ToString("F4")
-                    </p>
+            <!-- Brand / Model -->
+            <small class="text-muted d-block mb-3">
+                @Model.Brand / @(string.IsNullOrEmpty(Model.Model) ? "-" : Model.Model)
+            </small>
+
+            <!-- Info Section (stacked mini-containers) -->
+            <div class="d-flex flex-column gap-2">
+
+                <!-- Coordinates -->
+                <div class="bg-light rounded p-2 d-flex align-items-start">
+                    <i class="fas fa-map-marker-alt text-custom-primary me-2 mt-1"></i>
+                    <div class="small text-muted">
+                        <strong>Coordinates:</strong> @Model.Latitude.ToString("F4"), @Model.Longitude.ToString("F4")
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="text-muted small d-block">Direction</label>
-                    <p class="mb-0 small">
-                        <i class="fas fa-compass text-custom-primary me-1"></i>
-                        @Model.DirectionDegrees.ToString("F0")° (@GetDirectionName(Model.DirectionDegrees))
-                    </p>
-                </div>
-            </div>
-            
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="text-muted small d-block">Brand/Model</label>
-                    <p class="mb-0 small">@Model.Brand/@(string.IsNullOrEmpty(Model.Model) ? "-" : Model.Model)</p>
-                </div>
-                <div class="col-md-6">
-                    <label class="text-muted small d-block">Time at Current Location</label>
-                    <p class="mb-0 small">
-                        <i class="fas fa-clock text-custom-primary me-1"></i>
+
+                <!-- Time at Current Location -->
+                <div class="bg-light rounded p-2 d-flex align-items-start">
+                    <i class="fas fa-clock text-custom-primary me-2 mt-1"></i>
+                    <div class="small text-muted">
+                        <strong>Current Location:</strong>
                         @if (Model.TimeAtCurrentLocation.HasValue)
                         {
                             @GetDurationString(Model.TimeAtCurrentLocation.Value)
@@ -77,11 +66,24 @@
                         {
                             <span class="text-muted">Unknown</span>
                         }
-                    </p>
+                    </div>
                 </div>
+
+                <!-- Direction -->
+                <div class="bg-light rounded p-2 d-flex align-items-start">
+                    <i class="fas fa-compass text-custom-primary me-2 mt-1"></i>
+                    <div class="small text-muted">
+                        <strong>Camera Direction:</strong> Facing @GetDirectionName(Model.DirectionDegrees)
+                        <span class="text-muted small">
+                            (@Model.DirectionDegrees.ToString("F0")°)
+                        </span>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="d-flex gap-2 mt-2">
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 mt-3">
                 <a href="/properties/@Model.PropertyId/cameras/@Model.Id/edit" class="btn btn-sm btn-outline-primary flex-fill">
                     <i class="fas fa-edit me-1"></i> Edit Camera
                 </a>
@@ -90,46 +92,9 @@
                 </a>
             </div>
 
-
         </div>
     </div>
 
-    <!-- Photos Section -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-images fa-lg text-custom-primary me-2"></i>
-                    <h5 class="mb-0">Photos</h5>
-                </div>
-                <span class="badge badge-custom-primary">@Model.PhotoCount</span>
-            </div>
-
-            @if (Model.PhotoCount == 0)
-            {
-                <div class="text-center py-3">
-                    <p class="text-muted">No photos uploaded to this camera yet.</p>
-                    <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary btn-sm">Upload First Photos</a>
-                </div>
-            }
-            else
-            {
-                <div class="d-grid">
-                    <a href="/properties/@Model.PropertyId/photos?cameras=@Model.Id" class="btn btn-outline-primary">
-                        <i class="fas fa-images me-2"></i>View All Photos from @Model.Name
-                    </a>
-                </div>
-            }
-        </div>
-    </div>
-
-    <!-- Advanced Options -->
-    <div class="d-flex justify-content-end">
-        <a href="/properties/@Model.PropertyId/cameras/@Model.Id/delete" class="btn btn-outline-danger btn-sm">
-            <i class="fas fa-trash me-1"></i> Delete Camera
-        </a>
-    </div>
-</div>
 
 @section Scripts {
     <script>
