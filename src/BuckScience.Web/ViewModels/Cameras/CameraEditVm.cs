@@ -36,6 +36,10 @@ public class CameraEditVm
 
     public bool IsActive { get; set; }
 
+    // Property coordinates for map centering (not editable by user)
+    public double PropertyLatitude { get; set; }
+    public double PropertyLongitude { get; set; }
+
     // Helper method to sync DirectionDegrees from DirectionSelection
     public void SyncDirectionFromSelection()
     {

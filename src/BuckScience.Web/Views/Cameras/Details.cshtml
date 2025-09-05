@@ -82,9 +82,9 @@
             </div>
 
             <div class="d-flex gap-2 mt-2">
-                <a href="/properties/@Model.PropertyId/cameras/@Model.Id/edit" class="btn btn-sm btn-outline-primary flex-fill">
+                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="editCamera(@Model.PropertyId, @Model.Id)">
                     <i class="fas fa-edit me-1"></i> Edit Camera
-                </a>
+                </button>
                 <a href="/cameras/@Model.Id/upload" class="btn btn-sm btn-custom-primary flex-fill">
                     <i class="fas fa-upload me-1"></i> Upload Photos
                 </a>
@@ -139,6 +139,16 @@
                 window.App.panToCameraLocation(lng, lat);
             } else {
                 console.log('Pan to camera location:', lng, lat);
+            }
+        };
+
+        // Function to edit camera using sidebar loading
+        window.editCamera = function(propertyId, cameraId) {
+            if (window.App && window.App.loadSidebar) {
+                window.App.loadSidebar(`/properties/${propertyId}/cameras/${cameraId}/edit`, { push: true });
+            } else {
+                // Fallback to regular navigation
+                window.location.href = `/properties/${propertyId}/cameras/${cameraId}/edit`;
             }
         };
 
