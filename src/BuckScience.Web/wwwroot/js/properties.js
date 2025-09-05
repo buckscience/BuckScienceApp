@@ -973,90 +973,12 @@ window.App = window.App || {};
     function showCameraPopup(camera, lngLat) {
         const properties = camera.properties;
         
-        // Remove any existing camera panel
-        const existingPanel = document.getElementById('cameraDetailsPanel');
-        if (existingPanel) {
-            existingPanel.remove();
+        // Load camera details in sidebar instead of showing a modal
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/cameras/${properties.id}/details`, { push: true });
+        } else {
+            console.error('Sidebar loading not available');
         }
-
-        const panelHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="cameraDetailsPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Camera Details</h5>
-                    <button type="button" class="btn-close" onclick="closeCameraDetailsPanel()"></button>
-                </div>
-                
-                <div class="alert alert-warning" role="alert">
-                    <i class="fas fa-camera me-2"></i>
-                    <strong>${properties.name}</strong>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Equipment</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">Brand/Model: ${properties.brandModel}</small>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Status</label>
-                    <div class="p-2 border rounded">
-                        <span class="badge ${properties.isActive ? 'bg-success' : 'bg-secondary'}">
-                            ${properties.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Photo Count</label>
-                    <div class="p-2 border rounded bg-light">
-                        <strong class="text-primary">${properties.photoCount}</strong> photos
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Direction</label>
-                    <div class="p-2 border rounded bg-light">
-                        <span class="text-muted">
-                            <i class="fas fa-compass me-1"></i>
-                            <strong>${properties.directionDegrees ? properties.directionDegrees.toFixed(0) : '0'}° (${properties.directionText || 'N'})</strong>
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Location</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">
-                            <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}<br>
-                            <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="d-flex gap-2 flex-column">
-                    <button type="button" class="btn btn-outline-primary" onclick="panToCameraLocation(${lngLat.lng}, ${lngLat.lat}); closeCameraDetailsPanel();">
-                        <i class="fas fa-crosshairs me-1"></i>Focus on Map
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='/cameras/${properties.id}/details'">
-                        <i class="fas fa-eye me-1"></i>View Details Page
-                    </button>
-                    <button type="button" class="btn btn-outline-warning" onclick="window.location.href='/cameras/${properties.id}/photos'">
-                        <i class="fas fa-images me-1"></i>View Photos
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeCameraDetailsPanel()">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', panelHtml);
-        
-        // Store panel reference globally for potential cleanup
-        window.App._currentCameraPanel = document.getElementById('cameraDetailsPanel');
     }
 
     function setupFeatureDrawing(propertyId) {
@@ -1228,63 +1150,12 @@ window.App = window.App || {};
     function showFeaturePopup(feature, lngLat) {
         const props = feature.properties;
         
-        // Remove any existing feature panel
-        const existingPanel = document.getElementById('featureDetailsPanel');
-        if (existingPanel) {
-            existingPanel.remove();
+        // Load feature details in sidebar instead of showing a modal
+        if (window.App && window.App.loadSidebar) {
+            window.App.loadSidebar(`/features/${props.id}/details`, { push: true });
+        } else {
+            console.error('Sidebar loading not available');
         }
-
-        const panelHtml = `
-            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureDetailsPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Property Feature</h5>
-                    <button type="button" class="btn-close" onclick="closeFeatureDetailsPanel()"></button>
-                </div>
-                
-                <div class="alert alert-primary" role="alert">
-                    <i class="fas fa-map-marker-alt me-2"></i>
-                    <strong>${props.name}</strong>
-                </div>
-                
-                ${props.notes ? `
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted">${props.notes}</small>
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <div class="mb-3">
-                    <label class="form-label">Location</label>
-                    <div class="p-2 border rounded bg-light">
-                        <small class="text-muted">
-                            <strong>Latitude:</strong> ${lngLat.lat.toFixed(6)}<br>
-                            <strong>Longitude:</strong> ${lngLat.lng.toFixed(6)}
-                        </small>
-                    </div>
-                </div>
-                
-                <div class="d-flex gap-2 flex-column">
-                    <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(${props.id}); closeFeatureDetailsPanel();">
-                        <i class="fas fa-edit me-1"></i>Edit Feature
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(${props.id}); closeFeatureDetailsPanel();">
-                        <i class="fas fa-trash me-1"></i>Delete Feature
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeFeatureDetailsPanel()">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Add panel to DOM
-        document.body.insertAdjacentHTML('beforeend', panelHtml);
-        
-        // Store panel reference globally for potential cleanup
-        window.App._currentFeaturePanel = document.getElementById('featureDetailsPanel');
     }
 
     // Function to close feature panel
