@@ -1,6 +1,6 @@
-@model BuckScience.Web.ViewModels.Properties.PropertyFeatureEditVm
+@model BuckScience.Web.ViewModels.Properties.PropertyFeatureVm
 @{
-    ViewData["Title"] = $"Edit Feature";
+    ViewData["Title"] = $"Edit {Model.Name} - Feature";
 }
 
 <div class="feature-edit" style="max-width: 350px;">
@@ -20,27 +20,36 @@
     </div>
 
     <!-- Edit Form -->
-    <form asp-action="FeatureEdit" method="post" data-ajax="true">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Id" />
-        <input type="hidden" asp-for="GeometryWkt" />
-
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
+    <form id="featureEditForm">
         <div class="mb-3">
-            <label asp-for="Name" class="form-label">Feature Name</label>
-            <input asp-for="Name" class="form-control" 
+            <label for="editFeatureName" class="form-label">Feature Name</label>
+            <input type="text" class="form-control" id="editFeatureName" 
                    placeholder="Custom name (optional)" 
-                   maxlength="100" />
-            <span asp-validation-for="Name" class="text-danger"></span>
+                   value="@Model?.Name"
+                   maxlength="100">
             <small class="text-muted">Leave blank for default type name</small>
         </div>
 
         <div class="mb-3">
-            <label asp-for="Type" class="form-label">Feature Type</label>
-            <select asp-for="Type" asp-items="ViewBag.FeatureTypeOptions" class="form-select" id="editFeatureType" required>
+            <label for="editFeatureType" class="form-label">Feature Type</label>
+            <select class="form-select" id="editFeatureType" required>
+                @if (ViewBag.FeatureTypeOptions != null)
+                {
+                    @foreach (var option in ViewBag.FeatureTypeOptions)
+                    {
+                        var isSelected = Model?.Type.ToString() == option.Value;
+                        <option value="@option.Value" selected="@isSelected">@option.Text</option>
+                    }
+                }
+                else
+                {
+                    <option value="">Loading feature types...</option>
+                    @if (Model?.Type != null)
+                    {
+                        <option value="@Model.Type" selected>@Model.TypeName</option>
+                    }
+                }
             </select>
-            <span asp-validation-for="Type" class="text-danger"></span>
         </div>
 
         <div class="mb-3" style="display: none;">
@@ -51,37 +60,36 @@
         </div>
 
         <div class="mb-4">
-            <label asp-for="Notes" class="form-label">Notes</label>
-            <textarea asp-for="Notes" class="form-control" rows="3" 
-                      placeholder="Add notes..."></textarea>
-            <span asp-validation-for="Notes" class="text-danger"></span>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-4 d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary" onclick="cancelFeatureEdit()">
-                Cancel
-            </button>
-            <button type="submit" class="btn btn-custom-primary">
-                <i class="fas fa-save me-1"></i>Save Changes
-            </button>
+            <label for="editFeatureNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="editFeatureNotes" rows="3" 
+                      placeholder="Add notes...">@Model?.Notes</textarea>
         </div>
     </form>
+
+    <!-- Action Buttons -->
+    <div class="mt-4 d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="cancelFeatureEdit()">
+            Cancel
+        </button>
+        <button type="button" class="btn btn-custom-primary" onclick="saveFeatureEdit(@Model.Id)">
+            <i class="fas fa-save me-1"></i>Save Changes
+        </button>
+    </div>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    
     <script>
         const FEATURE_ID = @Model.Id;
         
         async function loadFeatureData() {
             try {
+                console.log('=== LOADING FEATURE DATA ===');
                 console.log('Loading feature data for ID:', FEATURE_ID);
                 const response = await fetch(`/features/${FEATURE_ID}`);
                 
+                console.log('API response status:', response.status);
                 if (!response.ok) {
-                    throw new Error(`Failed to load feature data: ${response.status}`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 
                 const featureData = await response.json();
@@ -94,29 +102,27 @@
         }
 
         function populateForm(featureData) {
-            // Update geometry WKT in hidden field (required for editing)
-            const geometryInput = document.querySelector('input[name="GeometryWkt"]');
-            if (geometryInput && featureData) {
-                const geometryWkt = featureData.geometryWkt || featureData.GeometryWkt || '';
-                geometryInput.value = geometryWkt;
-                console.log('Updated geometry WKT in form');
-            }
-
+            console.log('=== POPULATING FORM ===');
+            console.log('Feature data:', featureData);
+            
             // Update geometry type display
             const geometryDisplay = document.getElementById('geometryTypeDisplay');
             if (geometryDisplay && featureData) {
                 const geometryWkt = featureData.geometryWkt || featureData.GeometryWkt || '';
                 const geometryType = geometryWkt.split('(')[0] || 'Unknown';
                 geometryDisplay.textContent = geometryType;
+                console.log('Updated geometry type display:', geometryType);
             }
         }
 
         async function initializeFeatureEdit() {
+            console.log('=== INITIALIZING FEATURE EDIT ===');
             console.log('Initializing feature edit for ID:', FEATURE_ID);
             
             // Focus on the feature being edited
             if (window.App && window.App.focusPropertyFeature) {
                 window.App.focusPropertyFeature(FEATURE_ID);
+                console.log('Focused on property feature');
             }
 
             // Load fresh feature data from API
@@ -130,6 +136,7 @@
             if (window.App) {
                 window.App._editingFeature = featureData;
                 window.App._editingFeatureId = FEATURE_ID;
+                console.log('Stored editing feature data');
             }
 
             // Populate form with loaded data
@@ -138,25 +145,31 @@
             // Enable geometry editing for the feature
             setTimeout(() => {
                 if (typeof window.enableGeometryEditing === 'function') {
+                    console.log('Enabling geometry editing...');
                     const normalizedFeature = {
                         ...featureData,
                         geometryWkt: featureData.geometryWkt || featureData.GeometryWkt
                     };
                     window.enableGeometryEditing(normalizedFeature);
-                    console.log('Enabled geometry editing');
+                    console.log('Enabled geometry editing for feature:', normalizedFeature);
+                } else {
+                    console.warn('enableGeometryEditing function not available');
                 }
             }, 500);
         }
 
         // Initialize when DOM is ready
         function startInitialization() {
+            console.log('=== STARTING INITIALIZATION ===');
             // Wait for elements to be available
             const waitForElements = () => {
                 const typeSelect = document.getElementById('editFeatureType');
                 
                 if (typeSelect) {
+                    console.log('Feature type select found, starting initialization');
                     initializeFeatureEdit();
                 } else {
+                    console.log('Waiting for feature type select...');
                     setTimeout(waitForElements, 50);
                 }
             };
@@ -172,18 +185,11 @@
 
         // Handle sidebar load events
         document.addEventListener('sidebar:loaded', function(event) {
+            console.log('Sidebar loaded event:', event.detail);
             if (event.detail && event.detail.url && event.detail.url.includes(`/features/${FEATURE_ID}/edit`)) {
+                console.log('Sidebar loaded for feature edit, reinitializing...');
                 setTimeout(startInitialization, 100);
             }
         });
-
-        // Update geometry WKT when geometry changes (called by map editing functions)
-        window.updateFeatureGeometry = function(newGeometryWkt) {
-            const geometryInput = document.querySelector('input[name="GeometryWkt"]');
-            if (geometryInput) {
-                geometryInput.value = newGeometryWkt;
-                console.log('Updated geometry WKT:', newGeometryWkt.substring(0, 50) + '...');
-            }
-        };
     </script>
 }

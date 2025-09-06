@@ -208,6 +208,8 @@ public class PropertiesController : Controller
 
     private static string GetFeatureIcon(ClassificationType type) => FeatureHelper.GetFeatureIcon(type);
 
+    private static FeatureCategory GetFeatureCategory(ClassificationType type) => FeatureHelper.GetCategory(type);
+
     // PHOTOS: GET /properties/{id}/photos
     [HttpGet]
     [Route("/properties/{id:int}/photos")]
@@ -522,69 +524,23 @@ public class PropertiesController : Controller
         var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(id, _db, _currentUser.Id.Value, ct);
         if (feature is null) return NotFound();
 
-        var vm = new PropertyFeatureEditVm
+        var vm = new PropertyFeatureVm
         {
             Id = feature.Id,
             Type = feature.ClassificationType,
+            Category = GetFeatureCategory(feature.ClassificationType),
             Name = feature.Name,
+            TypeName = GetFeatureName(feature.ClassificationType),
+            Description = GetFeatureDescription(feature.ClassificationType),
+            Icon = GetFeatureIcon(feature.ClassificationType),
             GeometryWkt = feature.GeometryWkt,
-            Notes = feature.Notes
+            Notes = feature.Notes,
+            CreatedAt = feature.CreatedAt
         };
 
         PopulateFeatureTypeSelectList();
 
         return View("FeatureEdit", vm);
-    }
-
-    // FEATURE EDIT: POST /features/{id}/edit
-    [HttpPost("/features/{id:int}/edit")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> FeatureEdit([FromRoute] int id, PropertyFeatureEditVm vm, CancellationToken ct = default)
-    {
-        if (!ModelState.IsValid)
-        {
-            PopulateFeatureTypeSelectList();
-            return View("FeatureEdit", vm);
-        }
-
-        if (_currentUser.Id is null) return Forbid();
-
-        if (vm.Id != id)
-            return BadRequest("Route and model identifiers mismatch.");
-
-        var ok = await UpdatePropertyFeature.HandleAsync(
-            new UpdatePropertyFeature.Command(
-                id,
-                vm.Type,
-                vm.GeometryWkt,
-                vm.Name,
-                vm.Notes),
-            _db,
-            _geometryFactory,
-            _currentUser.Id.Value,
-            ct);
-
-        if (!ok) return NotFound();
-
-        TempData["UpdatedId"] = id;
-        
-        // Check if this is an AJAX/sidebar request
-        if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-        {
-            // For AJAX requests (sidebar), redirect to feature details
-            return RedirectToAction("FeatureDetails", new { id });
-        }
-        
-        // For regular requests, redirect to property details
-        // We need to get the property ID from the feature
-        var feature = await GetPropertyFeature.HandleAsync(id, _db, _currentUser.Id.Value, ct);
-        if (feature != null)
-        {
-            return RedirectToAction("Details", new { id = feature.PropertyId });
-        }
-        
-        // Fallback - redirect to properties index
-        return RedirectToAction("Index");
     }
 
     private void PopulateTimeZones(PropertyCreateVm vm)
