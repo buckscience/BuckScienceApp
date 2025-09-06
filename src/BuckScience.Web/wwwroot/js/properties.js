@@ -190,15 +190,13 @@ window.App = window.App || {};
             if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 14) });
         }
 
-        // Initialize camera coordinates from inputs or property center
+        // Initialize camera coordinates from inputs only if they exist
         const currentLat = parseFloat(latInput.value);
         const currentLng = parseFloat(lngInput.value);
         if (Number.isFinite(currentLat) && Number.isFinite(currentLng) && (currentLat !== 0 || currentLng !== 0)) {
             setCoords(currentLat, currentLng);
-        } else {
-            // Default to property center
-            setCoords(propertyCoords.lat, propertyCoords.lng);
         }
+        // Don't automatically set to property center to avoid map movement
 
         // Marker drag updates inputs
         if (marker._onDragEnd) marker.off('dragend', marker._onDragEnd);
