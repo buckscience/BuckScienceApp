@@ -89,6 +89,12 @@
                     <i class="fas fa-upload me-1"></i> Upload Photos
                 </a>
             </div>
+            
+            <div class="d-grid mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="if(window.currentCameraCoords) panToCameraLocation(window.currentCameraCoords.lng, window.currentCameraCoords.lat)">
+                    <i class="fas fa-crosshairs me-1"></i> Focus on Map
+                </button>
+            </div>
 
 
         </div>
@@ -142,33 +148,10 @@
             }
         };
 
-        // Initialize camera details when page loads (for sidebar loads)
-        document.addEventListener('DOMContentLoaded', function() {
-            // If this is loaded via sidebar, pan to camera location automatically
-            const cameraLat = @Model.Latitude;
-            const cameraLng = @Model.Longitude;
-            
-            // Small delay to ensure everything is initialized
-            setTimeout(() => {
-                if (window.App && window.App.panToCameraLocation) {
-                    window.App.panToCameraLocation(cameraLng, cameraLat);
-                }
-            }, 100);
-        });
-
-        // Also handle sidebar load events
-        document.addEventListener('sidebar:loaded', function(event) {
-            // If this is a camera details page loaded in sidebar, pan to camera
-            if (event.detail && event.detail.url && event.detail.url.includes('/cameras/') && event.detail.url.includes('/details')) {
-                const cameraLat = @Model.Latitude;
-                const cameraLng = @Model.Longitude;
-                
-                setTimeout(() => {
-                    if (window.App && window.App.panToCameraLocation) {
-                        window.App.panToCameraLocation(cameraLng, cameraLat);
-                    }
-                }, 300);
-            }
-        });
+        // Store camera coordinates for manual focus button (removed auto-pan)
+        window.currentCameraCoords = {
+            lat: @Model.Latitude,
+            lng: @Model.Longitude
+        };
     </script>
 }

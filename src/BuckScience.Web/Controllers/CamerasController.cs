@@ -204,6 +204,8 @@ public class CamerasController : Controller
 
         ViewBag.PropertyId = propertyId;
         ViewBag.PropertyName = result.Property.Name;
+        ViewBag.PropertyLatitude = result.Property.Latitude;
+        ViewBag.PropertyLongitude = result.Property.Longitude;
 
         var vm = new CameraEditVm
         {

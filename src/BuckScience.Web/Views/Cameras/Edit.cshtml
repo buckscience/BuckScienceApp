@@ -17,46 +17,45 @@
         <span asp-validation-for="Name" class="text-danger"></span>
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-6">
-            <label asp-for="Brand" class="form-label"></label>
-            <input asp-for="Brand" class="form-control" />
-            <span asp-validation-for="Brand" class="text-danger"></span>
-        </div>
-        <div class="col-md-6">
-            <label asp-for="Model" class="form-label"></label>
-            <input asp-for="Model" class="form-control" />
-            <span asp-validation-for="Model" class="text-danger"></span>
-        </div>
+    <div class="mb-3">
+        <label asp-for="Brand" class="form-label"></label>
+        <input asp-for="Brand" class="form-control" />
+        <span asp-validation-for="Brand" class="text-danger"></span>
     </div>
 
-    <div class="row g-3 mt-1">
-        <div class="col-md-4">
-            <label asp-for="Latitude" class="form-label"></label>
-            <input asp-for="Latitude" class="form-control" step="any" />
-            <span asp-validation-for="Latitude" class="text-danger"></span>
-        </div>
-        <div class="col-md-4">
-            <label asp-for="Longitude" class="form-label"></label>
-            <input asp-for="Longitude" class="form-control" step="any" />
-            <span asp-validation-for="Longitude" class="text-danger"></span>
-        </div>
-        <div class="col-md-4">
-            <label asp-for="DirectionSelection" class="form-label">Direction</label>
-            <select asp-for="DirectionSelection" class="form-select">
-                <option value="N">North (0°)</option>
-                <option value="NE">Northeast (45°)</option>
-                <option value="E">East (90°)</option>
-                <option value="SE">Southeast (135°)</option>
-                <option value="S">South (180°)</option>
-                <option value="SW">Southwest (225°)</option>
-                <option value="W">West (270°)</option>
-                <option value="NW">Northwest (315°)</option>
-            </select>
-            <span asp-validation-for="DirectionSelection" class="text-danger"></span>
-            <div class="form-text">Choose the direction the camera is pointing</div>
-            <input asp-for="DirectionDegrees" type="hidden" />
-        </div>
+    <div class="mb-3">
+        <label asp-for="Model" class="form-label"></label>
+        <input asp-for="Model" class="form-control" />
+        <span asp-validation-for="Model" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Latitude" class="form-label"></label>
+        <input asp-for="Latitude" class="form-control" step="any" />
+        <span asp-validation-for="Latitude" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Longitude" class="form-label"></label>
+        <input asp-for="Longitude" class="form-control" step="any" />
+        <span asp-validation-for="Longitude" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="DirectionSelection" class="form-label">Direction</label>
+        <select asp-for="DirectionSelection" class="form-select">
+            <option value="N">North (0°)</option>
+            <option value="NE">Northeast (45°)</option>
+            <option value="E">East (90°)</option>
+            <option value="SE">Southeast (135°)</option>
+            <option value="S">South (180°)</option>
+            <option value="SW">Southwest (225°)</option>
+            <option value="W">West (270°)</option>
+            <option value="NW">Northwest (315°)</option>
+        </select>
+        <span asp-validation-for="DirectionSelection" class="text-danger"></span>
+        <div class="form-text">Choose the direction the camera is pointing</div>
+        <input asp-for="DirectionDegrees" type="hidden" />
     </div>
 
     <div class="form-check form-switch mt-3">
@@ -72,4 +71,33 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Expose property coordinates to JavaScript for map centering
+        window.App = window.App || {};
+        window.App.propertyCoords = {
+            lat: @ViewBag.PropertyLatitude,
+            lng: @ViewBag.PropertyLongitude
+        };
+
+        // Wire up camera form when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof App !== 'undefined' && App.wireCameraForm) {
+                    const container = document.getElementById('sidebar-content') || document.body;
+                    App.wireCameraForm(container);
+                }
+            }, 500); // Give the map time to initialize
+        });
+
+        // Also wire up when sidebar loads (for AJAX navigation)
+        document.addEventListener('sidebar:loaded', function() {
+            setTimeout(function() {
+                if (typeof App !== 'undefined' && App.wireCameraForm) {
+                    const container = document.getElementById('sidebar-content') || document.body;
+                    App.wireCameraForm(container);
+                }
+            }, 500);
+        });
+    </script>
 }
