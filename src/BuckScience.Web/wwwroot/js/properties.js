@@ -894,17 +894,25 @@ window.App = window.App || {};
                         // Add click event to marker
                         markerElement.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            showCameraPopup({
-                                properties: {
-                                    id: camera.id,
-                                    name: camera.name,
-                                    isActive: camera.isActive,
-                                    photoCount: camera.photoCount,
-                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : ''),
-                                    directionDegrees: camera.directionDegrees,
-                                    directionText: compassDirection
-                                }
-                            }, { lng: camera.longitude, lat: camera.latitude });
+                            // Load camera details in the sidebar instead of showing floating panel
+                            if (window.App.loadSidebar) {
+                                const cameraDetailsUrl = `/cameras/${camera.id}/details`;
+                                console.log('Loading camera details in sidebar:', cameraDetailsUrl);
+                                window.App.loadSidebar(cameraDetailsUrl, { push: false });
+                            } else {
+                                // Fallback to the floating panel if sidebar loader is not available
+                                showCameraPopup({
+                                    properties: {
+                                        id: camera.id,
+                                        name: camera.name,
+                                        isActive: camera.isActive,
+                                        photoCount: camera.photoCount,
+                                        brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : ''),
+                                        directionDegrees: camera.directionDegrees,
+                                        directionText: compassDirection
+                                    }
+                                }, { lng: camera.longitude, lat: camera.latitude });
+                            }
                         });
 
                         // Store marker reference for cleanup
