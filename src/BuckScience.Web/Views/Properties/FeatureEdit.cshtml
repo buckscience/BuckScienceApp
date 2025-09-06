@@ -138,15 +138,30 @@
             console.log('✓ Set feature name to:', nameInput.value);
 
             // Populate feature type options and select current type
-            if (window.FeatureUtils && classificationType) {
+            if (window.FeatureUtils) {
+                // Generate all feature type options with current type selected
                 typeSelect.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(classificationType);
-                console.log('✓ Populated feature type options using FeatureUtils, selected:', classificationType);
-            } else if (classificationType) {
-                // Fallback if FeatureUtils not available
-                typeSelect.innerHTML = `<option value="${classificationType}" selected>Feature Type ${classificationType}</option>`;
-                console.log('⚠ Used fallback option for feature type:', classificationType);
+                console.log('✓ Populated ALL feature type options using FeatureUtils, selected:', classificationType);
+                console.log('✓ Feature type dropdown now has', typeSelect.options.length, 'options');
             } else {
-                console.error('✗ No classification type available');
+                console.error('✗ FeatureUtils not available - attempting to load it');
+                // Try to load FeatureUtils and retry
+                setTimeout(() => {
+                    if (window.FeatureUtils) {
+                        typeSelect.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(classificationType);
+                        console.log('✓ Populated feature type options on retry, selected:', classificationType);
+                        console.log('✓ Feature type dropdown now has', typeSelect.options.length, 'options');
+                    } else {
+                        // Ultimate fallback - at least show current type
+                        if (classificationType) {
+                            typeSelect.innerHTML = `<option value="${classificationType}" selected>Feature Type ${classificationType}</option>`;
+                            console.log('⚠ Used fallback - only current feature type available');
+                        } else {
+                            typeSelect.innerHTML = '<option value="">Unable to load feature types</option>';
+                            console.error('✗ FeatureUtils still not available and no classification type');
+                        }
+                    }
+                }, 500);
             }
 
             // Populate notes
@@ -239,28 +254,31 @@
             console.log('=== STARTING INITIALIZATION ===');
             console.log('Current time:', new Date().toISOString());
             console.log('Document ready state:', document.readyState);
+            console.log('FeatureUtils available:', !!window.FeatureUtils);
             
-            // Wait for elements to be available
-            const waitForElements = () => {
+            // Wait for elements AND dependencies to be available
+            const waitForElementsAndDependencies = () => {
                 const nameInput = document.getElementById('editFeatureName');
                 const typeSelect = document.getElementById('editFeatureType');
                 const notesTextarea = document.getElementById('editFeatureNotes');
+                const featureUtilsAvailable = !!window.FeatureUtils;
                 
-                if (nameInput && typeSelect && notesTextarea) {
-                    console.log('✓ All form elements found, initializing...');
+                if (nameInput && typeSelect && notesTextarea && featureUtilsAvailable) {
+                    console.log('✓ All form elements and dependencies found, initializing...');
                     initializeFeatureEdit();
                 } else {
-                    console.log('⏳ Form elements not ready yet, retrying in 50ms...');
+                    console.log('⏳ Form elements or dependencies not ready yet, retrying in 50ms...');
                     console.log('Elements status:', {
                         nameInput: !!nameInput,
                         typeSelect: !!typeSelect,
-                        notesTextarea: !!notesTextarea
+                        notesTextarea: !!notesTextarea,
+                        featureUtils: featureUtilsAvailable
                     });
-                    setTimeout(waitForElements, 50);
+                    setTimeout(waitForElementsAndDependencies, 50);
                 }
             };
             
-            waitForElements();
+            waitForElementsAndDependencies();
         }
 
         // Initialize when DOM is ready
