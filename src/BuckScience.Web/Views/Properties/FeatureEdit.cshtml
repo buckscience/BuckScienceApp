@@ -38,8 +38,7 @@
 
         <div class="mb-3">
             <label asp-for="Type" class="form-label">Feature Type</label>
-            <select asp-for="Type" class="form-select" id="editFeatureType" required>
-                <option value="">Loading feature types...</option>
+            <select asp-for="Type" asp-items="ViewBag.FeatureTypeOptions" class="form-select" id="editFeatureType" required>
             </select>
             <span asp-validation-for="Type" class="text-danger"></span>
         </div>
@@ -102,14 +101,6 @@
                 geometryInput.value = geometryWkt;
                 console.log('Updated geometry WKT in form');
             }
-            
-            // Populate feature type options
-            const typeSelect = document.getElementById('editFeatureType');
-            if (typeSelect && window.FeatureUtils) {
-                const currentType = featureData.classificationType || featureData.ClassificationType;
-                typeSelect.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(currentType);
-                console.log('Populated feature type options, selected:', currentType);
-            }
 
             // Update geometry type display
             const geometryDisplay = document.getElementById('geometryTypeDisplay');
@@ -159,19 +150,18 @@
 
         // Initialize when DOM is ready
         function startInitialization() {
-            // Wait for elements AND dependencies to be available
-            const waitForElementsAndDependencies = () => {
+            // Wait for elements to be available
+            const waitForElements = () => {
                 const typeSelect = document.getElementById('editFeatureType');
-                const featureUtilsAvailable = !!window.FeatureUtils;
                 
-                if (typeSelect && featureUtilsAvailable) {
+                if (typeSelect) {
                     initializeFeatureEdit();
                 } else {
-                    setTimeout(waitForElementsAndDependencies, 50);
+                    setTimeout(waitForElements, 50);
                 }
             };
             
-            waitForElementsAndDependencies();
+            waitForElements();
         }
 
         if (document.readyState === 'loading') {

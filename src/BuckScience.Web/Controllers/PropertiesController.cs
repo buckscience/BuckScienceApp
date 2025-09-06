@@ -531,6 +531,8 @@ public class PropertiesController : Controller
             Notes = feature.Notes
         };
 
+        PopulateFeatureTypeSelectList();
+
         return View("FeatureEdit", vm);
     }
 
@@ -541,6 +543,7 @@ public class PropertiesController : Controller
     {
         if (!ModelState.IsValid)
         {
+            PopulateFeatureTypeSelectList();
             return View("FeatureEdit", vm);
         }
 
@@ -612,5 +615,57 @@ public class PropertiesController : Controller
             .ToList();
 
         vm.TimeZones = timeZones;
+    }
+
+    private void PopulateFeatureTypeSelectList()
+    {
+        // Group feature types by category for organized dropdown
+        var featuresByCategory = new List<SelectListItem>();
+
+        // Add default option
+        featuresByCategory.Add(new SelectListItem
+        {
+            Value = "",
+            Text = "-- Select Feature Type --",
+            Selected = false
+        });
+
+        // Group by category
+        var categories = new[]
+        {
+            FeatureCategory.Topographical,
+            FeatureCategory.ResourceFood,
+            FeatureCategory.ResourceWater,
+            FeatureCategory.ResourceBedding,
+            FeatureCategory.Other
+        };
+
+        foreach (var category in categories)
+        {
+            // Add category group header
+            var categoryName = FeatureHelper.GetCategoryName(category);
+            featuresByCategory.Add(new SelectListItem
+            {
+                Value = "",
+                Text = $"-- {categoryName} --",
+                Disabled = true
+            });
+
+            // Add features in this category
+            var featuresInCategory = Enum.GetValues<ClassificationType>()
+                .Where(ft => FeatureHelper.GetCategory(ft) == category)
+                .OrderBy(ft => FeatureHelper.GetFeatureName(ft));
+
+            foreach (var featureType in featuresInCategory)
+            {
+                featuresByCategory.Add(new SelectListItem
+                {
+                    Value = ((int)featureType).ToString(),
+                    Text = FeatureHelper.GetFeatureName(featureType)
+                });
+            }
+        }
+
+        ViewBag.FeatureTypeOptions = featuresByCategory;
     }
 }
