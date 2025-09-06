@@ -513,6 +513,32 @@ public class PropertiesController : Controller
         return View("FeatureDetails", vm);
     }
 
+    // FEATURE EDIT: GET /features/{id}/edit
+    [HttpGet("/features/{id:int}/edit")]
+    public async Task<IActionResult> FeatureEdit([FromRoute] int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(id, _db, _currentUser.Id.Value, ct);
+        if (feature is null) return NotFound();
+
+        var vm = new PropertyFeatureVm
+        {
+            Id = feature.Id,
+            Type = feature.ClassificationType,
+            Category = FeatureHelper.GetCategory(feature.ClassificationType),
+            Name = feature.Name ?? string.Empty, // Use custom name only, empty if no custom name
+            TypeName = GetFeatureName(feature.ClassificationType),
+            Description = GetFeatureDescription(feature.ClassificationType),
+            Icon = GetFeatureIcon(feature.ClassificationType),
+            GeometryWkt = feature.GeometryWkt,
+            Notes = feature.Notes,
+            CreatedAt = feature.CreatedAt
+        };
+
+        return View("FeatureEdit", vm);
+    }
+
     private void PopulateTimeZones(PropertyCreateVm vm)
     {
         var timeZones = TimeZoneInfo.GetSystemTimeZones()

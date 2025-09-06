@@ -223,7 +223,7 @@
                                                                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id, event); return false;" title="Edit feature">
                                                                         <i class="fas fa-edit"></i>
                                                                     </button>
                                                                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
@@ -418,11 +418,25 @@
             }
         }
 
-        function editFeature(featureId) {
-            if (window.App && window.App.editPropertyFeature) {
-                window.App.editPropertyFeature(featureId);
+        function editFeature(featureId, event) {
+            console.log('=== DETAILS EDIT FEATURE DEBUG START ===');
+            console.log('editFeature called with featureId:', featureId);
+            
+            // Prevent any default behavior or event propagation
+            if (event) {
+                console.log('Preventing event default and propagation');
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Use the standardized global edit function to ensure consistent behavior
+            if (window.editPropertyFeature) {
+                console.log('Calling global editPropertyFeature function');
+                window.editPropertyFeature(featureId, event);
             } else {
-                console.log('Edit feature:', featureId);
+                console.error('Global editPropertyFeature function not available');
+                // Emergency fallback
+                window.location.href = `/features/${featureId}/edit`;
             }
         }
 

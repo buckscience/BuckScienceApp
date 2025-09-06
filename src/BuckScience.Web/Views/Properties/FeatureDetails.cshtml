@@ -99,7 +99,7 @@
 
     <!-- Actions -->
     <div class="d-flex flex-column gap-2">
-        <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(@Model.Id); window.history.back();">
+        <button type="button" class="btn btn-outline-primary" onclick="editPropertyFeature(@Model.Id, event); return false;">
             <i class="fas fa-edit me-1"></i>Edit Feature
         </button>
         <button type="button" class="btn btn-outline-danger" onclick="deletePropertyFeature(@Model.Id); window.history.back();">

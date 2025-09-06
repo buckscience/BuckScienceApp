@@ -1,0 +1,305 @@
+@model BuckScience.Web.ViewModels.Properties.PropertyFeatureVm
+@{
+    ViewData["Title"] = $"Edit {Model.Name} - Feature";
+}
+
+<div class="feature-edit" style="max-width: 350px;">
+    <!-- Header with Cancel Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">Edit Feature</h2>
+        <button type="button" class="btn btn-custom-cancel btn-sm" onclick="cancelFeatureEdit()">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    </div>
+    <hr class="sidebar-title-separator mb-4" />
+
+    <!-- Instructions Alert -->
+    <div class="alert alert-success mb-4" role="alert">
+        <i class="fas fa-edit me-2"></i>
+        <strong>Drag</strong> to modify shape. Make changes and save.
+    </div>
+
+    <!-- Edit Form -->
+    <form id="featureEditForm">
+        <div class="mb-3">
+            <label for="editFeatureName" class="form-label">Feature Name</label>
+            <input type="text" class="form-control" id="editFeatureName" 
+                   placeholder="Custom name (optional)" 
+                   value="@Model?.Name"
+                   maxlength="100">
+            <small class="text-muted">Leave blank for default type name</small>
+        </div>
+
+        <div class="mb-3">
+            <label for="editFeatureType" class="form-label">Feature Type</label>
+            <select class="form-select" id="editFeatureType" required>
+                <option value="">Loading feature types...</option>
+                @if (Model?.Type != null)
+                {
+                    <option value="@Model.Type" selected>@Model.TypeName</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3" style="display: none;">
+            <label class="form-label">Geometry Type</label>
+            <div class="p-2 border rounded bg-light">
+                <small class="text-muted" id="geometryTypeDisplay"></small>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label for="editFeatureNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="editFeatureNotes" rows="3" 
+                      placeholder="Add notes...">@Model?.Notes</textarea>
+        </div>
+    </form>
+
+    <!-- Action Buttons -->
+    <div class="mt-4 d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="cancelFeatureEdit()">
+            Cancel
+        </button>
+        <button type="button" class="btn btn-custom-primary" onclick="saveFeatureEdit(@Model.Id)">
+            <i class="fas fa-save me-1"></i>Save Changes
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const FEATURE_ID = @Model.Id;
+        
+        async function loadFeatureData() {
+            try {
+                console.log('=== LOADING FEATURE DATA ===');
+                console.log('Loading feature data for ID:', FEATURE_ID);
+                const response = await fetch(`/features/${FEATURE_ID}`);
+                
+                console.log('API response status:', response.status);
+                console.log('API response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load feature data: ${response.status}`);
+                }
+                
+                const featureData = await response.json();
+                console.log('=== FEATURE DATA LOADED ===');
+                console.log('Loaded feature data from API:', featureData);
+                console.log('Feature data keys:', Object.keys(featureData));
+                return featureData;
+            } catch (error) {
+                console.error('=== ERROR LOADING FEATURE DATA ===');
+                console.error('Error loading feature data:', error);
+                return null;
+            }
+        }
+
+        function populateForm(featureData) {
+            console.log('=== POPULATING FORM ===');
+            console.log('Form population input data:', featureData);
+            
+            // Check if form elements exist
+            const nameInput = document.getElementById('editFeatureName');
+            const typeSelect = document.getElementById('editFeatureType');
+            const notesTextarea = document.getElementById('editFeatureNotes');
+            const geometryDisplay = document.getElementById('geometryTypeDisplay');
+            
+            console.log('Form elements found:');
+            console.log('- nameInput:', !!nameInput);
+            console.log('- typeSelect:', !!typeSelect);
+            console.log('- notesTextarea:', !!notesTextarea);
+            console.log('- geometryDisplay:', !!geometryDisplay);
+            
+            if (!nameInput || !typeSelect || !notesTextarea) {
+                console.error('Required form elements not found, cannot populate form');
+                console.error('Missing elements:', {
+                    nameInput: !nameInput,
+                    typeSelect: !typeSelect,
+                    notesTextarea: !notesTextarea
+                });
+                return;
+            }
+            
+            // Handle both camelCase (from JS) and PascalCase (from API) property names
+            const name = featureData.name || featureData.Name || '';
+            const classificationType = featureData.classificationType || featureData.ClassificationType;
+            const notes = featureData.notes || featureData.Notes || '';
+            const geometryWkt = featureData.geometryWkt || featureData.GeometryWkt || '';
+            
+            console.log('=== EXTRACTED VALUES ===');
+            console.log('- name:', name);
+            console.log('- classificationType:', classificationType);
+            console.log('- notes:', notes);
+            console.log('- geometryWkt (first 50 chars):', geometryWkt.substring(0, 50));
+            
+            // Populate feature name
+            nameInput.value = name;
+            console.log('✓ Set feature name to:', nameInput.value);
+
+            // Populate feature type options and select current type
+            if (window.FeatureUtils) {
+                // Generate all feature type options with current type selected
+                typeSelect.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(classificationType);
+                console.log('✓ Populated ALL feature type options using FeatureUtils, selected:', classificationType);
+                console.log('✓ Feature type dropdown now has', typeSelect.options.length, 'options');
+            } else {
+                console.error('✗ FeatureUtils not available - attempting to load it');
+                // Try to load FeatureUtils and retry
+                setTimeout(() => {
+                    if (window.FeatureUtils) {
+                        typeSelect.innerHTML = window.FeatureUtils.generateFeatureOptionsHtml(classificationType);
+                        console.log('✓ Populated feature type options on retry, selected:', classificationType);
+                        console.log('✓ Feature type dropdown now has', typeSelect.options.length, 'options');
+                    } else {
+                        // Ultimate fallback - at least show current type
+                        if (classificationType) {
+                            typeSelect.innerHTML = `<option value="${classificationType}" selected>Feature Type ${classificationType}</option>`;
+                            console.log('⚠ Used fallback - only current feature type available');
+                        } else {
+                            typeSelect.innerHTML = '<option value="">Unable to load feature types</option>';
+                            console.error('✗ FeatureUtils still not available and no classification type');
+                        }
+                    }
+                }, 500);
+            }
+
+            // Populate notes
+            notesTextarea.value = notes;
+            console.log('✓ Set feature notes to:', notesTextarea.value);
+
+            // Update geometry type display
+            if (geometryDisplay && geometryWkt) {
+                const geometryType = geometryWkt.split('(')[0] || 'Unknown';
+                geometryDisplay.textContent = geometryType;
+                console.log('✓ Set geometry type display to:', geometryType);
+            }
+            
+            console.log('=== FORM POPULATION COMPLETE ===');
+        }
+
+        async function initializeFeatureEdit() {
+            console.log('=== INITIALIZING FEATURE EDIT ===');
+            console.log('Feature ID:', FEATURE_ID);
+            console.log('Document ready state:', document.readyState);
+            console.log('DOM elements check:');
+            console.log('- editFeatureName exists:', !!document.getElementById('editFeatureName'));
+            console.log('- editFeatureType exists:', !!document.getElementById('editFeatureType'));
+            console.log('- editFeatureNotes exists:', !!document.getElementById('editFeatureNotes'));
+            
+            // Focus on the feature being edited
+            if (window.App && window.App.focusPropertyFeature) {
+                console.log('Focusing on property feature...');
+                window.App.focusPropertyFeature(FEATURE_ID);
+            } else {
+                console.log('window.App.focusPropertyFeature not available');
+            }
+
+            // Load fresh feature data from API
+            console.log('Loading feature data from API...');
+            const featureData = await loadFeatureData();
+            if (!featureData) {
+                console.error('✗ Failed to load feature data, cannot initialize form');
+                // Show error to user
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Error', 'Failed to load feature data. Please try refreshing the page.', 'error');
+                } else {
+                    alert('Failed to load feature data. Please try refreshing the page.');
+                }
+                return;
+            }
+
+            console.log('✓ Feature data loaded successfully');
+
+            // Store feature data for editing
+            if (window.App) {
+                window.App._editingFeature = featureData;
+                window.App._editingFeatureId = FEATURE_ID;
+                console.log('✓ Stored feature data in window.App');
+            } else {
+                console.log('window.App not available for storing feature data');
+            }
+
+            // Wait a moment for DOM to be fully ready, then populate form
+            console.log('Waiting for DOM readiness...');
+            setTimeout(() => {
+                console.log('DOM timeout completed, populating form...');
+                populateForm(featureData);
+            }, 100);
+
+            // Enable geometry editing for the feature
+            setTimeout(() => {
+                console.log('Setting up geometry editing...');
+                if (typeof window.enableGeometryEditing === 'function' && featureData) {
+                    // Create a normalized feature object for the geometry editing function
+                    const normalizedFeature = {
+                        ...featureData,
+                        // Ensure both camelCase and PascalCase properties are available
+                        geometryWkt: featureData.geometryWkt || featureData.GeometryWkt,
+                        geometry: featureData.geometry // May not exist, that's ok
+                    };
+                    console.log('Calling enableGeometryEditing with:', normalizedFeature);
+                    window.enableGeometryEditing(normalizedFeature);
+                    console.log('✓ Enabled geometry editing');
+                } else {
+                    console.log('enableGeometryEditing function not available or no feature data');
+                }
+            }, 500);
+            
+            console.log('=== FEATURE EDIT INITIALIZATION COMPLETE ===');
+        }
+
+        // Multiple initialization points to ensure form gets populated
+        function startInitialization() {
+            console.log('=== STARTING INITIALIZATION ===');
+            console.log('Current time:', new Date().toISOString());
+            console.log('Document ready state:', document.readyState);
+            console.log('FeatureUtils available:', !!window.FeatureUtils);
+            
+            // Wait for elements AND dependencies to be available
+            const waitForElementsAndDependencies = () => {
+                const nameInput = document.getElementById('editFeatureName');
+                const typeSelect = document.getElementById('editFeatureType');
+                const notesTextarea = document.getElementById('editFeatureNotes');
+                const featureUtilsAvailable = !!window.FeatureUtils;
+                
+                if (nameInput && typeSelect && notesTextarea && featureUtilsAvailable) {
+                    console.log('✓ All form elements and dependencies found, initializing...');
+                    initializeFeatureEdit();
+                } else {
+                    console.log('⏳ Form elements or dependencies not ready yet, retrying in 50ms...');
+                    console.log('Elements status:', {
+                        nameInput: !!nameInput,
+                        typeSelect: !!typeSelect,
+                        notesTextarea: !!notesTextarea,
+                        featureUtils: featureUtilsAvailable
+                    });
+                    setTimeout(waitForElementsAndDependencies, 50);
+                }
+            };
+            
+            waitForElementsAndDependencies();
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            console.log('DOM still loading, waiting for DOMContentLoaded...');
+            document.addEventListener('DOMContentLoaded', startInitialization);
+        } else {
+            console.log('DOM already ready, starting initialization...');
+            setTimeout(startInitialization, 10);
+        }
+
+        // Handle sidebar load events for when content is loaded via AJAX
+        document.addEventListener('sidebar:loaded', function(event) {
+            console.log('=== SIDEBAR LOADED EVENT ===');
+            console.log('sidebar:loaded event received:', event.detail);
+            if (event.detail && event.detail.url && event.detail.url.includes(`/features/${FEATURE_ID}/edit`)) {
+                console.log('✓ Feature edit loaded in sidebar, re-initializing...');
+                setTimeout(startInitialization, 100);
+            } else {
+                console.log('Sidebar loaded but not for this feature edit');
+            }
+        });
+    </script>
+}
