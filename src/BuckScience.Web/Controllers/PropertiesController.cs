@@ -208,6 +208,8 @@ public class PropertiesController : Controller
 
     private static string GetFeatureIcon(ClassificationType type) => FeatureHelper.GetFeatureIcon(type);
 
+    private static FeatureCategory GetFeatureCategory(ClassificationType type) => FeatureHelper.GetCategory(type);
+
     // PHOTOS: GET /properties/{id}/photos
     [HttpGet]
     [Route("/properties/{id:int}/photos")]
@@ -526,7 +528,7 @@ public class PropertiesController : Controller
         {
             Id = feature.Id,
             Type = feature.ClassificationType,
-            Category = FeatureHelper.GetCategory(feature.ClassificationType),
+            Category = GetFeatureCategory(feature.ClassificationType),
             Name = feature.Name ?? string.Empty, // Use custom name only, empty if no custom name
             TypeName = GetFeatureName(feature.ClassificationType),
             Description = GetFeatureDescription(feature.ClassificationType),
@@ -535,6 +537,8 @@ public class PropertiesController : Controller
             Notes = feature.Notes,
             CreatedAt = feature.CreatedAt
         };
+
+        PopulateFeatureTypeSelectList(feature.ClassificationType);
 
         return View("FeatureEdit", vm);
     }
@@ -567,5 +571,50 @@ public class PropertiesController : Controller
             .ToList();
 
         vm.TimeZones = timeZones;
+    }
+
+    private void PopulateFeatureTypeSelectList(ClassificationType? selectedType = null)
+    {
+        // Group feature types by category for organized dropdown
+        var featuresByCategory = new List<SelectListItem>();
+
+        // Group by category (removed the default "Select Feature Type" option as requested)
+        var categories = new[]
+        {
+            FeatureCategory.Topographical,
+            FeatureCategory.ResourceFood,
+            FeatureCategory.ResourceWater,
+            FeatureCategory.ResourceBedding,
+            FeatureCategory.Other
+        };
+
+        foreach (var category in categories)
+        {
+            // Add category group header
+            var categoryName = FeatureHelper.GetCategoryName(category);
+            featuresByCategory.Add(new SelectListItem
+            {
+                Value = "",
+                Text = $"-- {categoryName} --",
+                Disabled = true
+            });
+
+            // Add features in this category
+            var featuresInCategory = Enum.GetValues<ClassificationType>()
+                .Where(ft => FeatureHelper.GetCategory(ft) == category)
+                .OrderBy(ft => FeatureHelper.GetFeatureName(ft));
+
+            foreach (var featureType in featuresInCategory)
+            {
+                featuresByCategory.Add(new SelectListItem
+                {
+                    Value = ((int)featureType).ToString(),
+                    Text = FeatureHelper.GetFeatureName(featureType),
+                    Selected = selectedType.HasValue && featureType == selectedType.Value
+                });
+            }
+        }
+
+        ViewBag.FeatureTypeOptions = featuresByCategory;
     }
 }
