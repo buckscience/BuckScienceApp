@@ -1426,7 +1426,7 @@ window.App = window.App || {};
         
         const modalHtml = `
             <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureEditPanel" 
-                 style="top: 12px; right: 45px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                 style="top: 11px; right: 60px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">Edit Property Feature</h5>
                     <button type="button" class="btn-close" onclick="cancelFeatureEdit()"></button>
