@@ -190,12 +190,6 @@ window.App = window.App || {};
             if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 14) });
         }
 
-        // First, recenter map to property location
-        m.flyTo({ 
-            center: [propertyCoords.lng, propertyCoords.lat], 
-            zoom: Math.max(m.getZoom(), 14) 
-        });
-
         // Initialize camera coordinates from inputs or property center
         const currentLat = parseFloat(latInput.value);
         const currentLng = parseFloat(lngInput.value);
