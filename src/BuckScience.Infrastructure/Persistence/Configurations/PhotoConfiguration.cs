@@ -28,7 +28,7 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.HasOne(p => p.Camera)
                   .WithMany(c => c.Photos)
                   .HasForeignKey(p => p.CameraId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(p => p.PlacementHistory)
                   .WithMany()

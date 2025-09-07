@@ -523,7 +523,7 @@ namespace BuckScience.Infrastructure.Migrations
                     b.HasOne("BuckScience.Domain.Entities.Camera", "Camera")
                         .WithMany("Photos")
                         .HasForeignKey("CameraId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BuckScience.Domain.Entities.CameraPlacementHistory", "PlacementHistory")
