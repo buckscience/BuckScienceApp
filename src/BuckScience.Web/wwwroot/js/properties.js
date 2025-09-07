@@ -110,7 +110,7 @@ window.App = window.App || {};
         }
     }
 
-    // Sidebar loads
+    // Sidebar loads (legacy event - will be removed once all views are updated)
     document.addEventListener('sidebar:loaded', () => {
         const container = document.getElementById('sidebar-content');
         if (!container) return;
@@ -155,6 +155,34 @@ window.App = window.App || {};
 
         // Wire the property create/edit form
         wirePropertyForm(container);
+    });
+
+    // New lightweight map layer update handler
+    document.addEventListener('map:updateLayers', (event) => {
+        const context = event.detail || {};
+        console.log('Updating map layers with context:', context);
+        
+        if (context.propertyId) {
+            // Load property features and cameras
+            loadPropertyFeatures(context.propertyId);
+            displayCamerasOnMap();
+            
+            // Set up drawing if not already done
+            if (!window.App._featureDrawingSetup) {
+                setupFeatureDrawing(context.propertyId);
+                window.App._featureDrawingSetup = true;
+            }
+        }
+        
+        if (context.cameraId) {
+            // Pan to camera location if available
+            displayCamerasOnMap();
+        }
+        
+        if (context.profileId) {
+            // Handle profile-specific map updates if needed
+            console.log('Profile context:', context.profileId);
+        }
     });
 
     // Initial page load (SSR)
@@ -1722,57 +1750,15 @@ window.App = window.App || {};
             return;
         }
         
-        // Use the sidebar loader to refresh the property details view
-        if (window.App && window.App.loadSidebar) {
-            const propertyDetailsUrl = `/properties/${propertyId}/details`;
-            console.log('Loading sidebar with URL:', propertyDetailsUrl);
-            
-            // Show a loading indicator
-            showRefreshIndicator(true);
-            
-            window.App.loadSidebar(propertyDetailsUrl, { push: false }).then(() => {
-                console.log('Property details view refreshed successfully');
-                showRefreshIndicator(false);
-                
-                // After the view is reloaded, expand the features accordion to show the changes
-                setTimeout(() => {
-                    const featuresAccordion = document.getElementById('featuresCollapse');
-                    if (featuresAccordion && !featuresAccordion.classList.contains('show')) {
-                        console.log('Expanding features accordion');
-                        // Use Bootstrap's collapse API to show the features section
-                        try {
-                            const bsCollapse = new bootstrap.Collapse(featuresAccordion, {
-                                show: true
-                            });
-                        } catch (e) {
-                            console.warn('Could not expand features accordion:', e);
-                        }
-                    }
-                    
-                    // Re-initialize property features for the refreshed view
-                    if (window.App && window.App.initializePropertyFeatures) {
-                        console.log('Re-initializing property features after refresh');
-                        window.App.initializePropertyFeatures(propertyId);
-                    }
-                }, 300); // Increased delay to ensure DOM is fully updated
-            }).catch(error => {
-                console.error('Error refreshing property details view:', error);
-                showRefreshIndicator(false);
-                
-                // Show user-friendly error message
-                showFeatureError('Failed to refresh property details: ' + error.message);
-                
-                // Fallback: just reload features if sidebar loader fails
-                console.log('Falling back to reloading features only');
-                setTimeout(() => {
-                    loadPropertyFeatures(propertyId);
-                }, 1000);
-            });
-        } else {
-            console.warn('Sidebar loader not available, falling back to reloading features');
-            // Fallback: just reload features if sidebar loader not available
-            loadPropertyFeatures(propertyId);
-        }
+        // Use standard navigation to refresh the view
+        const propertyDetailsUrl = `/properties/${propertyId}/details`;
+        console.log('Navigating to:', propertyDetailsUrl);
+        
+        // Show a loading indicator
+        showRefreshIndicator(true);
+        
+        // Simply navigate to the property details page
+        window.location.href = propertyDetailsUrl;
     }
 
     function showRefreshIndicator(show) {

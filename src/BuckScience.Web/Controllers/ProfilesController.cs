@@ -256,6 +256,7 @@ public class ProfilesController : Controller
             Id = profile.Id,
             Name = profile.Name,
             ProfileStatus = profile.ProfileStatus,
+            PropertyId = profile.PropertyId,
             PropertyName = profile.PropertyName,
             TagName = profile.TagName,
             CoverPhotoUrl = profile.CoverPhotoUrl

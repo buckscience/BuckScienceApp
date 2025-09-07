@@ -839,5 +839,12 @@ else
                 currentPhotoId = null;
             });
         }
+
+        // Trigger map layer update when this view loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({ propertyId: @Model.PropertyId });
+            }
+        });
     </script>
 }

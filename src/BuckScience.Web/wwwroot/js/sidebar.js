@@ -1,179 +1,9 @@
-﻿// SPA-style sidebar loader: injects server-rendered views into #sidebar-content
-// without reloading the map or the page shell.
+// Simplified sidebar functionality - handles toggle and map layer updates only
+// All navigation is now handled via standard MVC routing
 
 window.App = window.App || {};
 
 (function () {
-    const routeMap = {
-        // Map your mini-navbar hash links to real endpoints here
-        '#properties': '/properties',
-        '#account': '/account',
-        '#settings': 'account/settings'
-    };
-
-    function isHtml(str) {
-        return /<\/?[a-z][\s\S]*>/i.test(str);
-    }
-
-    async function fetchPartial(url) {
-        console.log('Fetching partial from:', url);
-        
-        try {
-            const resp = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            
-            console.log('Fetch response status:', resp.status, resp.statusText);
-            
-            if (!resp.ok) {
-                const errorText = await resp.text();
-                console.error('Fetch error response:', errorText);
-                
-                // Provide more specific error messages
-                let errorMessage = `Failed to load ${url}: ${resp.status} ${resp.statusText}`;
-                if (resp.status === 404) {
-                    errorMessage = 'The requested page could not be found.';
-                } else if (resp.status === 500) {
-                    errorMessage = 'Server error occurred while loading content.';
-                } else if (resp.status === 403) {
-                    errorMessage = 'Access denied to the requested content.';
-                }
-                
-                throw new Error(errorMessage);
-            }
-            
-            const html = await resp.text();
-            console.log('Fetch successful, response length:', html.length);
-            
-            if (!html || html.trim().length === 0) {
-                throw new Error('Received empty response from server');
-            }
-            
-            return html;
-        } catch (error) {
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                throw new Error('Network error: Unable to connect to server');
-            }
-            throw error;
-        }
-    }
-
-    async function loadSidebar(url, { push = false } = {}) {
-        const container = document.getElementById('sidebar-content');
-        if (!container) {
-            console.error('Sidebar container not found');
-            return;
-        }
-
-        console.log('Loading sidebar with URL:', url);
-
-        // Visual hint
-        container.style.opacity = '0.6';
-
-        try {
-            console.log('Fetching sidebar content from:', url);
-            const html = await fetchPartial(url);
-            console.log('Received HTML response, length:', html.length);
-            
-            // Accept either plain fragment or full page; if full page,
-            // try to extract just the #sidebar-content child
-            if (isHtml(html)) {
-                // naive insert: treat response as partial
-                container.innerHTML = html;
-                console.log('Updated sidebar content');
-            } else {
-                container.textContent = html;
-                console.log('Updated sidebar with text content');
-            }
-
-            // Inform any feature-specific scripts
-            const ev = new CustomEvent('sidebar:loaded', { detail: { url } });
-            document.dispatchEvent(ev);
-            console.log('Dispatched sidebar:loaded event');
-
-            if (push) {
-                history.pushState({ url }, '', url);
-                console.log('Updated browser history');
-            }
-
-            // Update toggle position after content load with improved timing
-            setTimeout(() => {
-                if (window.updateTogglePosition) {
-                    updateTogglePositionDebounced(true);
-                }
-            }, 100); // Increased from 50ms to 100ms for better reliability
-        } catch (err) {
-            console.error('Error loading sidebar content:', err);
-            console.error('Failed URL:', url);
-            
-            // Provide better error messaging based on error type
-            let errorDetails = err.message;
-            let errorTitle = 'Failed to load content';
-            
-            if (err.message.includes('Network error')) {
-                errorTitle = 'Network Error';
-                errorDetails = 'Unable to connect to the server. Please check your connection and try again.';
-            } else if (err.message.includes('Server error')) {
-                errorTitle = 'Server Error';
-                errorDetails = 'The server encountered an error. Please try again in a moment.';
-            } else if (err.message.includes('404')) {
-                errorTitle = 'Page Not Found';
-                errorDetails = 'The requested page could not be found.';
-            } else if (err.message.includes('403')) {
-                errorTitle = 'Access Denied';
-                errorDetails = 'You do not have permission to access this content.';
-            }
-            
-            container.innerHTML = `<div class="alert alert-danger">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>${errorTitle}</h6>
-                <p class="mb-2">${errorDetails}</p>
-                <details class="mb-0">
-                    <summary class="small text-muted" style="cursor: pointer;">Technical Details</summary>
-                    <p class="mb-0 small text-muted mt-2">
-                        <strong>URL:</strong> ${url}<br>
-                        <strong>Error:</strong> ${err.message}
-                    </p>
-                </details>
-                <div class="mt-3">
-                    <button class="btn btn-outline-primary btn-sm" onclick="window.App.loadSidebar('${url}', { push: false })">
-                        <i class="fas fa-redo me-1"></i>Try Again
-                    </button>
-                </div>
-            </div>`;
-        } finally {
-            container.style.opacity = '';
-        }
-    }
-
-    function wireRouting() {
-        // Intercept navbar links that we’ve mapped
-        document.body.addEventListener('click', (e) => {
-            const a = e.target.closest('a');
-            if (!a) return;
-            const href = a.getAttribute('href');
-            if (!href) return;
-
-            // From mini navbar: #properties, #account, etc.
-            if (routeMap[href]) {
-                e.preventDefault();
-                loadSidebar(routeMap[href], { push: true });
-                return;
-            }
-
-            // Also support direct in-sidebar navigation via links marked data-sidebar-nav
-            if (a.matches('[data-sidebar-nav]')) {
-                e.preventDefault();
-                loadSidebar(href, { push: true });
-            }
-        });
-
-        // Support back/forward
-        window.addEventListener('popstate', (e) => {
-            const url = e.state?.url || location.pathname;
-            if (url) loadSidebar(url, { push: false });
-        });
-    }
-
     function updateTogglePosition() {
         const btn = document.getElementById('sidebar-toggle');
         const aside = document.getElementById('sidebar');
@@ -277,19 +107,29 @@ window.App = window.App || {};
         });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        wireRouting();
-        wireSidebarToggle();
+    // Lightweight function to trigger map layer updates when new content is loaded
+    function triggerMapLayerUpdate(context = {}) {
+        // Dispatch event for map layer updates
+        const event = new CustomEvent('map:updateLayers', { detail: context });
+        document.dispatchEvent(event);
+    }
 
-        // On first load, if current URL maps to a sidebar endpoint, load it.
-        // Otherwise leave whatever the server rendered by default.
-        const initialHash = location.hash;
-        if (routeMap[initialHash]) {
-            loadSidebar(routeMap[initialHash], { push: false });
+    document.addEventListener('DOMContentLoaded', () => {
+        wireSidebarToggle();
+        
+        // Trigger initial map layer update based on current page context
+        const currentPath = window.location.pathname;
+        const propertyMatch = currentPath.match(/\/properties\/(\d+)/);
+        const cameraMatch = currentPath.match(/\/cameras\/(\d+)/);
+        
+        if (propertyMatch) {
+            triggerMapLayerUpdate({ propertyId: parseInt(propertyMatch[1]) });
+        } else if (cameraMatch) {
+            triggerMapLayerUpdate({ cameraId: parseInt(cameraMatch[1]) });
         }
     });
 
-    // Expose for other modules
-    window.App.loadSidebar = loadSidebar;
+    // Expose utilities for other modules
     window.updateTogglePosition = updateTogglePosition;
+    window.App.triggerMapLayerUpdate = triggerMapLayerUpdate;
 })();
