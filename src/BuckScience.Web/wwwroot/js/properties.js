@@ -165,7 +165,13 @@ window.App = window.App || {};
         if (context.propertyId) {
             // Load property features and cameras
             loadPropertyFeatures(context.propertyId);
-            displayCamerasOnMap();
+            
+            // Only display camera markers if we're not in camera creation mode
+            // (detected by presence of camera form inputs)
+            const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
+            if (!isOnCameraForm) {
+                displayCamerasOnMap();
+            }
             
             // Set up drawing if not already done
             if (!window.App._featureDrawingSetup) {
@@ -175,8 +181,11 @@ window.App = window.App || {};
         }
         
         if (context.cameraId) {
-            // Pan to camera location if available
-            displayCamerasOnMap();
+            // Pan to camera location if available (only if not on camera form)
+            const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
+            if (!isOnCameraForm) {
+                displayCamerasOnMap();
+            }
         }
         
         if (context.profileId) {
@@ -261,6 +270,27 @@ window.App = window.App || {};
         lngInput.addEventListener('change', onInputChange);
     }
 
+    // Cleanup function to remove camera creation marker
+    function cleanupCameraForm() {
+        const m = map();
+        if (!m) return;
+        
+        // Remove camera creation marker
+        if (window.App._cameraMarker) {
+            window.App._cameraMarker.remove();
+            window.App._cameraMarker = null;
+        }
+        
+        // Remove click handler for camera placement
+        if (window.App._cameraClickHandler) {
+            m.off('click', window.App._cameraClickHandler);
+            window.App._cameraClickHandler = null;
+        }
+    }
+
+    // Expose cleanup function
+    window.App.cleanupCameraForm = cleanupCameraForm;
+
     // Public API
     window.App.focusProperty = function ({ bbox }) {
         if (bbox) fitToBbox(bbox);
@@ -287,8 +317,11 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Display cameras on the map 
-        displayCamerasOnMap();
+        // Display cameras on the map only if not on camera creation form
+        const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
+        if (!isOnCameraForm) {
+            displayCamerasOnMap();
+        }
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
