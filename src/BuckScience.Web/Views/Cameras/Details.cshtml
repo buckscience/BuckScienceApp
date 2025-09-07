@@ -123,6 +123,123 @@
         </div>
     </div>
 
+    <!-- Camera Location History -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-map-marker-alt fa-lg text-custom-primary me-2"></i>
+                    <h5 class="mb-0">Location History</h5>
+                </div>
+                <span class="badge badge-custom-primary">@Model.PlacementHistory.Count</span>
+            </div>
+
+            @if (!Model.PlacementHistory.Any())
+            {
+                <div class="text-center py-3">
+                    <p class="text-muted">No location history recorded for this camera yet.</p>
+                </div>
+            }
+            else
+            {
+                <div class="accordion" id="placementHistoryAccordion">
+                    @for (int i = 0; i < Model.PlacementHistory.Count; i++)
+                    {
+                        var placement = Model.PlacementHistory[i];
+                        var accordionId = $"placement{placement.Id}";
+                        var isExpanded = i == 0; // Expand first (most recent) item
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading@(placement.Id)">
+                                <button class="accordion-button @(isExpanded ? "" : "collapsed") fs-6 py-2" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#@accordionId" 
+                                        aria-expanded="@(isExpanded ? "true" : "false")" aria-controls="@accordionId">
+                                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                        <div class="d-flex align-items-center">
+                                            @if (placement.IsCurrentPlacement)
+                                            {
+                                                <i class="fas fa-map-pin text-success me-2"></i>
+                                                <span class="fw-bold">Current Location</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-map-marker text-muted me-2"></i>
+                                                <span>Previous Location</span>
+                                            }
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">
+                                                @placement.StartDateTime.ToString("MMM d, yyyy")
+                                                @if (placement.Duration.HasValue)
+                                                {
+                                                    <span>• @GetDurationString(placement.Duration.Value)</span>
+                                                }
+                                            </small>
+                                        </div>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="@accordionId" class="accordion-collapse collapse @(isExpanded ? "show" : "")" 
+                                 aria-labelledby="heading@(placement.Id)" data-bs-parent="#placementHistoryAccordion">
+                                <div class="accordion-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="text-muted small d-block">Coordinates</label>
+                                            <p class="mb-0 small">
+                                                <i class="fas fa-map-marker-alt text-custom-primary me-1"></i>
+                                                @placement.Latitude.ToString("F4"), @placement.Longitude.ToString("F4")
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="text-muted small d-block">Direction</label>
+                                            <p class="mb-0 small">
+                                                <i class="fas fa-compass text-custom-primary me-1"></i>
+                                                @placement.DirectionDegrees.ToString("F0")° (@GetDirectionName(placement.DirectionDegrees))
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="text-muted small d-block">Placed</label>
+                                            <p class="mb-0 small">
+                                                <i class="fas fa-calendar text-custom-primary me-1"></i>
+                                                @placement.StartDateTime.ToString("MMM d, yyyy h:mm tt")
+                                            </p>
+                                        </div>
+                                        @if (placement.EndDateTime.HasValue)
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="text-muted small d-block">Moved</label>
+                                                <p class="mb-0 small">
+                                                    <i class="fas fa-calendar text-custom-primary me-1"></i>
+                                                    @placement.EndDateTime.Value.ToString("MMM d, yyyy h:mm tt")
+                                                </p>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="text-muted small d-block">Status</label>
+                                                <p class="mb-0 small">
+                                                    <span class="badge badge-custom-success">Currently Active</span>
+                                                </p>
+                                            </div>
+                                        }
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                onclick="panToCameraLocation(@placement.Longitude, @placement.Latitude)">
+                                            <i class="fas fa-eye me-1"></i> Focus on Map
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
     <!-- Advanced Options -->
     <div class="d-flex justify-content-end">
         <a href="/properties/@Model.PropertyId/cameras/@Model.Id/delete" class="btn btn-outline-danger btn-sm">
@@ -133,7 +250,7 @@
 
 @section Scripts {
     <script>
-        // Ensure panToCameraLocation function is available
+        // Make panToCameraLocation function available for manual use, but don't auto-call it
         window.panToCameraLocation = function(lng, lat) {
             if (window.App && window.App.panToCameraLocation) {
                 window.App.panToCameraLocation(lng, lat);
@@ -142,33 +259,7 @@
             }
         };
 
-        // Initialize camera details when page loads (for sidebar loads)
-        document.addEventListener('DOMContentLoaded', function() {
-            // If this is loaded via sidebar, pan to camera location automatically
-            const cameraLat = @Model.Latitude;
-            const cameraLng = @Model.Longitude;
-            
-            // Small delay to ensure everything is initialized
-            setTimeout(() => {
-                if (window.App && window.App.panToCameraLocation) {
-                    window.App.panToCameraLocation(cameraLng, cameraLat);
-                }
-            }, 100);
-        });
-
-        // Also handle sidebar load events
-        document.addEventListener('sidebar:loaded', function(event) {
-            // If this is a camera details page loaded in sidebar, pan to camera
-            if (event.detail && event.detail.url && event.detail.url.includes('/cameras/') && event.detail.url.includes('/details')) {
-                const cameraLat = @Model.Latitude;
-                const cameraLng = @Model.Longitude;
-                
-                setTimeout(() => {
-                    if (window.App && window.App.panToCameraLocation) {
-                        window.App.panToCameraLocation(cameraLng, cameraLat);
-                    }
-                }, 300);
-            }
-        });
+        // Note: Removed automatic map panning to preserve map state as requested
+        // Map will maintain current zoom/position when viewing camera details
     </script>
 }

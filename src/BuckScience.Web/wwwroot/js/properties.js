@@ -162,10 +162,12 @@ window.App = window.App || {};
         const context = event.detail || {};
         console.log('Updating map layers with context:', context);
         
+        let needsDisplayCameras = false;
+        
         if (context.propertyId) {
-            // Load property features and cameras
+            // Load property features
             loadPropertyFeatures(context.propertyId);
-            displayCamerasOnMap();
+            needsDisplayCameras = true;
             
             // Set up drawing if not already done
             if (!window.App._featureDrawingSetup) {
@@ -175,7 +177,12 @@ window.App = window.App || {};
         }
         
         if (context.cameraId) {
-            // Pan to camera location if available
+            // Camera context also needs camera display
+            needsDisplayCameras = true;
+        }
+        
+        // Only call displayCamerasOnMap once, even if both propertyId and cameraId are set
+        if (needsDisplayCameras) {
             displayCamerasOnMap();
         }
         
@@ -287,8 +294,8 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Display cameras on the map 
-        displayCamerasOnMap();
+        // Note: displayCamerasOnMap() will be called by the map:updateLayers event handler
+        // to avoid duplicate calls
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
@@ -755,6 +762,13 @@ window.App = window.App || {};
             return;
         }
 
+        // Prevent rapid multiple calls
+        if (window.App._displayingCameras) {
+            console.log('displayCamerasOnMap already in progress, skipping duplicate call');
+            return;
+        }
+        window.App._displayingCameras = true;
+
         console.log('Loading cameras for property:', propertyId);
 
         // Remove existing camera markers
@@ -919,20 +933,29 @@ window.App = window.App || {};
                         .setLngLat([camera.longitude, camera.latitude])
                         .addTo(m);
 
-                        // Add click event to marker
+                        // Add click event to marker - navigate to details view in sidebar
                         markerElement.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            showCameraPopup({
-                                properties: {
-                                    id: camera.id,
-                                    name: camera.name,
-                                    isActive: camera.isActive,
-                                    photoCount: camera.photoCount,
-                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : ''),
-                                    directionDegrees: camera.directionDegrees,
-                                    directionText: compassDirection
-                                }
-                            }, { lng: camera.longitude, lat: camera.latitude });
+                            // Navigate to camera details view in sidebar using AJAX to preserve map state
+                            const url = `/cameras/${camera.id}/details`;
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => {
+                                if (!response.ok) throw new Error(`Failed: ${response.status}`);
+                                return response.text();
+                            })
+                            .then(html => {
+                                document.getElementById('sidebar-content').innerHTML = html;
+                                document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url } }));
+                                history.pushState({ url }, '', url);
+                            })
+                            .catch(error => {
+                                console.error('Navigation error:', error);
+                                // Fallback to standard navigation
+                                window.location.href = url;
+                            });
                         });
 
                         // Store marker reference for cleanup
@@ -947,12 +970,17 @@ window.App = window.App || {};
 
                 console.log('All camera markers added successfully');
 
-                // Update map bounds to include cameras and property
-                updateMapBoundsWithCameras(cameras);
+                // Note: Preserving map state as requested - no automatic bounds adjustment
+                // User specifically requested no zooming, panning, or removing other features
+
+                // Reset the flag to allow future calls
+                window.App._displayingCameras = false;
 
             })
             .catch(error => {
                 console.error('Error loading cameras:', error);
+                // Reset the flag even on error to allow retry
+                window.App._displayingCameras = false;
             });
     }
 

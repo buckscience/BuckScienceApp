@@ -1,92 +1,145 @@
-﻿
+﻿/* ========== Mini Navbar ========== */
+#mini-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 80px;
+    height: 100vh;
+    background: #36454F;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    #mini-navbar .nav-top,
+    #mini-navbar .nav-bottom {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        width: 100%;
+    }
+
+    #mini-navbar .nav-logo {
+        margin: 1rem 0;
+        font-size: 1.5rem; /* was 2rem, reduced for less bulk */
+        font-weight: bold;
+        color: #fff;
+        text-align: center;
+    }
+
+    #mini-navbar a {
+        color: #fff;
+        text-decoration: none;
+        text-align: center;
+        font-size: 0.85rem; /* was 1.5rem, reduced for clarity */
+        transition: background 0.2s;
+        padding: 0.5rem 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+        #mini-navbar a span {
+            font-size: 0.72rem; /* reduce label text size */
+            margin-top: 0.2rem;
+        }
+
+        #mini-navbar a:hover {
+            background: #222;
+        }
+
+    #mini-navbar i {
+        font-size: 1.15rem; /* reduce icon size */
+        margin-bottom: 0.15rem;
+    }
+
+/* ========== Layout: HTML, Body, Map, Geocoder, Mapbox Controls ========== */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: sans-serif;
+}
+
 #map {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 80px; /* mini navbar */
-    right: 0; /* full width behind sidebar */
+    right: 0;
+    z-index: 1;
 }
 
-/* Make the in-form geocoder fill the form width */
-#property-geocoder .mapboxgl-ctrl-geocoder {
-    width: 100%;
-    min-width: 100%;
+#geocoder {
+    position: absolute;
+    top: 10px;
+    left: 90px;
+    z-index: 2;
+    width: 300px;
 }
 
+.mapboxgl-ctrl-top-left {
+    top: 50px !important;
+}
+
+/* ========== Sidebar Overlay (Main) ========== */
 .sidebar-overlay {
     position: fixed;
     top: 0;
     left: 80px;
     bottom: 0;
-    min-width: 400px;
-    width: max-content;
-    max-width: calc(100vw - 80px); /* Leave room for navbar */
+    width: 400px;
+    min-width: 320px;
+    max-width: calc(100vw - 80px);
     background: #fff;
     overflow-y: auto;
     box-shadow: 2px 0 16px rgba(0,0,0,0.18);
     z-index: 1000;
     padding: 2rem 1.5rem 1.5rem 1.5rem;
     transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
-/* When sidebar is collapsed, put it behind the mini navbar */
-.sidebar-overlay.collapsed {
-    z-index: 5; /* Below mini navbar (z-index: 10) but above map */
-}
+    .sidebar-overlay.sidebar-wide {
+        width: 1200px;
+        min-width: 320px;
+        max-width: calc(100vw - 80px);
+    }
 
-    /* Ensure sidebar content doesn't overflow unnecessarily */
+    .sidebar-overlay.collapsed {
+        z-index: 5;
+    }
+
+    /* Sidebar content and controls */
     .sidebar-overlay .container-fluid {
         width: 100%;
-        min-width: 320px; /* Minimum content width */
+        min-width: 320px;
     }
 
     .sidebar-overlay .form-control,
     .sidebar-overlay .form-select {
-        min-width: 200px; /* Ensure form controls have reasonable minimum width */
+        min-width: 200px;
     }
 
-.sidebar-header {
+.sidebar-header,
+.sidebar-title {
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
     letter-spacing: -1px;
+    color: #222;
 }
 
-.sidebar-toggle {
-    position: fixed;
-    top: 50%;
-    /* left position will be set dynamically by JavaScript */
-    transform: translateY(-50%);
-    z-index: 1001; /* Above sidebar */
-    width: 20px;
-    height: 40px;
-    background: #36454F;
-    border: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0 20px 20px 0;
-    transition: left 0.3s ease, background 0.2s, opacity 0.2s;
-    cursor: pointer;
-    color: white;
-    /* Hide initially until positioned correctly */
-    opacity: 0;
-    visibility: hidden;
-}
-
-.sidebar-toggle.positioned {
-    opacity: 1;
-    visibility: visible;
-}
-
-.sidebar-toggle:hover {
-    background: #4a5a5f;
-}
-
-/* When sidebar is collapsed, move toggle button to the navbar edge */
-.sidebar-overlay.collapsed + .sidebar-toggle {
-    left: 80px; /* At the edge of the navbar */
+.sidebar-title-separator {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(to right, #e9ecef, transparent);
+    margin: 1rem 0 1.5rem 0;
 }
 
 .sidebar-actions {
@@ -112,6 +165,109 @@
             background: #eaeaea;
         }
 
+/* ========== Sidebar Toggle Button ========== */
+.sidebar-toggle {
+    position: fixed;
+    top: 50%;
+    /* left position set dynamically by JS */
+    transform: translateY(-50%);
+    z-index: 1001;
+    width: 20px;
+    height: 40px;
+    background: #36454F;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 20px 20px 0;
+    transition: left 0.3s, background 0.2s, opacity 0.2s;
+    cursor: pointer;
+    color: white;
+    opacity: 0;
+    visibility: hidden;
+}
+
+    .sidebar-toggle.positioned {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .sidebar-toggle:hover {
+        background: #4a5a5f;
+    }
+
+.sidebar-overlay.collapsed + .sidebar-toggle {
+    left: 80px;
+}
+
+/* ========== Responsive: Tablets & Phones ========== */
+@media (max-width: 991.98px) {
+    #mini-navbar {
+        width: 60px;
+    }
+
+    #map {
+        left: 60px;
+    }
+
+    .sidebar-overlay {
+        left: 60px;
+        width: 80vw;
+        min-width: 240px;
+        max-width: calc(100vw - 60px);
+    }
+
+        .sidebar-overlay.sidebar-wide {
+            width: 95vw;
+            min-width: 240px;
+        }
+}
+
+@media (max-width: 600px), (max-width: 575.98px) {
+    #mini-navbar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 60px;
+        flex-direction: row;
+        z-index: 11;
+        background: #36454F;
+    }
+
+    #map {
+        left: 0;
+        top: 60px;
+    }
+
+    .sidebar-overlay {
+        left: 0;
+        top: 60px;
+        width: 100vw;
+        min-width: 0;
+        border-radius: 0;
+        padding: 1rem;
+        position: fixed;
+        z-index: 1100;
+        max-width: 100vw;
+    }
+
+        .sidebar-overlay.sidebar-wide {
+            width: 100vw;
+            min-width: 0;
+            left: 0;
+            top: 60px;
+        }
+}
+
+/* ========== Geocoder ========== */
+#property-geocoder .mapboxgl-ctrl-geocoder {
+    width: 100%;
+    min-width: 100%;
+}
+
+/* ========== Hunt Area Cards ========== */
 .hunt-area-card {
     display: flex;
     align-items: center;
@@ -157,94 +313,7 @@
     cursor: pointer;
 }
 
-@media (max-width: 600px) {
-    .sidebar-overlay {
-        left: 0;
-        width: 100vw;
-        border-radius: 0;
-        padding: 1rem;
-    }
-}
-
-/* Button Styles */
-.theme-btn,
-.btn-primary,
-.subscribe-btn,
-.btn-custom-primary {
-    background-color: #527A52;
-    border-color: #527A52;
-    color: #fff;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-    .theme-btn:hover,
-    .btn-primary:hover,
-    .subscribe-btn:hover,
-    .btn-custom-primary:hover {
-        background-color: #8CAF8C;
-        border-color: #8CAF8C;
-        color: #fff;
-    }
-
-.btn-outline-primary,
-.btn-outline-primary.dropdown-toggle {
-    color: #527A52 !important;
-    border-color: #527A52 !important;
-    background-color: #fff !important;
-}
-
-    .btn-outline-primary:hover,
-    .btn-outline-primary:focus,
-    .btn-outline-primary:active,
-    .btn-outline-primary.dropdown-toggle:hover,
-    .btn-outline-primary.dropdown-toggle:focus,
-    .btn-outline-primary.dropdown-toggle:active,
-    .btn-outline-primary.show {
-        background-color: #527A52 !important;
-        color: #fff !important;
-        border-color: #527A52 !important;
-        box-shadow: 0 0 0 0.2rem rgba(82, 122, 82, 0.25) !important;
-    }
-
-/* Dropdown menu item styling to use green theme colors */
-.dropdown-item {
-    color: #527A52 !important;
-}
-
-.dropdown-item:hover,
-.dropdown-item:focus {
-    background-color: #527A52 !important;
-    color: #fff !important;
-}
-
-.dropdown-item.active,
-.dropdown-item:active {
-    background-color: #527A52 !important;
-    color: #fff !important;
-}
-
-.dropdown-item.active {
-    background-color: #8CAF8C !important;
-    color: #fff !important;
-}
-
-/* Cancel/Secondary Button Styles */
-.btn-custom-cancel,
-.btn-outline-cancel {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: #fff;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-    .btn-custom-cancel:hover,
-    .btn-outline-cancel:hover {
-        background-color: #5a6268;
-        border-color: #545b62;
-        color: #fff;
-    }
-
-/* Property List */
+/* ========== Property List & Cards ========== */
 .property-list {
     overflow-y: auto;
     max-height: calc(100vh - 100px);
@@ -253,7 +322,6 @@
     gap: 20px;
 }
 
-/* Property Item */
 .property-item {
     position: relative;
     display: flex;
@@ -271,19 +339,17 @@
         border-color: #d1d5db;
     }
 
-/* Property Actions */
 .property-actions {
     margin-left: auto;
     display: flex;
     gap: 0.25rem;
 }
 
-.property-actions .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
+    .property-actions .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
 
-/* Icon Styling */
 .property-icon {
     width: 34px;
     height: 34px;
@@ -300,7 +366,6 @@
         color: #4a5568;
     }
 
-/* Text Styling */
 .property-info {
     display: flex;
     flex-direction: column;
@@ -317,7 +382,6 @@
     font-size: 12px;
     color: #718096;
 }
-
 
 .property-card {
     background: #fff;
@@ -342,13 +406,11 @@
     color: #6b7280;
 }
 
-/* Actions */
 .property-actions {
     display: flex;
     gap: 8px;
 }
 
-/* Property Details Card Styles */
 .property-details-card {
     margin: 0 auto;
 }
@@ -362,6 +424,7 @@
     font-size: 1rem;
 }
 
+/* ========== Content Cards ========== */
 .content-icon-card {
     background: #f8f9fa;
     border-radius: 14px;
@@ -402,6 +465,7 @@
     font-size: 0.9rem;
 }
 
+/* ========== Action Buttons ========== */
 .action-btn-primary {
     background: #ff3a1e;
     width: 48px;
@@ -414,14 +478,16 @@
     height: 48px;
 }
 
-/* Property Details Styles */
-.property-details .accordion-item {
+/* ========== Property Details Accordion & Cards ========== */
+.property-details .accordion-item,
+.camera-details .accordion-item {
     border: 1px solid #e1e4e8;
     margin-bottom: 0.5rem;
     border-radius: 8px;
 }
 
-.property-details .accordion-button {
+.property-details .accordion-button,
+.camera-details .accordion-button {
     background-color: #f8f9fa;
     border: none;
     padding: 1rem;
@@ -430,26 +496,30 @@
     transition: background-color 0.2s, color 0.2s;
 }
 
-.property-details .accordion-button:hover {
-    background-color: #e9ecef;
-    color: #527A52;
-}
+    .property-details .accordion-button:hover,
+    .camera-details .accordion-button:hover {
+        background-color: #e9ecef;
+        color: #527A52;
+    }
 
-.property-details .accordion-button:not(.collapsed) {
-    background-color: #8CAF8C !important;
-    color: #fff !important;
-    box-shadow: none;
-}
+    .property-details .accordion-button:not(.collapsed),
+    .camera-details .accordion-button:not(.collapsed) {
+        background-color: #8CAF8C !important;
+        color: #fff !important;
+        box-shadow: none;
+    }
 
-.property-details .accordion-button:not(.collapsed):hover {
-    background-color: #527A52 !important;
-    color: #fff !important;
-}
+        .property-details .accordion-button:not(.collapsed):hover,
+        .camera-details .accordion-button:not(.collapsed):hover {
+            background-color: #527A52 !important;
+            color: #fff !important;
+        }
 
-.property-details .accordion-button:focus {
-    box-shadow: none;
-    border-color: transparent;
-}
+    .property-details .accordion-button:focus,
+    .camera-details .accordion-button:focus {
+        box-shadow: none;
+        border-color: transparent;
+    }
 
 .property-details .camera-card,
 .property-details .profile-card,
@@ -458,13 +528,13 @@
     border: 1px solid #e1e4e8;
 }
 
-.property-details .camera-card:hover,
-.property-details .profile-card:hover,
-.property-details .feature-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
-    border-color: #d1d5db;
-}
+    .property-details .camera-card:hover,
+    .property-details .profile-card:hover,
+    .property-details .feature-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+        border-color: #d1d5db;
+    }
 
 .property-details .feature-icon {
     display: flex;
@@ -486,12 +556,8 @@
     font-size: 0.75rem;
 }
 
-/* Custom Badge Styles */
-.badge-custom-primary {
-    background-color: #527A52;
-    color: #fff;
-}
-
+/* ========== Custom Badges & Text ========== */
+.badge-custom-primary,
 .badge-custom-success {
     background-color: #527A52;
     color: #fff;
@@ -518,97 +584,41 @@
     border: 1px solid #e1e4e8;
 }
 
-/* Custom Text Colors */
 .text-custom-primary {
     color: #527A52 !important;
 }
 
-/* Camera Details Styling */
+/* ========== Camera Details ========== */
 .camera-details {
     min-height: 100%;
     max-width: 1200px;
 }
 
-/* Camera Details Accordion Styling to match green theme */
-.camera-details .accordion-item {
-    border: 1px solid #e1e4e8;
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-}
-
-.camera-details .accordion-button {
-    background-color: #f8f9fa;
-    border: none;
-    padding: 1rem;
-    font-weight: 600;
-    color: #2d3748;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.camera-details .accordion-button:hover {
-    background-color: #e9ecef;
-    color: #527A52;
-}
-
-.camera-details .accordion-button:not(.collapsed) {
-    background-color: #8CAF8C !important;
-    color: #fff !important;
-    box-shadow: none;
-}
-
-.camera-details .accordion-button:not(.collapsed):hover {
-    background-color: #527A52 !important;
-    color: #fff !important;
-}
-
-.camera-details .accordion-button:focus {
-    box-shadow: none;
-    border-color: transparent;
-}
-
-/* Photo grid improvements for single image */
+/* ========== Photo Grid ========== */
 .photo-grid-container {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
 }
 
-/* When there's only one photo, make it larger */
-.photo-grid-container .photo-item:only-child {
-    max-width: 375px;
-    width: 100%;
-}
+    .photo-grid-container .photo-item:only-child {
+        max-width: 375px;
+        width: 100%;
+    }
 
-/* For multiple photos, use responsive sizing */
-.photo-grid-container .photo-item {
-    flex: 1 1 300px;
-    max-width: 350px;
-    min-width: 250px;
-}
+    .photo-grid-container .photo-item {
+        flex: 1 1 300px;
+        max-width: 350px;
+        min-width: 250px;
+    }
 
-/* Override Bootstrap grid for photo cards when using custom photo grid */
-.photo-grid-container .photo-item .card-img-top {
-    height: 250px;
-    object-fit: cover;
-    cursor: pointer;
-}
+        .photo-grid-container .photo-item .card-img-top {
+            height: 250px;
+            object-fit: cover;
+            cursor: pointer;
+        }
 
-.sidebar-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0;
-    letter-spacing: -1px;
-    color: #222;
-}
-
-.sidebar-title-separator {
-    border: 0;
-    height: 1px;
-    background: linear-gradient(to right, #e9ecef, transparent);
-    margin: 1rem 0 1.5rem 0;
-}
-
-/* Modal z-index fixes for sidebar - use higher values to ensure modals work */
+/* ========== Modal Z-Index Fixes ========== */
 .modal {
     z-index: 1055 !important;
 }
@@ -616,3 +626,79 @@
 .modal-backdrop {
     z-index: 1050 !important;
 }
+
+/* ========== Button Styles ========== */
+.theme-btn,
+.btn-primary,
+.subscribe-btn,
+.btn-custom-primary {
+    background-color: #527A52;
+    border-color: #527A52;
+    color: #fff;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+    .theme-btn:hover,
+    .btn-primary:hover,
+    .subscribe-btn:hover,
+    .btn-custom-primary:hover {
+        background-color: #8CAF8C;
+        border-color: #8CAF8C;
+        color: #fff;
+    }
+
+.btn-outline-primary,
+.btn-outline-primary.dropdown-toggle {
+    color: #527A52 !important;
+    border-color: #527A52 !important;
+    background-color: #fff !important;
+}
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus,
+    .btn-outline-primary:active,
+    .btn-outline-primary.dropdown-toggle:hover,
+    .btn-outline-primary.dropdown-toggle:focus,
+    .btn-outline-primary.dropdown-toggle:active,
+    .btn-outline-primary.show {
+        background-color: #527A52 !important;
+        color: #fff !important;
+        border-color: #527A52 !important;
+        box-shadow: 0 0 0 0.2rem rgba(82, 122, 82, 0.25) !important;
+    }
+
+.dropdown-item {
+    color: #527A52 !important;
+}
+
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        background-color: #527A52 !important;
+        color: #fff !important;
+    }
+
+    .dropdown-item.active,
+    .dropdown-item:active {
+        background-color: #527A52 !important;
+        color: #fff !important;
+    }
+
+    .dropdown-item.active {
+        background-color: #8CAF8C !important;
+        color: #fff !important;
+    }
+
+.btn-custom-cancel,
+.btn-outline-cancel {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+    .btn-custom-cancel:hover,
+    .btn-outline-cancel:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+        color: #fff;
+    }

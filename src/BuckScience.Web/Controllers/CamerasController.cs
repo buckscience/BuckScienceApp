@@ -459,6 +459,9 @@ public class CamerasController : Controller
         var camera = await GetCameraDetails.HandleAsync(_db, _currentUser.Id.Value, id, ct);
         if (camera is null) return NotFound();
 
+        // Get placement history
+        var placementHistory = await GetCameraPlacementHistory.HandleAsync(_db, _currentUser.Id.Value, id, ct);
+
         var vm = new CameraDetailsVm
         {
             Id = camera.Id,
@@ -476,7 +479,18 @@ public class CamerasController : Controller
             PhotoCount = camera.PhotoCount,
             CreatedDate = camera.CreatedDate,
             PropertyId = camera.PropertyId,
-            PropertyName = camera.PropertyName
+            PropertyName = camera.PropertyName,
+            PlacementHistory = placementHistory.Select(ph => new CameraDetailsVm.PlacementHistoryItemVm
+            {
+                Id = ph.Id,
+                Latitude = ph.Latitude,
+                Longitude = ph.Longitude,
+                DirectionDegrees = ph.DirectionDegrees,
+                StartDateTime = ph.StartDateTime,
+                EndDateTime = ph.EndDateTime,
+                IsCurrentPlacement = ph.IsCurrentPlacement,
+                Duration = ph.Duration
+            }).ToList()
         };
 
         return View(vm);
