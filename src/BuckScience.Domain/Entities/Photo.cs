@@ -7,12 +7,13 @@ namespace BuckScience.Domain.Entities
     {
         protected Photo() { } // EF
 
-        public Photo(int cameraId, string photoUrl, DateTime dateTaken, DateTime? dateUploaded = null)
+        public Photo(int cameraId, string photoUrl, DateTime dateTaken, DateTime? dateUploaded = null, int? cameraPlacementHistoryId = null)
         {
             SetCamera(cameraId);
             SetPhotoUrl(photoUrl);
             SetDateTaken(dateTaken);
             DateUploaded = dateUploaded ?? DateTime.UtcNow;
+            SetCameraPlacementHistory(cameraPlacementHistoryId);
         }
 
         public int Id { get; private set; }
@@ -24,6 +25,10 @@ namespace BuckScience.Domain.Entities
         // Required relationship to Camera
         public int CameraId { get; private set; }
         public virtual Camera Camera { get; private set; } = default!;
+
+        // Optional relationship to Camera Placement History
+        public int? CameraPlacementHistoryId { get; private set; }
+        public virtual CameraPlacementHistory? PlacementHistory { get; private set; }
 
         // Optional relationship to Weather
         public int? WeatherId { get; private set; }
@@ -61,6 +66,14 @@ namespace BuckScience.Domain.Entities
                 throw new ArgumentOutOfRangeException(nameof(weatherId));
 
             WeatherId = weatherId;
+        }
+
+        public void SetCameraPlacementHistory(int? cameraPlacementHistoryId)
+        {
+            if (cameraPlacementHistoryId.HasValue && cameraPlacementHistoryId.Value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(cameraPlacementHistoryId));
+
+            CameraPlacementHistoryId = cameraPlacementHistoryId;
         }
     }
 }
