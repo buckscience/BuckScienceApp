@@ -162,16 +162,12 @@ window.App = window.App || {};
         const context = event.detail || {};
         console.log('Updating map layers with context:', context);
         
+        let needsDisplayCameras = false;
+        
         if (context.propertyId) {
-            // Load property features and cameras
+            // Load property features
             loadPropertyFeatures(context.propertyId);
-            
-            // Only display camera markers if we're not in camera creation mode
-            // (detected by presence of camera form inputs)
-            const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
-            if (!isOnCameraForm) {
-                displayCamerasOnMap();
-            }
+            needsDisplayCameras = true;
             
             // Set up drawing if not already done
             if (!window.App._featureDrawingSetup) {
@@ -181,11 +177,13 @@ window.App = window.App || {};
         }
         
         if (context.cameraId) {
-            // Pan to camera location if available (only if not on camera form)
-            const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
-            if (!isOnCameraForm) {
-                displayCamerasOnMap();
-            }
+            // Camera context also needs camera display
+            needsDisplayCameras = true;
+        }
+        
+        // Only call displayCamerasOnMap once, even if both propertyId and cameraId are set
+        if (needsDisplayCameras) {
+            displayCamerasOnMap();
         }
         
         if (context.profileId) {
@@ -270,27 +268,6 @@ window.App = window.App || {};
         lngInput.addEventListener('change', onInputChange);
     }
 
-    // Cleanup function to remove camera creation marker
-    function cleanupCameraForm() {
-        const m = map();
-        if (!m) return;
-        
-        // Remove camera creation marker
-        if (window.App._cameraMarker) {
-            window.App._cameraMarker.remove();
-            window.App._cameraMarker = null;
-        }
-        
-        // Remove click handler for camera placement
-        if (window.App._cameraClickHandler) {
-            m.off('click', window.App._cameraClickHandler);
-            window.App._cameraClickHandler = null;
-        }
-    }
-
-    // Expose cleanup function
-    window.App.cleanupCameraForm = cleanupCameraForm;
-
     // Public API
     window.App.focusProperty = function ({ bbox }) {
         if (bbox) fitToBbox(bbox);
@@ -317,11 +294,8 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Display cameras on the map only if not on camera creation form
-        const isOnCameraForm = document.querySelector('#Latitude') && document.querySelector('#Longitude');
-        if (!isOnCameraForm) {
-            displayCamerasOnMap();
-        }
+        // Note: displayCamerasOnMap() will be called by the map:updateLayers event handler
+        // to avoid duplicate calls
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
@@ -788,6 +762,13 @@ window.App = window.App || {};
             return;
         }
 
+        // Prevent rapid multiple calls
+        if (window.App._displayingCameras) {
+            console.log('displayCamerasOnMap already in progress, skipping duplicate call');
+            return;
+        }
+        window.App._displayingCameras = true;
+
         console.log('Loading cameras for property:', propertyId);
 
         // Remove existing camera markers
@@ -983,9 +964,14 @@ window.App = window.App || {};
                 // Update map bounds to include cameras and property
                 updateMapBoundsWithCameras(cameras);
 
+                // Reset the flag to allow future calls
+                window.App._displayingCameras = false;
+
             })
             .catch(error => {
                 console.error('Error loading cameras:', error);
+                // Reset the flag even on error to allow retry
+                window.App._displayingCameras = false;
             });
     }
 
