@@ -21,9 +21,9 @@
         <!-- Cameras Section -->
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="camerasHeading">
-                <button class="accordion-button flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
-                    <i class="fas fa-camera fa-lg me-2"></i>
-                    Cameras <span class="badge badge-custom-primary ms-2">@Model.Cameras.Count</span>
+                <button class="accordion-button flex-grow-1 fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
+                    <i class="fas fa-camera me-2"></i>
+                    Cameras <span class="badge badge-custom-primary ms-2 fs-7">@Model.Cameras.Count</span>
                 </button>
             </h2>
             <div id="camerasCollapse" class="accordion-collapse collapse show" aria-labelledby="camerasHeading" data-bs-parent="#propertyDetailsAccordion">
@@ -34,30 +34,30 @@
                             <div class="row g-3">
                                 @foreach (var camera in Model.Cameras)
                                 {
-                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <div class="col-12 col-sm-6">
     <div class="card camera-card w-100" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
-        <div class="card-body">
+        <div class="card-body p-3">
             <!-- Title and Badge -->
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="card-title mb-0">@camera.Name</h6>
-                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                <h6 class="card-title mb-0 fs-6">@camera.Name</h6>
+                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary") fs-7">
                     @(camera.IsActive ? "Active" : "Inactive")
                 </span>
             </div>
 
             <!-- Camera Brand/Model -->
-            <p class="card-text text-muted small mb-2">
+            <p class="card-text text-muted mb-2 fs-7">
                 <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
             </p>
 
             <!-- Location -->
-            <p class="card-text text-muted small mb-2">
+            <p class="card-text text-muted mb-2 fs-7">
                 <i class="fas fa-map-marker-alt me-1"></i>
                 @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
             </p>
 
             <!-- Direction -->
-            <p class="card-text text-muted small mb-2">
+            <p class="card-text text-muted mb-2 fs-7">
                 <i class="fas fa-compass me-1"></i>
                 @{
                     var compassDirection = DirectionHelper.FromFloat(camera.DirectionDegrees);
@@ -68,10 +68,10 @@
 
             <!-- Buttons -->
             <div class="d-flex gap-1 mt-2">
-                <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
+                <button type="button" class="btn btn-outline-primary btn-sm flex-fill fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
                     <i class="fas fa-circle-info"></i>
                 </button>
-                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill d-flex align-items-center justify-content-center gap-1">
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill d-flex align-items-center justify-content-center gap-1 fs-7">
                     <i class="fas fa-images"></i>
                     <span>@camera.PhotoCount</span>
                 </a>
@@ -83,7 +83,7 @@
                                 }
                             </div>
                         </div>
-                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm ms-2 mt-3" style="min-width:unset; padding:0.25rem 0.75rem;">
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7" style="min-width:unset; padding:0.25rem 0.75rem;">
                             <i class="fas fa-plus me-1"></i> Add Camera
                         </a>
                     }
@@ -102,36 +102,36 @@
         <!-- Profiles Section -->
         <div class="accordion-item">
             <h2 class="accordion-header d-flex justify-content-between align-items-center" id="profilesHeading">
-                <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
-                    <i class="fas fa-crosshairs fa-lg me-2"></i>
-                    Profiles <span class="badge badge-custom-primary ms-2">@Model.Profiles.Count</span>
+                <button class="accordion-button collapsed flex-grow-1 fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
+                    <i class="fas fa-crosshairs me-2"></i>
+                    Profiles <span class="badge badge-custom-primary ms-2 fs-7">@Model.Profiles.Count</span>
                 </button>
             </h2>
             <div id="profilesCollapse" class="accordion-collapse collapse" aria-labelledby="profilesHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
                     @if (Model.Profiles.Any())
                     {
-                        <div class="row g-3">
+                        <div class="row g-2">
                             @foreach (var profile in Model.Profiles)
                             {
-                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <div class="col-12 col-sm-6">
                                     <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" style="cursor:pointer;">
                                         <div class="position-relative">
-                                            <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover;">
-                                            <div class="position-absolute top-0 end-0 m-2">
-                                                <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus)">
+                                            <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover; height: 120px;">
+                                            <div class="position-absolute top-0 end-0 m-1">
+                                                <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus) fs-7">
                                                     @profile.ProfileStatus
                                                 </span>
                                             </div>
                                         </div>
-                                        <div class="card-body text-center mt-auto">
-                                            <h6 class="card-title mb-0">@profile.Name</h6>
+                                        <div class="card-body text-center mt-auto p-2">
+                                            <h6 class="card-title mb-0 fs-6">@profile.Name</h6>
                                         </div>
                                     </a>
                                 </div>
                             }
                         </div>
-                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm ms-2 mt-3" onclick="event.stopPropagation();">
+                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm mt-2 fs-7" onclick="event.stopPropagation();">
                             <i class="fas fa-plus me-1"></i> Add Profile
                         </a>
                     }
@@ -150,32 +150,32 @@
         <!-- Features Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="featuresHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#featuresCollapse" aria-expanded="false" aria-controls="featuresCollapse">
-                    <i class="fas fa-map-marked-alt fa-lg me-2"></i>
-                    Features <span class="badge badge-custom-primary ms-2">@Model.Features.Count</span>
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#featuresCollapse" aria-expanded="false" aria-controls="featuresCollapse">
+                    <i class="fas fa-map-marked-alt me-2"></i>
+                    Features <span class="badge badge-custom-primary ms-2 fs-7">@Model.Features.Count</span>
                 </button>
             </h2>
             <div id="featuresCollapse" class="accordion-collapse collapse" aria-labelledby="featuresHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
                     <div class="mb-3">
-                        <button type="button" class="btn btn-custom-primary btn-sm" onclick="startDrawingFeature()">
-                            <i class="fas fa-crosshairs fa-lg me-1"></i> Add Feature
+                        <button type="button" class="btn btn-custom-primary btn-sm fs-7" onclick="startDrawingFeature()">
+                            <i class="fas fa-crosshairs me-1"></i> Add Feature
                         </button>
-                        <small class="text-muted ms-2">Use the drawing tools on the map to add property features</small>
+                        <small class="text-muted ms-2 fs-7">Use the drawing tools on the map to add property features</small>
                     </div>
                     
                     @if (Model.Features.Any())
                     {
                         <!-- Category Filter -->
                         <div class="mb-3">
-                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <label class="form-label mb-0 me-2">Filter by Category:</label>
-                                <button class="btn btn-outline-secondary btn-sm feature-category-filter active" data-category="all">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <label class="form-label mb-0 me-2 fs-7">Filter by Category:</label>
+                                <button class="btn btn-outline-secondary btn-sm feature-category-filter active fs-7" data-category="all">
                                     All (@Model.Features.Count)
                                 </button>
                                 @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
                                 {
-                                    <button class="btn btn-outline-secondary btn-sm feature-category-filter" data-category="@((int)categoryGroup.Key)">
+                                    <button class="btn btn-outline-secondary btn-sm feature-category-filter fs-7" data-category="@((int)categoryGroup.Key)">
                                         @GetCategoryDisplayName(categoryGroup.Key) (@categoryGroup.Count())
                                     </button>
                                 }
@@ -188,45 +188,45 @@
                             var categoryId = $"featureCategory{(int)categoryGroup.Key}";
                             <div class="feature-category-group" data-category="@((int)categoryGroup.Key)">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="text-muted mb-0 flex-grow-1">
+                                    <h6 class="text-muted mb-0 flex-grow-1 fs-6">
                                         <i class="@GetCategoryIcon(categoryGroup.Key) me-1"></i>
                                         @GetCategoryDisplayName(categoryGroup.Key) 
-                                        <span class="badge badge-custom-secondary ms-1">@categoryGroup.Count()</span>
+                                        <span class="badge badge-custom-secondary ms-1 fs-7">@categoryGroup.Count()</span>
                                     </h6>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                                    <button class="btn btn-sm btn-outline-secondary fs-7" type="button" data-bs-toggle="collapse" 
                                             data-bs-target="#@categoryId" aria-expanded="true" aria-controls="@categoryId">
                                         <i class="fas fa-chevron-down"></i>
                                     </button>
                                 </div>
                                 <div class="collapse show" id="@categoryId">
-                                    <div class="row g-3 mb-4">
+                                    <div class="row g-2 mb-3">
                                         @foreach (var feature in categoryGroup)
                                         {
-                                            <div class="col-12 col-md-6">
+                                            <div class="col-12">
                                                 <div class="card feature-card">
-                                                    <div class="card-body d-flex align-items-start">
+                                                    <div class="card-body p-3 d-flex align-items-start">
                                                         <div class="flex-grow-1">
                                                             <div class="d-flex justify-content-between align-items-start">
-                                                                <div>
-                                                                    <h6 class="card-title mb-1">@feature.Name</h6>
-                                                                    <small class="text-muted">@feature.TypeName</small>
+                                                                <div class="flex-grow-1">
+                                                                    <h6 class="card-title mb-1 fs-6">@feature.Name</h6>
+                                                                    <small class="text-muted fs-7">@feature.TypeName</small>
                                                                     @if (!string.IsNullOrEmpty(feature.Notes))
                                                                     {
-                                                                        <p class="card-text text-muted small mb-1 mt-1">@feature.Notes</p>
+                                                                        <p class="card-text text-muted mb-1 mt-1 fs-7">@feature.Notes</p>
                                                                     }
                                                                     @if (feature.CreatedAt.HasValue)
                                                                     {
-                                                                        <small class="text-muted d-block">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                        <small class="text-muted d-block fs-7">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
                                                                     }
                                                                 </div>
                                                                 <div class="btn-group" role="group">
-                                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editFeature(@feature.Id)">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm fs-7" onclick="editFeature(@feature.Id)">
                                                                         <i class="fas fa-edit"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFeature(@feature.Id)">
+                                                                    <button type="button" class="btn btn-outline-danger btn-sm fs-7" onclick="deleteFeature(@feature.Id)">
                                                                         <i class="fas fa-trash"></i>
                                                                     </button>
                                                                 </div>
@@ -297,24 +297,53 @@
 
 @section Styles {
     <style>
+        /* Custom font sizes for compact layout */
+        .fs-7 {
+            font-size: 0.75rem !important;
+        }
+        
+        .fs-6 {
+            font-size: 0.875rem !important;
+        }
+        
         .camera-card,
         .profile-card,
         .feature-card {
             height: 100%;
+            transition: all 0.15s ease;
         }
         
-        /* Better responsive card sizing */
-        @@media (min-width: 768px) {
-            .col-md-4 {
-                min-width: 240px; /* Minimum width for medium screens */
-            }
+        .camera-card:hover,
+        .profile-card:hover,
+        .feature-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        /* Keep cards from getting too narrow on small screens */
-        @@media (min-width: 576px) and (max-width: 767.98px) {
+        /* Optimize accordion body padding */
+        .accordion-body {
+            padding: 1rem 1.25rem;
+        }
+        
+        /* Optimize card spacing */
+        .card-body {
+            padding: 0.75rem;
+        }
+        
+        /* Better responsive card sizing for sidebar */
+        @@media (min-width: 576px) {
             .col-sm-6 {
-                min-width: 220px; /* Minimum width for small screens */
+                min-width: 180px; /* Optimal for 400px sidebar */
             }
+        }
+        
+        /* Tighter spacing for sidebar layout */
+        .property-details .row {
+            margin: 0 -0.5rem;
+        }
+        
+        .property-details .row > * {
+            padding: 0 0.5rem;
         }
 
         /* Feature category collapse styling */
@@ -335,6 +364,18 @@
 
         .feature-category-group button[data-bs-toggle="collapse"] i {
             transition: transform 0.2s ease;
+        }
+        
+        /* Compact button styling */
+        .btn-sm.fs-7 {
+            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
+        }
+        
+        /* Optimize badge sizing */
+        .badge.fs-7 {
+            font-size: 0.65rem !important;
+            padding: 0.2em 0.4em;
         }
     </style>
 }
