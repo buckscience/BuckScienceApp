@@ -67,13 +67,26 @@
             </p>
 
             <!-- Buttons -->
-            <div class="d-flex gap-1 mt-2">
-                <button type="button" class="btn btn-outline-primary btn-sm flex-fill fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)">
+            <div class="btn-group w-100 mt-2" role="group">
+                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); panToCameraLocation(@camera.Longitude, @camera.Latitude)" title="Focus on map">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)" title="View details">
                     <i class="fas fa-circle-info"></i>
                 </button>
-                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm flex-fill d-flex align-items-center justify-content-center gap-1 fs-7">
-                    <i class="fas fa-images"></i>
-                    <span>@camera.PhotoCount</span>
+                <a href="/properties/@Model.Id/cameras/@camera.Id/edit" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="Edit camera" onclick="event.stopPropagation();">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm fs-7 d-flex align-items-center justify-content-center" title="Delete camera" onclick="event.stopPropagation();">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+            
+            <!-- Photo count -->
+            <div class="d-flex justify-content-center mt-2">
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm fs-7" onclick="event.stopPropagation();">
+                    <i class="fas fa-images me-1"></i>
+                    <span>@camera.PhotoCount Photos</span>
                 </a>
             </div>
         </div>
@@ -503,6 +516,13 @@
         window.focusPropertyFeature = focusPropertyFeature;
         window.editFeature = editFeature;
         window.deleteFeature = deleteFeature;
+        window.panToCameraLocation = function(lng, lat) {
+            if (window.App && window.App.panToCameraLocation) {
+                window.App.panToCameraLocation(lng, lat);
+            } else {
+                console.log('Pan to camera location:', lng, lat);
+            }
+        };
 
         // Feature category filtering
         document.addEventListener('DOMContentLoaded', function() {

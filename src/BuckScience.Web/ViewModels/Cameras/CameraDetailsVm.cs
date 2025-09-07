@@ -18,4 +18,17 @@ public class CameraDetailsVm
     public DateTime CreatedDate { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
+    public List<PlacementHistoryItemVm> PlacementHistory { get; set; } = new();
+
+    public class PlacementHistoryItemVm
+    {
+        public int Id { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public float DirectionDegrees { get; set; }
+        public DateTime StartDateTime { get; set; }
+        public DateTime? EndDateTime { get; set; }
+        public bool IsCurrentPlacement { get; set; }
+        public TimeSpan? Duration { get; set; }
+    }
 }
