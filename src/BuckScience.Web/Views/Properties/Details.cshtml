@@ -80,13 +80,8 @@
                 <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm fs-7 d-flex align-items-center justify-content-center" title="Delete camera" onclick="event.stopPropagation();">
                     <i class="fas fa-trash"></i>
                 </a>
-            </div>
-            
-            <!-- Photo count -->
-            <div class="d-flex justify-content-center mt-2">
-                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm fs-7" onclick="event.stopPropagation();">
-                    <i class="fas fa-images me-1"></i>
-                    <span>@camera.PhotoCount Photos</span>
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="View photos" onclick="event.stopPropagation();">
+                    <i class="fas fa-images"></i>
                 </a>
             </div>
         </div>
