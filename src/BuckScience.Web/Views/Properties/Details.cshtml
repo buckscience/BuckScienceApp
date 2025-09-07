@@ -342,40 +342,13 @@
 @section Scripts {
     <script>
         function navigateToCamera(cameraId) {
-            if (window.App && window.App.loadSidebar) {
-                // Find the camera data to get coordinates
-                const camera = @Html.Raw(Json.Serialize(Model.Cameras));
-                const targetCamera = camera.find(c => c.id === cameraId);
-                
-                if (targetCamera) {
-                    // Load camera details in sidebar
-                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true })
-                        .then(() => {
-                            // After sidebar loads, pan to camera location
-                            if (window.App && window.App.panToCameraLocation) {
-                                setTimeout(() => {
-                                    window.App.panToCameraLocation(targetCamera.longitude, targetCamera.latitude);
-                                }, 300); // Small delay to ensure sidebar is fully loaded
-                            }
-                        })
-                        .catch((error) => {
-                            console.error('Error loading camera details:', error);
-                        });
-                } else {
-                    console.error('Camera not found:', cameraId);
-                    window.App.loadSidebar(`/cameras/${cameraId}/details`, { push: true });
-                }
-            } else {
-                console.log('Navigate to camera:', cameraId);
-            }
+            // Use standard MVC navigation
+            window.location.href = `/cameras/${cameraId}/details`;
         }
 
         function navigateToProfile(profileId) {
-            if (window.App && window.App.loadSidebar) {
-                window.App.loadSidebar(`/profiles/${profileId}`, { push: true });
-            } else {
-                window.location.href = `/profiles/${profileId}`;
-            }
+            // Use standard MVC navigation
+            window.location.href = `/profiles/${profileId}`;
         }
 
         function startDrawingFeature() {
@@ -444,6 +417,11 @@
             
             if (window.App && window.App.initializePropertyFeatures) {
                 window.App.initializePropertyFeatures(@Model.Id);
+            }
+            
+            // Trigger map layer update for this property
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({ propertyId: @Model.Id });
             }
         });
 
