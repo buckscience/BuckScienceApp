@@ -480,6 +480,8 @@ public class CamerasController : Controller
             CreatedDate = camera.CreatedDate,
             PropertyId = camera.PropertyId,
             PropertyName = camera.PropertyName,
+            PropertyLatitude = camera.PropertyLatitude,
+            PropertyLongitude = camera.PropertyLongitude,
             PlacementHistory = placementHistory.Select(ph => new CameraDetailsVm.PlacementHistoryItemVm
             {
                 Id = ph.Id,

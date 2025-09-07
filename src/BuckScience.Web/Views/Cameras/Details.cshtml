@@ -256,6 +256,13 @@
             }
         };
 
+        // Set up property coordinates for proper map context
+        window.App = window.App || {};
+        window.App.propertyCoords = {
+            lat: @Model.PropertyLatitude,
+            lng: @Model.PropertyLongitude
+        };
+
         // Camera placement history data for map display
         window.cameraPlacementHistory = @Html.Raw(Json.Serialize(Model.PlacementHistory.Select(p => new {
             id = p.Id,
@@ -275,22 +282,112 @@
             propertyId: @Model.PropertyId
         };
 
-        // Trigger camera placement history display on map
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.App && window.App.displayCameraPlacementHistory) {
-                window.App.displayCameraPlacementHistory(window.currentCamera, window.cameraPlacementHistory);
+        // Function to initialize camera placement markers with proper timing
+        function initializeCameraPlacementHistory() {
+            console.log('Initializing camera placement history...');
+            
+            // Ensure the map exists and is ready
+            if (!window.App || !window.App.getMap) {
+                console.log('Map not ready, retrying...');
+                setTimeout(initializeCameraPlacementHistory, 100);
+                return;
             }
             
-            // Also trigger the normal map layer update for the property context
+            const map = window.App.getMap();
+            if (!map || !map.isStyleLoaded()) {
+                console.log('Map style not loaded, retrying...');
+                setTimeout(initializeCameraPlacementHistory, 100);
+                return;
+            }
+
+            // First, trigger the normal map layer update for the property context
             document.dispatchEvent(new CustomEvent('map:updateLayers', { 
                 detail: { 
                     propertyId: @Model.PropertyId,
                     cameraId: @Model.Id
                 } 
             }));
+            
+            // Display camera placement history with slight delay to ensure property context is set
+            if (window.App.displayCameraPlacementHistory) {
+                setTimeout(() => {
+                    console.log('Displaying camera placement history...');
+                    window.App.displayCameraPlacementHistory(window.currentCamera, window.cameraPlacementHistory);
+                    
+                    // After displaying placement history, ensure proper map bounds
+                    setTimeout(() => {
+                        centerMapOnCameraAndHistory();
+                    }, 500);
+                }, 200);
+            }
+        }
+
+        // Function to center map appropriately for camera and placement history
+        function centerMapOnCameraAndHistory() {
+            const map = window.App?.getMap?.();
+            if (!map) return;
+
+            // Create bounds that include property, current camera location, and all placement history
+            let bounds = new mapboxgl.LngLatBounds();
+            
+            // Always include property location
+            bounds.extend([window.App.propertyCoords.lng, window.App.propertyCoords.lat]);
+            
+            // Include current camera location
+            bounds.extend([@Model.Longitude, @Model.Latitude]);
+            
+            // Include all placement history locations
+            if (window.cameraPlacementHistory && window.cameraPlacementHistory.length > 0) {
+                window.cameraPlacementHistory.forEach(placement => {
+                    bounds.extend([placement.longitude, placement.latitude]);
+                });
+            }
+            
+            // Check if we have more than just a single point
+            const boundsArray = bounds.toArray();
+            const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+            
+            if (hasMultiplePoints) {
+                // Fit to bounds with all camera locations and property
+                console.log('Fitting map bounds to include all camera placements and property');
+                map.fitBounds(bounds, {
+                    padding: {
+                        top: 60,
+                        bottom: 60,
+                        left: 60,
+                        right: 60
+                    },
+                    maxZoom: 18,
+                    duration: 1500
+                });
+            } else {
+                // If only one location, center on it with reasonable zoom
+                console.log('Centering map on single camera location');
+                map.flyTo({
+                    center: [@Model.Longitude, @Model.Latitude],
+                    zoom: 16,
+                    duration: 1500
+                });
+            }
+        }
+
+        // Initialize when DOM is ready, but with better timing control
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Camera details page loaded');
+            
+            // Wait a bit for the map to initialize before trying to add placement history
+            setTimeout(initializeCameraPlacementHistory, 300);
         });
 
-        // Note: Removed automatic map panning to preserve map state as requested
-        // Map will maintain current zoom/position when viewing camera details
+        // Also initialize if the map loads after DOM ready
+        if (window.App && window.App.getMap) {
+            const existingMap = window.App.getMap();
+            if (existingMap) {
+                existingMap.on('load', function() {
+                    console.log('Map load event fired');
+                    setTimeout(initializeCameraPlacementHistory, 100);
+                });
+            }
+        }
     </script>
 }
