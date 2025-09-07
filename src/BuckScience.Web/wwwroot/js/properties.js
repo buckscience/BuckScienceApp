@@ -163,7 +163,7 @@ window.App = window.App || {};
         wirePropertyForm(container);
     });
 
-    // Mount camera form and wire map <-> form with property recentering
+    // Mount camera form and wire map <-> form without affecting map view
     function wireCameraForm(container) {
         const m = map();
         if (!m || typeof mapboxgl === 'undefined') return;
@@ -186,38 +186,60 @@ window.App = window.App || {};
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
             latInput.value = Number(lat).toFixed(6);
             lngInput.value = Number(lng).toFixed(6);
-            marker.setLngLat([lng, lat]).addTo(m);
+            // Only add marker to map if explicitly requested
+            if (opts.addToMap !== false) {
+                marker.setLngLat([lng, lat]).addTo(m);
+            } else {
+                // Just set the position without adding to map to avoid visual changes
+                marker.setLngLat([lng, lat]);
+            }
             if (opts.fly) m.flyTo({ center: [lng, lat], zoom: Math.max(m.getZoom(), 14) });
         }
 
-        // Initialize camera coordinates from inputs only if they exist
+        // Initialize camera coordinates from inputs but DON'T add marker to avoid map changes
         const currentLat = parseFloat(latInput.value);
         const currentLng = parseFloat(lngInput.value);
         if (Number.isFinite(currentLat) && Number.isFinite(currentLng) && (currentLat !== 0 || currentLng !== 0)) {
-            setCoords(currentLat, currentLng);
+            // Set coordinates but don't add marker to map to prevent any visual changes
+            setCoords(currentLat, currentLng, { addToMap: false });
         }
-        // Don't automatically set to property center to avoid map movement
 
         // Marker drag updates inputs
         if (marker._onDragEnd) marker.off('dragend', marker._onDragEnd);
         marker._onDragEnd = () => {
             const ll = marker.getLngLat();
-            setCoords(ll.lat, ll.lng);
+            setCoords(ll.lat, ll.lng, { addToMap: true }); // Only update when user explicitly drags
         };
         marker.on('dragend', marker._onDragEnd);
 
-        // Map click sets coords
-        if (window.App._cameraClickHandler) m.off('click', window.App._cameraClickHandler);
-        window.App._cameraClickHandler = (e) => setCoords(e.lngLat.lat, e.lngLat.lng);
-        m.on('click', window.App._cameraClickHandler);
+        // Map click sets coords - only for new camera creation, not edit
+        const isCreateView = container?.querySelector?.('form[action*="/cameras/add"]') || 
+                            window.location.pathname.includes('/cameras/add');
+        if (isCreateView) {
+            if (window.App._cameraClickHandler) m.off('click', window.App._cameraClickHandler);
+            window.App._cameraClickHandler = (e) => setCoords(e.lngLat.lat, e.lngLat.lng, { addToMap: true });
+            m.on('click', window.App._cameraClickHandler);
+        } else {
+            // For edit view, remove click handler to prevent accidental coordinate changes
+            if (window.App._cameraClickHandler) {
+                m.off('click', window.App._cameraClickHandler);
+                window.App._cameraClickHandler = null;
+            }
+        }
 
-        // Inputs change -> move marker
+        // Inputs change -> move marker (only update position, don't force visual changes)
         if (latInput._onChange) latInput.removeEventListener('change', latInput._onChange);
         if (lngInput._onChange) lngInput.removeEventListener('change', lngInput._onChange);
         const onInputChange = () => {
             const lat = parseFloat(latInput.value);
             const lng = parseFloat(lngInput.value);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) marker.setLngLat([lng, lat]).addTo(m);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                marker.setLngLat([lng, lat]);
+                // Only add to map if marker was already visible
+                if (marker.getElement().parentNode) {
+                    marker.addTo(m);
+                }
+            }
         };
         latInput._onChange = onInputChange;
         lngInput._onChange = onInputChange;
