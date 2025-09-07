@@ -35,7 +35,7 @@
                                 @foreach (var camera in Model.Cameras)
                                 {
                                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-    <div class="card camera-card w-100" style="cursor: pointer;" onclick="panToCameraLocation(@camera.Longitude, @camera.Latitude)">
+    <div class="card camera-card w-100" style="cursor: pointer;" onclick="window.location.href='/cameras/@camera.Id/details'">
         <div class="card-body">
             <!-- Title and Badge -->
             <div class="d-flex justify-content-between align-items-center mb-2">

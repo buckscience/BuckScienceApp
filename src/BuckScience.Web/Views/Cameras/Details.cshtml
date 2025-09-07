@@ -133,7 +133,7 @@
 
 @section Scripts {
     <script>
-        // Ensure panToCameraLocation function is available
+        // Make panToCameraLocation function available for manual use, but don't auto-call it
         window.panToCameraLocation = function(lng, lat) {
             if (window.App && window.App.panToCameraLocation) {
                 window.App.panToCameraLocation(lng, lat);
@@ -142,33 +142,7 @@
             }
         };
 
-        // Initialize camera details when page loads (for sidebar loads)
-        document.addEventListener('DOMContentLoaded', function() {
-            // If this is loaded via sidebar, pan to camera location automatically
-            const cameraLat = @Model.Latitude;
-            const cameraLng = @Model.Longitude;
-            
-            // Small delay to ensure everything is initialized
-            setTimeout(() => {
-                if (window.App && window.App.panToCameraLocation) {
-                    window.App.panToCameraLocation(cameraLng, cameraLat);
-                }
-            }, 100);
-        });
-
-        // Also handle sidebar load events
-        document.addEventListener('sidebar:loaded', function(event) {
-            // If this is a camera details page loaded in sidebar, pan to camera
-            if (event.detail && event.detail.url && event.detail.url.includes('/cameras/') && event.detail.url.includes('/details')) {
-                const cameraLat = @Model.Latitude;
-                const cameraLng = @Model.Longitude;
-                
-                setTimeout(() => {
-                    if (window.App && window.App.panToCameraLocation) {
-                        window.App.panToCameraLocation(cameraLng, cameraLat);
-                    }
-                }, 300);
-            }
-        });
+        // Note: Removed automatic map panning to preserve map state as requested
+        // Map will maintain current zoom/position when viewing camera details
     </script>
 }
