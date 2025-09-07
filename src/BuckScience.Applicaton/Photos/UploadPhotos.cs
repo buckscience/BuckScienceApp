@@ -63,7 +63,9 @@ public static class UploadPhotos
                 var exifLocation = ExtractLocationFromExif(file.Content, weatherSettings.Value);
                 
                 // Create Photo entity first with placeholder URL to get the ID for metadata
-                var photo = new Photo(cmd.CameraId, "UPLOADING", dateTaken, cameraPlacementHistoryId: currentPlacement?.Id);
+                // Only set placement history ID if it's valid (entities saved to database have ID > 0)
+                var placementHistoryId = currentPlacement?.Id > 0 ? (int?)currentPlacement.Id : null;
+                var photo = new Photo(cmd.CameraId, "UPLOADING", dateTaken, cameraPlacementHistoryId: placementHistoryId);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
                 
