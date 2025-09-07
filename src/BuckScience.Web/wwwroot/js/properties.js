@@ -933,20 +933,11 @@ window.App = window.App || {};
                         .setLngLat([camera.longitude, camera.latitude])
                         .addTo(m);
 
-                        // Add click event to marker
+                        // Add click event to marker - navigate to details view in sidebar
                         markerElement.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            showCameraPopup({
-                                properties: {
-                                    id: camera.id,
-                                    name: camera.name,
-                                    isActive: camera.isActive,
-                                    photoCount: camera.photoCount,
-                                    brandModel: camera.brand + (camera.model ? ` / ${camera.model}` : ''),
-                                    directionDegrees: camera.directionDegrees,
-                                    directionText: compassDirection
-                                }
-                            }, { lng: camera.longitude, lat: camera.latitude });
+                            // Navigate to camera details view in sidebar without affecting map state
+                            window.location.href = `/cameras/${camera.id}/details`;
                         });
 
                         // Store marker reference for cleanup
@@ -961,8 +952,8 @@ window.App = window.App || {};
 
                 console.log('All camera markers added successfully');
 
-                // Update map bounds to include cameras and property
-                updateMapBoundsWithCameras(cameras);
+                // Note: Preserving map state as requested - no automatic bounds adjustment
+                // User specifically requested no zooming, panning, or removing other features
 
                 // Reset the flag to allow future calls
                 window.App._displayingCameras = false;
