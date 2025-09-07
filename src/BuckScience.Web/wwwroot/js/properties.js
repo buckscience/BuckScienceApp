@@ -273,6 +273,283 @@ window.App = window.App || {};
         if (bbox) fitToBbox(bbox);
     };
 
+    // Function to display camera placement history markers
+    window.App.displayCameraPlacementHistory = function(camera, placementHistory) {
+        const m = map();
+        if (!m) {
+            console.error('Map not available for displaying camera placement history');
+            return;
+        }
+
+        if (!placementHistory || !Array.isArray(placementHistory) || placementHistory.length === 0) {
+            console.log('No placement history to display');
+            return;
+        }
+
+        console.log('Displaying placement history for camera:', camera.name, 'with', placementHistory.length, 'placements');
+
+        // Remove existing camera placement history markers
+        if (window.App._cameraPlacementMarkers) {
+            window.App._cameraPlacementMarkers.forEach(marker => {
+                marker.remove();
+            });
+            window.App._cameraPlacementMarkers = [];
+        } else {
+            window.App._cameraPlacementMarkers = [];
+        }
+
+        // Function to convert degrees to compass direction
+        function getCompassDirection(degrees) {
+            const directions = {
+                0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
+                180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
+            };
+            
+            // Normalize degrees
+            degrees = degrees % 360;
+            if (degrees < 0) degrees += 360;
+            
+            // Find closest direction
+            let closest = 0;
+            let minDiff = Math.abs(degrees - 0);
+            
+            for (const deg in directions) {
+                const diff = Math.abs(degrees - parseFloat(deg));
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = parseFloat(deg);
+                }
+            }
+            
+            return directions[closest];
+        }
+
+        // Function to calculate direction indicator position
+        function calculateDirectionPosition(degrees) {
+            // Normalize degrees
+            degrees = degrees % 360;
+            if (degrees < 0) degrees += 360;
+            
+            // Convert to radians (0° = North = top)
+            const radians = degrees * (Math.PI / 180);
+            
+            // Calculate position around a circle with radius 18px
+            const radius = 18;
+            const x = radius * Math.sin(radians);
+            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
+            
+            return { x, y };
+        }
+
+        // Create markers for each placement in history
+        placementHistory.forEach((placement, index) => {
+            try {
+                // Create marker element with Font Awesome camera icon and direction indicator
+                const markerElement = document.createElement('div');
+                markerElement.className = 'camera-placement-marker';
+                
+                const compassDirection = getCompassDirection(placement.directionDegrees);
+                const directionPos = calculateDirectionPosition(placement.directionDegrees);
+                
+                // Determine marker color based on whether it's current or historical placement
+                const isCurrentPlacement = placement.isCurrentPlacement;
+                const markerClass = isCurrentPlacement ? 
+                    (camera.isActive ? 'current-active' : 'current-inactive') : 
+                    'historical';
+                
+                markerElement.innerHTML = `
+                    <div class="camera-placement-marker-inner ${markerClass}">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <div class="camera-placement-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
+                        ${compassDirection}
+                    </div>
+                `;
+                
+                // Add CSS styles for placement markers if not already added
+                if (!document.getElementById('camera-placement-marker-styles')) {
+                    const styleSheet = document.createElement('style');
+                    styleSheet.id = 'camera-placement-marker-styles';
+                    styleSheet.type = 'text/css';
+                    styleSheet.innerText = `
+                        .camera-placement-marker {
+                            cursor: pointer;
+                            width: 30px;
+                            height: 30px;
+                            position: relative;
+                        }
+                        .camera-placement-marker-inner {
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 3px solid #ffffff;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            font-size: 14px;
+                            color: #ffffff;
+                            transition: transform 0.2s ease;
+                        }
+                        .camera-placement-marker-inner:hover {
+                            transform: scale(1.1);
+                        }
+                        .camera-placement-marker-inner.current-active {
+                            background-color: #FF6B35; /* Current active camera color */
+                        }
+                        .camera-placement-marker-inner.current-inactive {
+                            background-color: #999999; /* Current inactive camera color */
+                        }
+                        .camera-placement-marker-inner.historical {
+                            background-color: #666666; /* Historical/old location color (darker gray) */
+                        }
+                        .camera-placement-direction-indicator {
+                            position: absolute;
+                            background-color: #2c3e50;
+                            color: white;
+                            border: 2px solid #ffffff;
+                            border-radius: 50%;
+                            width: 20px;
+                            height: 20px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 10px;
+                            font-weight: bold;
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            z-index: 1;
+                            transform: translate(-50%, -50%);
+                        }
+                    `;
+                    document.head.appendChild(styleSheet);
+                }
+
+                // Create marker
+                const marker = new mapboxgl.Marker({
+                    element: markerElement,
+                    anchor: 'center'
+                })
+                .setLngLat([placement.longitude, placement.latitude])
+                .addTo(m);
+
+                // Add click event to marker - show placement details
+                markerElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showPlacementDetailsPopup(placement, camera, { lng: placement.longitude, lat: placement.latitude });
+                });
+
+                // Store marker reference for cleanup
+                window.App._cameraPlacementMarkers.push(marker);
+
+                console.log(`Added placement marker ${index + 1}: ${isCurrentPlacement ? 'Current' : 'Historical'} location`);
+
+            } catch (error) {
+                console.error(`Error creating placement marker ${index + 1}:`, error);
+            }
+        });
+
+        console.log('All camera placement markers added successfully');
+    };
+
+    // Function to show placement details popup
+    function showPlacementDetailsPopup(placement, camera, lngLat) {
+        // Remove any existing camera panel
+        const existingPanel = document.getElementById('placementDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
+
+        const formatDate = (dateString) => {
+            return new Date(dateString).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+
+        const panelHtml = `
+            <div class="position-fixed bg-white border shadow-lg rounded p-3" id="placementDetailsPanel" 
+                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Camera Placement</h5>
+                    <button type="button" class="btn-close" onclick="closePlacementDetailsPanel()"></button>
+                </div>
+                
+                <div class="alert ${placement.isCurrentPlacement ? 'alert-success' : 'alert-secondary'}" role="alert">
+                    <i class="fas fa-camera me-2"></i>
+                    <strong>${camera.name}</strong>
+                    <br><small>${placement.isCurrentPlacement ? 'Current Location' : 'Previous Location'}</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Placed</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            ${formatDate(placement.startDateTime)}
+                        </small>
+                    </div>
+                </div>
+                
+                ${placement.endDateTime ? `
+                    <div class="mb-3">
+                        <label class="form-label">Moved</label>
+                        <div class="p-2 border rounded bg-light">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${formatDate(placement.endDateTime)}
+                            </small>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="p-2 border rounded">
+                            <span class="badge bg-success">Currently Active</span>
+                        </div>
+                    </div>
+                `}
+                
+                <div class="mb-3">
+                    <label class="form-label">Direction</label>
+                    <div class="p-2 border rounded bg-light">
+                        <span class="text-muted">
+                            <i class="fas fa-compass me-1"></i>
+                            <strong>${placement.directionDegrees.toFixed(0)}°</strong>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Coordinates</label>
+                    <div class="p-2 border rounded bg-light">
+                        <small class="text-muted">
+                            <strong>Lat:</strong> ${lngLat.lat.toFixed(6)}<br>
+                            <strong>Lng:</strong> ${lngLat.lng.toFixed(6)}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-column">
+                    <button type="button" class="btn btn-outline-primary" onclick="panToCameraLocation(${lngLat.lng}, ${lngLat.lat}); closePlacementDetailsPanel();">
+                        <i class="fas fa-crosshairs me-1"></i>Focus on Map
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closePlacementDetailsPanel()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add panel to DOM
+        document.body.insertAdjacentHTML('beforeend', panelHtml);
+        
+        // Store panel reference globally for potential cleanup
+        window.App._currentPlacementPanel = document.getElementById('placementDetailsPanel');
+    }
+
     // Property Features functionality
     window.App.initializePropertyFeatures = function(propertyId) {
         console.log('Initializing property features for property:', propertyId);
@@ -2106,6 +2383,18 @@ window.App = window.App || {};
     
     window.panToCameraLocation = function(lng, lat) {
         window.App.panToCameraLocation(lng, lat);
+    };
+
+    window.closePlacementDetailsPanel = function() {
+        if (window.App._currentPlacementPanel) {
+            window.App._currentPlacementPanel.remove();
+            window.App._currentPlacementPanel = null;
+        }
+        
+        const existingPanel = document.getElementById('placementDetailsPanel');
+        if (existingPanel) {
+            existingPanel.remove();
+        }
     };
     
     window.disableGeometryEditing = function() {

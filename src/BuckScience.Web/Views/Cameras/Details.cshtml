@@ -256,6 +256,40 @@
             }
         };
 
+        // Camera placement history data for map display
+        window.cameraPlacementHistory = @Html.Raw(Json.Serialize(Model.PlacementHistory.Select(p => new {
+            id = p.Id,
+            latitude = p.Latitude,
+            longitude = p.Longitude,
+            directionDegrees = p.DirectionDegrees,
+            startDateTime = p.StartDateTime,
+            endDateTime = p.EndDateTime,
+            isCurrentPlacement = p.IsCurrentPlacement
+        })));
+
+        // Current camera data
+        window.currentCamera = {
+            id: @Model.Id,
+            name: '@Html.Raw(Json.Serialize(Model.Name))',
+            isActive: @Model.IsActive.ToString().ToLower(),
+            propertyId: @Model.PropertyId
+        };
+
+        // Trigger camera placement history display on map
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.App && window.App.displayCameraPlacementHistory) {
+                window.App.displayCameraPlacementHistory(window.currentCamera, window.cameraPlacementHistory);
+            }
+            
+            // Also trigger the normal map layer update for the property context
+            document.dispatchEvent(new CustomEvent('map:updateLayers', { 
+                detail: { 
+                    propertyId: @Model.PropertyId,
+                    cameraId: @Model.Id
+                } 
+            }));
+        });
+
         // Note: Removed automatic map panning to preserve map state as requested
         // Map will maintain current zoom/position when viewing camera details
     </script>
