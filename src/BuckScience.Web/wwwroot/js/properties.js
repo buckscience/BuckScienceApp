@@ -936,8 +936,26 @@ window.App = window.App || {};
                         // Add click event to marker - navigate to details view in sidebar
                         markerElement.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            // Navigate to camera details view in sidebar without affecting map state
-                            window.location.href = `/cameras/${camera.id}/details`;
+                            // Navigate to camera details view in sidebar using AJAX to preserve map state
+                            const url = `/cameras/${camera.id}/details`;
+                            
+                            fetch(url, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(response => {
+                                if (!response.ok) throw new Error(`Failed: ${response.status}`);
+                                return response.text();
+                            })
+                            .then(html => {
+                                document.getElementById('sidebar-content').innerHTML = html;
+                                document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url } }));
+                                history.pushState({ url }, '', url);
+                            })
+                            .catch(error => {
+                                console.error('Navigation error:', error);
+                                // Fallback to standard navigation
+                                window.location.href = url;
+                            });
                         });
 
                         // Store marker reference for cleanup
