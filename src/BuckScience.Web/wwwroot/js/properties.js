@@ -344,8 +344,8 @@ window.App = window.App || {};
         // Convert to radians (0° = North = top)
         const radians = degrees * (Math.PI / 180);
         
-        // Calculate position around a circle with radius 16px (closer for placement markers)
-        const radius = 16;
+        // Calculate position around a circle with radius 20px (closer for placement markers but not overlapping)
+        const radius = 20;
         const x = radius * Math.sin(radians);
         const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
         
