@@ -378,9 +378,7 @@ window.App = window.App || {};
                     <div class="camera-placement-marker-inner ${markerClass}">
                         <i class="fas fa-camera"></i>
                     </div>
-                    <div class="camera-placement-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
-                        ${compassDirection}
-                    </div>
+                    <div class="camera-placement-direction-indicator" data-direction="${compassDirection}" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px; transform: translate(-50%, -50%) rotate(${placement.directionDegrees}deg);"></div>
                 `;
                 
                 // Add CSS styles for placement markers if not already added
@@ -422,20 +420,37 @@ window.App = window.App || {};
                         }
                         .camera-placement-direction-indicator {
                             position: absolute;
-                            background-color: #2c3e50;
-                            color: white;
-                            border: 2px solid #ffffff;
-                            border-radius: 50%;
-                            width: 20px;
-                            height: 20px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 10px;
-                            font-weight: bold;
-                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            width: 0;
+                            height: 0;
+                            border-left: 12px solid transparent;
+                            border-right: 12px solid transparent;
+                            border-bottom: 24px solid #2c3e50;
                             z-index: 1;
                             transform: translate(-50%, -50%);
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                        }
+                        .camera-placement-direction-indicator::before {
+                            content: "";
+                            position: absolute;
+                            left: -14px;
+                            top: 2px;
+                            width: 0;
+                            height: 0;
+                            border-left: 14px solid transparent;
+                            border-right: 14px solid transparent;
+                            border-bottom: 26px solid #ffffff;
+                            z-index: -1;
+                        }
+                        .camera-placement-direction-indicator::after {
+                            content: attr(data-direction);
+                            position: absolute;
+                            left: -6px;
+                            top: 8px;
+                            color: white;
+                            font-size: 10px;
+                            font-weight: bold;
+                            text-align: center;
+                            width: 12px;
                         }
                     `;
                     document.head.appendChild(styleSheet);
@@ -1169,9 +1184,7 @@ window.App = window.App || {};
                             <div class="camera-marker-inner ${camera.isActive ? 'active' : 'inactive'}">
                                 <i class="fas fa-camera"></i>
                             </div>
-                            <div class="camera-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
-                                ${compassDirection}
-                            </div>
+                            <div class="camera-direction-indicator" data-direction="${compassDirection}" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px; transform: translate(-50%, -50%) rotate(${camera.directionDegrees}deg);"></div>
                         `;
                         
                         // Add CSS styles for the marker
@@ -1206,20 +1219,37 @@ window.App = window.App || {};
                             }
                             .camera-direction-indicator {
                                 position: absolute;
-                                background-color: #2c3e50;
-                                color: white;
-                                border: 2px solid #ffffff;
-                                border-radius: 50%;
-                                width: 20px;
-                                height: 20px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 10px;
-                                font-weight: bold;
-                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                                width: 0;
+                                height: 0;
+                                border-left: 12px solid transparent;
+                                border-right: 12px solid transparent;
+                                border-bottom: 24px solid #2c3e50;
                                 z-index: 1;
                                 transform: translate(-50%, -50%);
+                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            }
+                            .camera-direction-indicator::before {
+                                content: '';
+                                position: absolute;
+                                left: -14px;
+                                top: 2px;
+                                width: 0;
+                                height: 0;
+                                border-left: 14px solid transparent;
+                                border-right: 14px solid transparent;
+                                border-bottom: 26px solid #ffffff;
+                                z-index: -1;
+                            }
+                            .camera-direction-indicator::after {
+                                content: attr(data-direction);
+                                position: absolute;
+                                left: -6px;
+                                top: 8px;
+                                color: white;
+                                font-size: 10px;
+                                font-weight: bold;
+                                text-align: center;
+                                width: 12px;
                             }
                         `;
 
@@ -1367,9 +1397,7 @@ window.App = window.App || {};
                     <div class="camera-placement-marker-inner historical">
                         <i class="fas fa-camera"></i>
                     </div>
-                    <div class="camera-placement-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
-                        ${compassDirection}
-                    </div>
+                    <div class="camera-placement-direction-indicator" data-direction="${compassDirection}" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px; transform: translate(-50%, -50%) rotate(${placement.directionDegrees}deg);"></div>
                 `;
                 
                 // Add CSS styles for placement markers if not already added
@@ -1411,20 +1439,37 @@ window.App = window.App || {};
                         }
                         .camera-placement-direction-indicator {
                             position: absolute;
-                            background-color: #2c3e50;
-                            color: white;
-                            border: 2px solid #ffffff;
-                            border-radius: 50%;
-                            width: 20px;
-                            height: 20px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 10px;
-                            font-weight: bold;
-                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            width: 0;
+                            height: 0;
+                            border-left: 12px solid transparent;
+                            border-right: 12px solid transparent;
+                            border-bottom: 24px solid #2c3e50;
                             z-index: 1;
                             transform: translate(-50%, -50%);
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                        }
+                        .camera-placement-direction-indicator::before {
+                            content: "";
+                            position: absolute;
+                            left: -14px;
+                            top: 2px;
+                            width: 0;
+                            height: 0;
+                            border-left: 14px solid transparent;
+                            border-right: 14px solid transparent;
+                            border-bottom: 26px solid #ffffff;
+                            z-index: -1;
+                        }
+                        .camera-placement-direction-indicator::after {
+                            content: attr(data-direction);
+                            position: absolute;
+                            left: -6px;
+                            top: 8px;
+                            color: white;
+                            font-size: 10px;
+                            font-weight: bold;
+                            text-align: center;
+                            width: 12px;
                         }
                     `;
                     document.head.appendChild(styleSheet);
