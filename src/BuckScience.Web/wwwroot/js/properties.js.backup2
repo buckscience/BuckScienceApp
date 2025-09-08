@@ -430,9 +430,19 @@ window.App = window.App || {};
                     </div>
                 `;
                 
-                // Camera placement marker styles are now in site.css
-
-.camera-placement-marker-inner {
+                // Add CSS styles for placement markers if not already added
+                if (!document.getElementById('camera-placement-marker-styles')) {
+                    const styleSheet = document.createElement('style');
+                    styleSheet.id = 'camera-placement-marker-styles';
+                    styleSheet.type = 'text/css';
+                    styleSheet.innerText = `
+                        .camera-placement-marker {
+                            cursor: pointer;
+                            width: 30px;
+                            height: 30px;
+                            position: relative;
+                        }
+                        .camera-placement-marker-inner {
                             width: 30px;
                             height: 30px;
                             border-radius: 50%;
@@ -1370,9 +1380,19 @@ window.App = window.App || {};
                     </div>
                 `;
                 
-                // Camera placement marker styles are now in site.css
-
-.camera-placement-marker-inner {
+                // Add CSS styles for placement markers if not already added
+                if (!document.getElementById('camera-placement-marker-styles')) {
+                    const styleSheet = document.createElement('style');
+                    styleSheet.id = 'camera-placement-marker-styles';
+                    styleSheet.type = 'text/css';
+                    styleSheet.innerText = `
+                        .camera-placement-marker {
+                            cursor: pointer;
+                            width: 30px;
+                            height: 30px;
+                            position: relative;
+                        }
+                        .camera-placement-marker-inner {
                             width: 30px;
                             height: 30px;
                             border-radius: 50%;
