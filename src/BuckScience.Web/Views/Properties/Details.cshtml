@@ -38,14 +38,13 @@
                                     <i class="fas fa-history me-1"></i>Show Historical Camera Placements
                                 </label>
                             </div>
-                            <small class="text-muted fs-7">View all locations where cameras have been placed over time</small>
                         </div>
                         
                         <div class="container-fluid px-0">
                             <div class="row g-3">
                                 @foreach (var camera in Model.Cameras)
                                 {
-                                    <div class="col-12 col-sm-6">
+                                    <div class="col-12">
     <div class="card camera-card w-100" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
         <div class="card-body p-3">
             <!-- Title and Badge -->
@@ -133,7 +132,7 @@
                         <div class="row g-2">
                             @foreach (var profile in Model.Profiles)
                             {
-                                <div class="col-12 col-sm-6">
+                                <div class="col-12">
                                     <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" style="cursor:pointer;">
                                         <div class="position-relative">
                                             <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover; height: 120px;">
@@ -349,6 +348,12 @@
             padding: 0.75rem;
         }
         
+        /* Fix: Remove padding for single-column camera cards */
+        .property-details .row > .col-12 {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        
         /* Better responsive card sizing for sidebar */
         @@media (min-width: 576px) {
             .col-sm-6 {
@@ -441,7 +446,7 @@
                 const instructionDiv = document.createElement('div');
                 instructionDiv.id = 'drawing-instructions';
                 instructionDiv.className = 'alert alert-info position-fixed';
-                instructionDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1000; max-width: 300px;';
+                instructionDiv.style.cssText = 'top: 10px; right: 60px; z-index: 1000; max-width: 300px;';
                 instructionDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start">
                         <div>

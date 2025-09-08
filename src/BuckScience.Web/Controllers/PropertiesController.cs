@@ -298,6 +298,9 @@ public class PropertiesController : Controller
             AvailableTags = availableTags.Select(t => new TagInfo { Id = t.Id, Name = t.Name }).ToList()
         };
 
+        // Ensure Wide View
+        ViewBag.SidebarWide = true;
+
         return View(vm);
     }
 
