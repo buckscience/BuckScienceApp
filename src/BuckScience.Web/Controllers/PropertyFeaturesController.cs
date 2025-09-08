@@ -2,15 +2,17 @@ using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.PropertyFeatures;
 using BuckScience.Domain.Enums;
+using BuckScience.Web.ViewModels.PropertyFeatures;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 
 namespace BuckScience.Web.Controllers;
 
 [Authorize]
-[ApiController]
-public class PropertyFeaturesController : ControllerBase
+public class PropertyFeaturesController : Controller
 {
     private readonly IAppDbContext _db;
     private readonly GeometryFactory _geometryFactory;
@@ -117,6 +119,134 @@ public class PropertyFeaturesController : ControllerBase
         if (!success) return NotFound();
 
         return NoContent();
+    }
+
+    // EDIT: GET /features/{id}/edit
+    [HttpGet]
+    [Route("/features/{id:int}/edit")]
+    public async Task<IActionResult> Edit(int id, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        var feature = await Application.PropertyFeatures.GetPropertyFeature.HandleAsync(id, _db, _currentUser.Id.Value, ct);
+        if (feature is null) return NotFound();
+
+        // Get property name for breadcrumb/header
+        var property = await _db.Properties.AsNoTracking()
+            .Where(p => p.Id == feature.PropertyId)
+            .FirstOrDefaultAsync(ct);
+
+        var vm = new PropertyFeatureEditVm
+        {
+            Id = feature.Id,
+            PropertyId = feature.PropertyId,
+            PropertyName = property?.Name ?? "Unknown",
+            Name = feature.Name,
+            ClassificationType = feature.ClassificationType,
+            GeometryWkt = feature.GeometryWkt,
+            Notes = feature.Notes,
+            GeometryType = ExtractGeometryType(feature.GeometryWkt),
+            ClassificationTypeOptions = GetClassificationTypeOptions(feature.ClassificationType)
+        };
+
+        return View(vm);
+    }
+
+    // EDIT: POST /features/{id}/edit
+    [HttpPost]
+    [Route("/features/{id:int}/edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, PropertyFeatureEditVm vm, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        if (vm.Id != id)
+            return BadRequest("Route and model Id mismatch.");
+
+        if (!ModelState.IsValid)
+        {
+            vm.ClassificationTypeOptions = GetClassificationTypeOptions(vm.ClassificationType);
+            return View(vm);
+        }
+
+        try
+        {
+            var cmd = new Application.PropertyFeatures.UpdatePropertyFeature.Command(
+                id,
+                vm.ClassificationType,
+                vm.GeometryWkt,
+                vm.Name,
+                vm.Notes);
+
+            var success = await Application.PropertyFeatures.UpdatePropertyFeature.HandleAsync(cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
+            if (!success) return NotFound();
+
+            TempData["SuccessMessage"] = "Feature updated successfully.";
+            return RedirectToRoute("PropertyDetails", new { id = vm.PropertyId });
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError("", ex.Message);
+            vm.ClassificationTypeOptions = GetClassificationTypeOptions(vm.ClassificationType);
+            return View(vm);
+        }
+    }
+
+    private static string ExtractGeometryType(string geometryWkt)
+    {
+        if (string.IsNullOrEmpty(geometryWkt)) return "Unknown";
+        
+        var upperWkt = geometryWkt.ToUpper();
+        if (upperWkt.StartsWith("POINT")) return "Point";
+        if (upperWkt.StartsWith("LINESTRING")) return "Line";
+        if (upperWkt.StartsWith("POLYGON")) return "Polygon";
+        if (upperWkt.StartsWith("MULTIPOINT")) return "MultiPoint";
+        if (upperWkt.StartsWith("MULTILINESTRING")) return "MultiLine";
+        if (upperWkt.StartsWith("MULTIPOLYGON")) return "MultiPolygon";
+        
+        return "Unknown";
+    }
+
+    private static List<SelectListItem> GetClassificationTypeOptions(ClassificationType selected)
+    {
+        return Enum.GetValues<ClassificationType>()
+            .Select(ct => new SelectListItem
+            {
+                Value = ((int)ct).ToString(),
+                Text = GetClassificationTypeDisplayName(ct),
+                Selected = ct == selected
+            })
+            .OrderBy(x => x.Text)
+            .ToList();
+    }
+
+    private static string GetClassificationTypeDisplayName(ClassificationType type)
+    {
+        return type switch
+        {
+            ClassificationType.AgCropField => "Agricultural Crop Field",
+            ClassificationType.FoodPlot => "Food Plot",
+            ClassificationType.MastTreePatch => "Mast Tree Patch",
+            ClassificationType.BrowsePatch => "Browse Patch",
+            ClassificationType.PrairieForbPatch => "Prairie Forb Patch",
+            ClassificationType.BeddingArea => "Bedding Area",
+            ClassificationType.ThickBrush => "Thick Brush",
+            ClassificationType.Clearcut => "Clearcut",
+            ClassificationType.CRP => "CRP (Conservation Reserve Program)",
+            ClassificationType.CedarThicket => "Cedar Thicket",
+            ClassificationType.LeewardSlope => "Leeward Slope",
+            ClassificationType.EdgeCover => "Edge Cover",
+            ClassificationType.IsolatedCover => "Isolated Cover",
+            ClassificationType.ManMadeCover => "Man-Made Cover",
+            ClassificationType.RidgePoint => "Ridge Point",
+            ClassificationType.RidgeSpur => "Ridge Spur",
+            ClassificationType.CreekCrossing => "Creek Crossing",
+            ClassificationType.FieldEdge => "Field Edge",
+            ClassificationType.InsideCorner => "Inside Corner",
+            ClassificationType.PinchPointFunnel => "Pinch Point/Funnel",
+            ClassificationType.TravelCorridor => "Travel Corridor",
+            _ => type.ToString()
+        };
     }
 
     public class CreatePropertyFeatureRequest
