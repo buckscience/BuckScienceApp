@@ -290,6 +290,98 @@ window.App = window.App || {};
         document.dispatchEvent(new CustomEvent('map:updateLayers', { detail: context }));
     };
 
+    // Helper functions for camera direction indicators (shared between placement history and camera display)
+    
+    // Function to convert degrees to compass direction
+    function getCompassDirection(degrees) {
+        const directions = {
+            0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
+            180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
+        };
+        
+        // Normalize degrees
+        degrees = degrees % 360;
+        if (degrees < 0) degrees += 360;
+        
+        // Find closest direction
+        let closest = 0;
+        let minDiff = Math.abs(degrees - 0);
+        
+        for (const deg in directions) {
+            const diff = Math.abs(degrees - parseFloat(deg));
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = parseFloat(deg);
+            }
+        }
+        
+        return directions[closest];
+    }
+
+    // Function to calculate direction indicator position
+    function calculateDirectionPosition(degrees) {
+        // Normalize degrees
+        degrees = degrees % 360;
+        if (degrees < 0) degrees += 360;
+        
+        // Convert to radians (0° = North = top)
+        const radians = degrees * (Math.PI / 180);
+        
+        // Calculate position around a circle with radius 24px 
+        const radius = 24;
+        const x = radius * Math.sin(radians);
+        const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
+        
+        return { x, y };
+    }
+
+    // Function to calculate direction indicator position for placement markers (smaller radius)
+    function calculatePlacementDirectionPosition(degrees) {
+        // Normalize degrees
+        degrees = degrees % 360;
+        if (degrees < 0) degrees += 360;
+        
+        // Convert to radians (0° = North = top)
+        const radians = degrees * (Math.PI / 180);
+        
+        // Calculate position around a circle with radius 16px (closer for placement markers)
+        const radius = 16;
+        const x = radius * Math.sin(radians);
+        const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
+        
+        return { x, y };
+    }
+
+    // Function to create SVG directional indicator
+    function createDirectionalIndicatorSVG(compassDirection, size = 28) {
+        return `
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <path id="arrow-shape" d="M${size/2} 2 L${size-4} ${size-2} L${size/2} ${size-6} L4 ${size-2} Z" />
+                </defs>
+                <!-- White arrow with black border -->
+                <use href="#arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
+                <!-- Direction text -->
+                <text x="${size/2}" y="${size/2 + 1}" fill="#000000">${compassDirection}</text>
+            </svg>
+        `;
+    }
+
+    // Function to create smaller SVG for placement markers
+    function createPlacementDirectionalIndicatorSVG(compassDirection, size = 24) {
+        return `
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <path id="placement-arrow-shape" d="M${size/2} 2 L${size-3} ${size-2} L${size/2} ${size-5} L3 ${size-2} Z" />
+                </defs>
+                <!-- White arrow with black border -->
+                <use href="#placement-arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
+                <!-- Direction text -->
+                <text x="${size/2}" y="${size/2}" fill="#000000">${compassDirection}</text>
+            </svg>
+        `;
+    }
+
     // Function to display camera placement history markers
     window.App.displayCameraPlacementHistory = function(camera, placementHistory) {
         const m = map();
@@ -313,96 +405,6 @@ window.App = window.App || {};
             window.App._cameraPlacementMarkers = [];
         } else {
             window.App._cameraPlacementMarkers = [];
-        }
-
-        // Function to convert degrees to compass direction
-        function getCompassDirection(degrees) {
-            const directions = {
-                0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
-                180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
-            };
-            
-            // Normalize degrees
-            degrees = degrees % 360;
-            if (degrees < 0) degrees += 360;
-            
-            // Find closest direction
-            let closest = 0;
-            let minDiff = Math.abs(degrees - 0);
-            
-            for (const deg in directions) {
-                const diff = Math.abs(degrees - parseFloat(deg));
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closest = parseFloat(deg);
-                }
-            }
-            
-            return directions[closest];
-        }
-
-        // Function to calculate direction indicator position
-        function calculateDirectionPosition(degrees) {
-            // Normalize degrees
-            degrees = degrees % 360;
-            if (degrees < 0) degrees += 360;
-            
-            // Convert to radians (0° = North = top)
-            const radians = degrees * (Math.PI / 180);
-            
-            // Calculate position around a circle with radius 18px (closer to camera marker)
-            const radius = 18;
-            const x = radius * Math.sin(radians);
-            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
-            
-            return { x, y };
-        }
-
-        // Function to calculate direction indicator position for placement markers (smaller radius)
-        function calculatePlacementDirectionPosition(degrees) {
-            // Normalize degrees
-            degrees = degrees % 360;
-            if (degrees < 0) degrees += 360;
-            
-            // Convert to radians (0° = North = top)
-            const radians = degrees * (Math.PI / 180);
-            
-            // Calculate position around a circle with radius 16px (closer for placement markers)
-            const radius = 16;
-            const x = radius * Math.sin(radians);
-            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
-            
-            return { x, y };
-        }
-
-        // Function to create SVG directional indicator
-        function createDirectionalIndicatorSVG(compassDirection, size = 28) {
-            return `
-                <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <path id="arrow-shape" d="M${size/2} 2 L${size-4} ${size-2} L${size/2} ${size-6} L4 ${size-2} Z" />
-                    </defs>
-                    <!-- White arrow with black border -->
-                    <use href="#arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
-                    <!-- Direction text -->
-                    <text x="${size/2}" y="${size/2 + 1}" fill="#000000">${compassDirection}</text>
-                </svg>
-            `;
-        }
-
-        // Function to create smaller SVG for placement markers
-        function createPlacementDirectionalIndicatorSVG(compassDirection, size = 24) {
-            return `
-                <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <path id="placement-arrow-shape" d="M${size/2} 2 L${size-3} ${size-2} L${size/2} ${size-5} L3 ${size-2} Z" />
-                    </defs>
-                    <!-- White arrow with black border -->
-                    <use href="#placement-arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
-                    <!-- Direction text -->
-                    <text x="${size/2}" y="${size/2}" fill="#000000">${compassDirection}</text>
-                </svg>
-            `;
         }
 
         // Create markers for each placement in history
@@ -1109,48 +1111,6 @@ window.App = window.App || {};
                 // Create individual markers for each camera
                 cameras.forEach((camera, index) => {
                     try {
-                        // Function to convert degrees to compass direction
-                        function getCompassDirection(degrees) {
-                            const directions = {
-                                0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
-                                180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
-                            };
-                            
-                            // Normalize degrees
-                            degrees = degrees % 360;
-                            if (degrees < 0) degrees += 360;
-                            
-                            // Find closest direction
-                            let closest = 0;
-                            let minDiff = Math.abs(degrees - 0);
-                            
-                            for (const deg in directions) {
-                                const diff = Math.abs(degrees - parseFloat(deg));
-                                if (diff < minDiff) {
-                                    minDiff = diff;
-                                    closest = parseFloat(deg);
-                                }
-                            }
-                            
-                            return directions[closest];
-                        }
-
-                        // Function to calculate direction indicator position
-                        function calculateDirectionPosition(degrees) {
-                            // Normalize degrees
-                            degrees = degrees % 360;
-                            if (degrees < 0) degrees += 360;
-                            
-                            // Convert to radians (0° = North = top)
-                            const radians = degrees * (Math.PI / 180);
-                            
-                            // Calculate position around a circle with radius 24px
-                            const radius = 24;
-                            const x = radius * Math.sin(radians);
-                            const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
-                            
-                            return { x, y };
-                        }
 
                         // Create marker element with Font Awesome camera icon and direction indicator
                         const markerElement = document.createElement('div');
@@ -1255,43 +1215,6 @@ window.App = window.App || {};
                 // Skip current placement as it's already shown as the main camera marker
                 if (placement.isCurrentPlacement) {
                     return;
-                }
-
-                // Function to convert degrees to compass direction
-                function getCompassDirection(degrees) {
-                    const directions = {
-                        0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
-                        180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
-                    };
-                    
-                    degrees = degrees % 360;
-                    if (degrees < 0) degrees += 360;
-                    
-                    let closest = 0;
-                    let minDiff = Math.abs(degrees - 0);
-                    
-                    for (const deg in directions) {
-                        const diff = Math.abs(degrees - parseFloat(deg));
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closest = parseFloat(deg);
-                        }
-                    }
-                    
-                    return directions[closest];
-                }
-
-                // Function to calculate direction indicator position
-                function calculateDirectionPosition(degrees) {
-                    degrees = degrees % 360;
-                    if (degrees < 0) degrees += 360;
-                    
-                    const radians = degrees * (Math.PI / 180);
-                    const radius = 18;
-                    const x = radius * Math.sin(radians);
-                    const y = -radius * Math.cos(radians);
-                    
-                    return { x, y };
                 }
 
                 // Create marker element for historical placement
