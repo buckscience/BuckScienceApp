@@ -327,8 +327,8 @@ window.App = window.App || {};
         // Convert to radians (0° = North = top)
         const radians = degrees * (Math.PI / 180);
         
-        // Calculate position around a circle with radius 28px 
-        const radius = 28;
+        // Calculate position around a circle with radius 34px 
+        const radius = 34;
         const x = radius * Math.sin(radians);
         const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
         
@@ -344,8 +344,8 @@ window.App = window.App || {};
         // Convert to radians (0° = North = top)
         const radians = degrees * (Math.PI / 180);
         
-        // Calculate position around a circle with radius 24px (closer for placement markers but not overlapping)
-        const radius = 24;
+        // Calculate position around a circle with radius 30px (closer for placement markers but not overlapping)
+        const radius = 30;
         const x = radius * Math.sin(radians);
         const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
         
@@ -353,7 +353,7 @@ window.App = window.App || {};
     }
 
     // Function to create SVG directional indicator
-    function createDirectionalIndicatorSVG(compassDirection, size = 28) {
+    function createDirectionalIndicatorSVG(compassDirection, size = 36) {
         return `
             <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -362,13 +362,13 @@ window.App = window.App || {};
                 <!-- White arrow with black border -->
                 <use href="#arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
                 <!-- Direction text -->
-                <text x="${size/2}" y="${size/2 + 1}" fill="#000000">${compassDirection}</text>
+                <text x="${size/2}" y="${size/2 + 2}" fill="#000000" font-size="10" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${compassDirection}</text>
             </svg>
         `;
     }
 
     // Function to create smaller SVG for placement markers
-    function createPlacementDirectionalIndicatorSVG(compassDirection, size = 24) {
+    function createPlacementDirectionalIndicatorSVG(compassDirection, size = 30) {
         return `
             <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -377,7 +377,7 @@ window.App = window.App || {};
                 <!-- White arrow with black border -->
                 <use href="#placement-arrow-shape" fill="white" stroke="#000000" stroke-width="1"/>
                 <!-- Direction text -->
-                <text x="${size/2}" y="${size/2}" fill="#000000">${compassDirection}</text>
+                <text x="${size/2}" y="${size/2 + 1}" fill="#000000" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${compassDirection}</text>
             </svg>
         `;
     }
@@ -1625,7 +1625,7 @@ window.App = window.App || {};
 
         const panelHtml = `
             <div class="position-fixed bg-white border shadow-lg rounded p-3" id="featureDetailsPanel" 
-                 style="top: 20px; right: 20px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
+                 style="top: 10px; right: 60px; width: 400px; z-index: 1050; max-height: 80vh; overflow-y: auto;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">Property Feature</h5>
                     <button type="button" class="btn-close" onclick="closeFeatureDetailsPanel()"></button>
