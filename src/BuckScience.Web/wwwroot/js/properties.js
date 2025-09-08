@@ -327,8 +327,8 @@ window.App = window.App || {};
         // Convert to radians (0° = North = top)
         const radians = degrees * (Math.PI / 180);
         
-        // Calculate position around a circle with radius 34px 
-        const radius = 34;
+        // Calculate position around a circle with radius 30px 
+        const radius = 30;
         const x = radius * Math.sin(radians);
         const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
         
@@ -344,8 +344,8 @@ window.App = window.App || {};
         // Convert to radians (0° = North = top)
         const radians = degrees * (Math.PI / 180);
         
-        // Calculate position around a circle with radius 30px (closer for placement markers but not overlapping)
-        const radius = 30;
+        // Calculate position around a circle with radius 26px (closer for placement markers but not overlapping)
+        const radius = 26;
         const x = radius * Math.sin(radians);
         const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
         
@@ -353,7 +353,7 @@ window.App = window.App || {};
     }
 
     // Function to create SVG directional indicator
-    function createDirectionalIndicatorSVG(compassDirection, size = 36) {
+    function createDirectionalIndicatorSVG(compassDirection, size = 40) {
         return `
             <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -368,7 +368,7 @@ window.App = window.App || {};
     }
 
     // Function to create smaller SVG for placement markers
-    function createPlacementDirectionalIndicatorSVG(compassDirection, size = 30) {
+    function createPlacementDirectionalIndicatorSVG(compassDirection, size = 34) {
         return `
             <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                 <defs>
