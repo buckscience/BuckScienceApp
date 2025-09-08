@@ -350,8 +350,8 @@ window.App = window.App || {};
             // Convert to radians (0° = North = top)
             const radians = degrees * (Math.PI / 180);
             
-            // Calculate position around a circle with radius 18px
-            const radius = 18;
+            // Calculate position around a circle with radius 24px
+            const radius = 24;
             const x = radius * Math.sin(radians);
             const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
             
@@ -422,35 +422,35 @@ window.App = window.App || {};
                             position: absolute;
                             width: 0;
                             height: 0;
-                            border-left: 12px solid transparent;
-                            border-right: 12px solid transparent;
-                            border-bottom: 24px solid #2c3e50;
+                            border-left: 6px solid transparent;
+                            border-right: 6px solid transparent;
+                            border-bottom: 12px solid #2c3e50;
                             z-index: 1;
                             transform: translate(-50%, -50%);
-                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                         }
                         .camera-placement-direction-indicator::before {
                             content: "";
                             position: absolute;
-                            left: -14px;
-                            top: 2px;
+                            left: -7px;
+                            top: 1px;
                             width: 0;
                             height: 0;
-                            border-left: 14px solid transparent;
-                            border-right: 14px solid transparent;
-                            border-bottom: 26px solid #ffffff;
+                            border-left: 7px solid transparent;
+                            border-right: 7px solid transparent;
+                            border-bottom: 13px solid #ffffff;
                             z-index: -1;
                         }
                         .camera-placement-direction-indicator::after {
                             content: attr(data-direction);
                             position: absolute;
-                            left: -6px;
-                            top: 8px;
+                            left: -4px;
+                            top: 3px;
                             color: white;
-                            font-size: 10px;
+                            font-size: 8px;
                             font-weight: bold;
                             text-align: center;
-                            width: 12px;
+                            width: 8px;
                         }
                     `;
                     document.head.appendChild(styleSheet);
@@ -1165,8 +1165,8 @@ window.App = window.App || {};
                             // Convert to radians (0° = North = top)
                             const radians = degrees * (Math.PI / 180);
                             
-                            // Calculate position around a circle with radius 18px
-                            const radius = 18;
+                            // Calculate position around a circle with radius 24px
+                            const radius = 24;
                             const x = radius * Math.sin(radians);
                             const y = -radius * Math.cos(radians); // Negative because CSS y increases downward
                             
@@ -1221,35 +1221,35 @@ window.App = window.App || {};
                                 position: absolute;
                                 width: 0;
                                 height: 0;
-                                border-left: 12px solid transparent;
-                                border-right: 12px solid transparent;
-                                border-bottom: 24px solid #2c3e50;
+                                border-left: 6px solid transparent;
+                                border-right: 6px solid transparent;
+                                border-bottom: 12px solid #2c3e50;
                                 z-index: 1;
                                 transform: translate(-50%, -50%);
-                                box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                             }
                             .camera-direction-indicator::before {
                                 content: '';
                                 position: absolute;
-                                left: -14px;
-                                top: 2px;
+                                left: -7px;
+                                top: 1px;
                                 width: 0;
                                 height: 0;
-                                border-left: 14px solid transparent;
-                                border-right: 14px solid transparent;
-                                border-bottom: 26px solid #ffffff;
+                                border-left: 7px solid transparent;
+                                border-right: 7px solid transparent;
+                                border-bottom: 13px solid #ffffff;
                                 z-index: -1;
                             }
                             .camera-direction-indicator::after {
                                 content: attr(data-direction);
                                 position: absolute;
-                                left: -6px;
-                                top: 8px;
+                                left: -4px;
+                                top: 3px;
                                 color: white;
-                                font-size: 10px;
+                                font-size: 8px;
                                 font-weight: bold;
                                 text-align: center;
-                                width: 12px;
+                                width: 8px;
                             }
                         `;
 
@@ -1441,35 +1441,35 @@ window.App = window.App || {};
                             position: absolute;
                             width: 0;
                             height: 0;
-                            border-left: 12px solid transparent;
-                            border-right: 12px solid transparent;
-                            border-bottom: 24px solid #2c3e50;
+                            border-left: 6px solid transparent;
+                            border-right: 6px solid transparent;
+                            border-bottom: 12px solid #2c3e50;
                             z-index: 1;
                             transform: translate(-50%, -50%);
-                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                         }
                         .camera-placement-direction-indicator::before {
                             content: "";
                             position: absolute;
-                            left: -14px;
-                            top: 2px;
+                            left: -7px;
+                            top: 1px;
                             width: 0;
                             height: 0;
-                            border-left: 14px solid transparent;
-                            border-right: 14px solid transparent;
-                            border-bottom: 26px solid #ffffff;
+                            border-left: 7px solid transparent;
+                            border-right: 7px solid transparent;
+                            border-bottom: 13px solid #ffffff;
                             z-index: -1;
                         }
                         .camera-placement-direction-indicator::after {
                             content: attr(data-direction);
                             position: absolute;
-                            left: -6px;
-                            top: 8px;
+                            left: -4px;
+                            top: 3px;
                             color: white;
-                            font-size: 10px;
+                            font-size: 8px;
                             font-weight: bold;
                             text-align: center;
-                            width: 12px;
+                            width: 8px;
                         }
                     `;
                     document.head.appendChild(styleSheet);
