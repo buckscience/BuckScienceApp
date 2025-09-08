@@ -273,6 +273,23 @@ window.App = window.App || {};
         if (bbox) fitToBbox(bbox);
     };
 
+    // Function to toggle camera placement history display
+    window.App.toggleCameraPlacementHistory = function(show) {
+        console.log('Toggling camera placement history:', show);
+        window.App._showHistoricalPlacements = show;
+        
+        // Force reload of cameras
+        if (window.App._currentPropertyId) {
+            window.App._displayingCameras = false;
+            displayCamerasOnMap();
+        }
+    };
+
+    // Function to trigger map layer update
+    window.App.triggerMapLayerUpdate = function(context) {
+        document.dispatchEvent(new CustomEvent('map:updateLayers', { detail: context }));
+    };
+
     // Function to display camera placement history markers
     window.App.displayCameraPlacementHistory = function(camera, placementHistory) {
         const m = map();
@@ -1058,8 +1075,21 @@ window.App = window.App || {};
             window.App._cameraMarkers = [];
         }
 
-        // Fetch camera data from API
-        fetch(`/properties/${propertyId}/cameras/api`)
+        // Remove existing camera placement history markers
+        if (window.App._cameraPlacementMarkers) {
+            window.App._cameraPlacementMarkers.forEach(marker => {
+                marker.remove();
+            });
+            window.App._cameraPlacementMarkers = [];
+        } else {
+            window.App._cameraPlacementMarkers = [];
+        }
+
+        // Check if historical markers should be shown (default: true for property view)
+        const showHistorical = window.App._showHistoricalPlacements !== false;
+
+        // Fetch camera data from API with placement history
+        fetch(`/properties/${propertyId}/cameras/api?includeHistory=${showHistorical}`)
             .then(response => {
                 console.log('Cameras API response status:', response.status, response.statusText);
                 if (!response.ok) {
@@ -1240,6 +1270,12 @@ window.App = window.App || {};
 
                         console.log(`Added camera marker ${index + 1}: ${camera.name}`);
 
+                        // Add placement history markers if available and historical view is enabled
+                        if (showHistorical && camera.placementHistory && Array.isArray(camera.placementHistory)) {
+                            console.log(`Adding ${camera.placementHistory.length} placement history markers for camera: ${camera.name}`);
+                            addCameraPlacementHistoryMarkers(camera, camera.placementHistory);
+                        }
+
                     } catch (error) {
                         console.error(`Error creating marker for camera ${camera.name}:`, error);
                     }
@@ -1247,8 +1283,14 @@ window.App = window.App || {};
 
                 console.log('All camera markers added successfully');
 
-                // Note: Preserving map state as requested - no automatic bounds adjustment
-                // User specifically requested no zooming, panning, or removing other features
+                // Update map bounds to include cameras and placement history
+                if (showHistorical) {
+                    // Enhanced bounds calculation that includes all placement history
+                    updateMapBoundsWithCamerasAndHistory(cameras);
+                } else {
+                    // Standard bounds calculation with just current locations
+                    updateMapBoundsWithCameras(cameras);
+                }
 
                 // Reset the flag to allow future calls
                 window.App._displayingCameras = false;
@@ -1259,6 +1301,215 @@ window.App = window.App || {};
                 // Reset the flag even on error to allow retry
                 window.App._displayingCameras = false;
             });
+    }
+
+    // Function to add camera placement history markers (factored out for reuse)
+    function addCameraPlacementHistoryMarkers(camera, placementHistory) {
+        if (!placementHistory || !Array.isArray(placementHistory) || placementHistory.length === 0) {
+            return;
+        }
+
+        const m = map();
+        if (!m) return;
+
+        placementHistory.forEach((placement, index) => {
+            try {
+                // Skip current placement as it's already shown as the main camera marker
+                if (placement.isCurrentPlacement) {
+                    return;
+                }
+
+                // Function to convert degrees to compass direction
+                function getCompassDirection(degrees) {
+                    const directions = {
+                        0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
+                        180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
+                    };
+                    
+                    degrees = degrees % 360;
+                    if (degrees < 0) degrees += 360;
+                    
+                    let closest = 0;
+                    let minDiff = Math.abs(degrees - 0);
+                    
+                    for (const deg in directions) {
+                        const diff = Math.abs(degrees - parseFloat(deg));
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closest = parseFloat(deg);
+                        }
+                    }
+                    
+                    return directions[closest];
+                }
+
+                // Function to calculate direction indicator position
+                function calculateDirectionPosition(degrees) {
+                    degrees = degrees % 360;
+                    if (degrees < 0) degrees += 360;
+                    
+                    const radians = degrees * (Math.PI / 180);
+                    const radius = 18;
+                    const x = radius * Math.sin(radians);
+                    const y = -radius * Math.cos(radians);
+                    
+                    return { x, y };
+                }
+
+                // Create marker element for historical placement
+                const markerElement = document.createElement('div');
+                markerElement.className = 'camera-placement-marker';
+                
+                const compassDirection = getCompassDirection(placement.directionDegrees);
+                const directionPos = calculateDirectionPosition(placement.directionDegrees);
+                
+                markerElement.innerHTML = `
+                    <div class="camera-placement-marker-inner historical">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <div class="camera-placement-direction-indicator" style="left: ${15 + directionPos.x}px; top: ${15 + directionPos.y}px;">
+                        ${compassDirection}
+                    </div>
+                `;
+                
+                // Add CSS styles for placement markers if not already added
+                if (!document.getElementById('camera-placement-marker-styles')) {
+                    const styleSheet = document.createElement('style');
+                    styleSheet.id = 'camera-placement-marker-styles';
+                    styleSheet.type = 'text/css';
+                    styleSheet.innerText = `
+                        .camera-placement-marker {
+                            cursor: pointer;
+                            width: 30px;
+                            height: 30px;
+                            position: relative;
+                        }
+                        .camera-placement-marker-inner {
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 3px solid #ffffff;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            font-size: 14px;
+                            color: #ffffff;
+                            transition: transform 0.2s ease;
+                        }
+                        .camera-placement-marker-inner:hover {
+                            transform: scale(1.1);
+                        }
+                        .camera-placement-marker-inner.current-active {
+                            background-color: #FF6B35; /* Current active camera color */
+                        }
+                        .camera-placement-marker-inner.current-inactive {
+                            background-color: #999999; /* Current inactive camera color */
+                        }
+                        .camera-placement-marker-inner.historical {
+                            background-color: #666666; /* Historical/old location color (darker gray) */
+                        }
+                        .camera-placement-direction-indicator {
+                            position: absolute;
+                            background-color: #2c3e50;
+                            color: white;
+                            border: 2px solid #ffffff;
+                            border-radius: 50%;
+                            width: 20px;
+                            height: 20px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 10px;
+                            font-weight: bold;
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                            z-index: 1;
+                            transform: translate(-50%, -50%);
+                        }
+                    `;
+                    document.head.appendChild(styleSheet);
+                }
+
+                // Create marker
+                const marker = new mapboxgl.Marker({
+                    element: markerElement,
+                    anchor: 'center'
+                })
+                .setLngLat([placement.longitude, placement.latitude])
+                .addTo(m);
+
+                // Add click event to marker - show placement details
+                markerElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showPlacementDetailsPopup(placement, camera, { lng: placement.longitude, lat: placement.latitude });
+                });
+
+                // Store marker reference for cleanup
+                window.App._cameraPlacementMarkers.push(marker);
+
+                console.log(`Added historical placement marker for camera: ${camera.name}`);
+
+            } catch (error) {
+                console.error(`Error creating historical placement marker for camera ${camera.name}:`, error);
+            }
+        });
+    }
+
+    // Enhanced bounds calculation that includes placement history  
+    function updateMapBoundsWithCamerasAndHistory(cameras) {
+        const m = map();
+        if (!m) return;
+
+        const propertyCoords = window.App?.propertyCoords;
+        if (!propertyCoords) return;
+
+        // Create bounds that include property and all camera locations (current and historical)
+        let bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([propertyCoords.lng, propertyCoords.lat]);
+
+        let totalPlacementCount = 0;
+
+        // Add current camera locations and all placement history to bounds
+        cameras.forEach(camera => {
+            // Add current camera location
+            bounds.extend([camera.longitude, camera.latitude]);
+            totalPlacementCount++;
+
+            // Add all placement history locations if available
+            if (camera.placementHistory && Array.isArray(camera.placementHistory)) {
+                camera.placementHistory.forEach(placement => {
+                    bounds.extend([placement.longitude, placement.latitude]);
+                    totalPlacementCount++;
+                });
+            }
+        });
+
+        console.log(`Calculated bounds including ${totalPlacementCount} total camera placement locations`);
+
+        // Check if we have more than just the property location
+        const boundsArray = bounds.toArray();
+        const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+        
+        if (hasMultiplePoints) {
+            // Fit to bounds with all camera placements
+            m.fitBounds(bounds, {
+                padding: {
+                    top: 50,
+                    bottom: 50, 
+                    left: 50,
+                    right: 50
+                },
+                maxZoom: 18,
+                duration: 1500
+            });
+        } else {
+            // If only property location, use a reasonable zoom level
+            m.flyTo({
+                center: [propertyCoords.lng, propertyCoords.lat],
+                zoom: 16,
+                duration: 1500
+            });
+        }
     }
 
     function updateMapBoundsWithCameras(cameras) {
