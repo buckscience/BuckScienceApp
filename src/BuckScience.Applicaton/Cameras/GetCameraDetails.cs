@@ -18,7 +18,9 @@ public static class GetCameraDetails
         int PhotoCount,
         DateTime CreatedDate,
         int PropertyId,
-        string PropertyName
+        string PropertyName,
+        double PropertyLatitude,
+        double PropertyLongitude
     );
 
     public static async Task<Result?> HandleAsync(
@@ -60,6 +62,8 @@ public static class GetCameraDetails
             camera.PhotoCount,
             camera.Camera.CreatedDate,
             camera.Camera.PropertyId,
-            camera.Property.Name);
+            camera.Property.Name,
+            camera.Property.Latitude,
+            camera.Property.Longitude);
     }
 }

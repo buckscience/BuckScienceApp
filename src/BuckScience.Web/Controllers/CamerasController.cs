@@ -82,7 +82,7 @@ public class CamerasController : Controller
     // API: GET /properties/{propertyId}/cameras/api
     [HttpGet]
     [Route("/properties/{propertyId:int}/cameras/api")]
-    public async Task<IActionResult> ApiIndex(int propertyId, CancellationToken ct)
+    public async Task<IActionResult> ApiIndex(int propertyId, [FromQuery] bool includeHistory = false, CancellationToken ct = default)
     {
         if (_currentUser.Id is null) return Forbid();
 
@@ -94,21 +94,48 @@ public class CamerasController : Controller
         // Get cameras for this property
         var items = await ListPropertyCameras.HandleAsync(_db, _currentUser.Id.Value, propertyId, ct);
 
-        var cameras = items.Select(x => new
+        var cameras = new List<object>();
+
+        foreach (var camera in items)
         {
-            id = x.Id,
-            name = x.Name,
-            brand = x.Brand,
-            model = x.Model,
-            latitude = x.Latitude,
-            longitude = x.Longitude,
-            directionDegrees = x.DirectionDegrees,
-            isActive = x.IsActive,
-            photoCount = x.PhotoCount,
-            createdDate = x.CreatedDate
-        }).ToList();
+            var cameraData = new
+            {
+                id = camera.Id,
+                name = camera.Name,
+                brand = camera.Brand,
+                model = camera.Model,
+                latitude = camera.Latitude,
+                longitude = camera.Longitude,
+                directionDegrees = camera.DirectionDegrees,
+                isActive = camera.IsActive,
+                photoCount = camera.PhotoCount,
+                createdDate = camera.CreatedDate,
+                placementHistory = includeHistory ? await GetCameraPlacementHistoryForApi(camera.Id, ct) : null
+            };
+
+            cameras.Add(cameraData);
+        }
 
         return Json(cameras);
+    }
+
+    private async Task<List<object>?> GetCameraPlacementHistoryForApi(int cameraId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return null;
+
+        var placementHistory = await GetCameraPlacementHistory.HandleAsync(_db, _currentUser.Id.Value, cameraId, ct);
+        
+        return placementHistory.Select(p => new
+        {
+            id = p.Id,
+            latitude = p.Latitude,
+            longitude = p.Longitude,
+            directionDegrees = p.DirectionDegrees,
+            startDateTime = p.StartDateTime,
+            endDateTime = p.EndDateTime,
+            isCurrentPlacement = p.IsCurrentPlacement,
+            duration = p.Duration
+        }).ToList<object>();
     }
 
     // CREATE: GET /properties/{propertyId}/cameras/add
@@ -480,6 +507,8 @@ public class CamerasController : Controller
             CreatedDate = camera.CreatedDate,
             PropertyId = camera.PropertyId,
             PropertyName = camera.PropertyName,
+            PropertyLatitude = camera.PropertyLatitude,
+            PropertyLongitude = camera.PropertyLongitude,
             PlacementHistory = placementHistory.Select(ph => new CameraDetailsVm.PlacementHistoryItemVm
             {
                 Id = ph.Id,

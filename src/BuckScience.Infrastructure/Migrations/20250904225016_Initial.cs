@@ -245,7 +245,7 @@ namespace BuckScience.Infrastructure.Migrations
                         column: x => x.CameraId,
                         principalTable: "Cameras",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Photos_Weathers_WeatherId",
                         column: x => x.WeatherId,

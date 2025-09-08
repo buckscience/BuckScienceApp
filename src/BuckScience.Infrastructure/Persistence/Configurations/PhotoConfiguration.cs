@@ -23,11 +23,17 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.HasIndex(p => p.CameraId);
             entity.HasIndex(p => p.DateTaken);
             entity.HasIndex(p => p.WeatherId);
+            entity.HasIndex(p => p.CameraPlacementHistoryId);
 
             entity.HasOne(p => p.Camera)
                   .WithMany(c => c.Photos)
                   .HasForeignKey(p => p.CameraId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.PlacementHistory)
+                  .WithMany()
+                  .HasForeignKey(p => p.CameraPlacementHistoryId)
+                  .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(p => p.Weather)
                   .WithMany()

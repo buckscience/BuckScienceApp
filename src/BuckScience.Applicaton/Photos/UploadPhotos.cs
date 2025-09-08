@@ -33,8 +33,9 @@ public static class UploadPhotos
         ILogger logger,
         CancellationToken ct)
     {
-        // Verify camera ownership through property using explicit join
+        // Verify camera ownership through property using explicit join and include placement histories
         var camera = await db.Cameras
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == cmd.CameraId && 
                        x.Property.ApplicationUserId == userId)
@@ -43,6 +44,9 @@ public static class UploadPhotos
 
         if (camera is null)
             throw new KeyNotFoundException("Camera not found or not owned by user.");
+
+        // Get current placement for associating with photos
+        var currentPlacement = camera.GetCurrentPlacement();
 
         var photoIds = new List<int>();
         var photosForWeatherProcessing = new List<(Photo photo, (double Latitude, double Longitude)? location, DateTime dateTaken)>();
@@ -59,7 +63,9 @@ public static class UploadPhotos
                 var exifLocation = ExtractLocationFromExif(file.Content, weatherSettings.Value);
                 
                 // Create Photo entity first with placeholder URL to get the ID for metadata
-                var photo = new Photo(cmd.CameraId, "UPLOADING", dateTaken);
+                // Only set placement history ID if it's valid (entities saved to database have ID > 0)
+                var placementHistoryId = currentPlacement?.Id > 0 ? (int?)currentPlacement.Id : null;
+                var photo = new Photo(cmd.CameraId, "UPLOADING", dateTaken, cameraPlacementHistoryId: placementHistoryId);
                 db.Photos.Add(photo);
                 await db.SaveChangesAsync(ct);
                 

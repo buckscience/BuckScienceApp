@@ -18,6 +18,8 @@ public class CameraDetailsVm
     public DateTime CreatedDate { get; set; }
     public int PropertyId { get; set; }
     public string PropertyName { get; set; } = string.Empty;
+    public double PropertyLatitude { get; set; }
+    public double PropertyLongitude { get; set; }
     public List<PlacementHistoryItemVm> PlacementHistory { get; set; } = new();
 
     public class PlacementHistoryItemVm
