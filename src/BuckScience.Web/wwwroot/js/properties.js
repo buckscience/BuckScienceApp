@@ -432,69 +432,6 @@ window.App = window.App || {};
                 
                 // Camera placement marker styles are now in site.css
 
-.camera-placement-marker-inner {
-                            width: 30px;
-                            height: 30px;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            border: 3px solid #ffffff;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            font-size: 14px;
-                            color: #ffffff;
-                            transition: transform 0.2s ease;
-                        }
-                        .camera-placement-marker-inner:hover {
-                            transform: scale(1.1);
-                        }
-                        .camera-placement-marker-inner.current-active {
-                            background-color: #FF6B35; /* Current active camera color */
-                        }
-                        .camera-placement-marker-inner.current-inactive {
-                            background-color: #999999; /* Current inactive camera color */
-                        }
-                        .camera-placement-marker-inner.historical {
-                            background-color: #666666; /* Historical/old location color (darker gray) */
-                        }
-                        .camera-placement-direction-indicator {
-                            position: absolute;
-                            width: 0;
-                            height: 0;
-                            border-left: 10px solid transparent;
-                            border-right: 10px solid transparent;
-                            border-bottom: 20px solid #2c3e50;
-                            z-index: 1;
-                            transform: translate(-50%, -50%);
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                        }
-                        .camera-placement-direction-indicator::before {
-                            content: "";
-                            position: absolute;
-                            left: -11px;
-                            top: 1px;
-                            width: 0;
-                            height: 0;
-                            border-left: 11px solid transparent;
-                            border-right: 11px solid transparent;
-                            border-bottom: 22px solid #ffffff;
-                            z-index: -1;
-                        }
-                        .camera-placement-direction-indicator::after {
-                            content: attr(data-direction);
-                            position: absolute;
-                            left: -8px;
-                            top: 6px;
-                            color: white;
-                            font-size: 10px;
-                            font-weight: bold;
-                            text-align: center;
-                            width: 16px;
-                        }
-                    `;
-                    document.head.appendChild(styleSheet);
-                }
-
                 // Create marker
                 const marker = new mapboxgl.Marker({
                     element: markerElement,
@@ -1371,69 +1308,6 @@ window.App = window.App || {};
                 `;
                 
                 // Camera placement marker styles are now in site.css
-
-.camera-placement-marker-inner {
-                            width: 30px;
-                            height: 30px;
-                            border-radius: 50%;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            border: 3px solid #ffffff;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            font-size: 14px;
-                            color: #ffffff;
-                            transition: transform 0.2s ease;
-                        }
-                        .camera-placement-marker-inner:hover {
-                            transform: scale(1.1);
-                        }
-                        .camera-placement-marker-inner.current-active {
-                            background-color: #FF6B35; /* Current active camera color */
-                        }
-                        .camera-placement-marker-inner.current-inactive {
-                            background-color: #999999; /* Current inactive camera color */
-                        }
-                        .camera-placement-marker-inner.historical {
-                            background-color: #666666; /* Historical/old location color (darker gray) */
-                        }
-                        .camera-placement-direction-indicator {
-                            position: absolute;
-                            width: 0;
-                            height: 0;
-                            border-left: 10px solid transparent;
-                            border-right: 10px solid transparent;
-                            border-bottom: 20px solid #2c3e50;
-                            z-index: 1;
-                            transform: translate(-50%, -50%);
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                        }
-                        .camera-placement-direction-indicator::before {
-                            content: "";
-                            position: absolute;
-                            left: -11px;
-                            top: 1px;
-                            width: 0;
-                            height: 0;
-                            border-left: 11px solid transparent;
-                            border-right: 11px solid transparent;
-                            border-bottom: 22px solid #ffffff;
-                            z-index: -1;
-                        }
-                        .camera-placement-direction-indicator::after {
-                            content: attr(data-direction);
-                            position: absolute;
-                            left: -8px;
-                            top: 6px;
-                            color: white;
-                            font-size: 10px;
-                            font-weight: bold;
-                            text-align: center;
-                            width: 16px;
-                        }
-                    `;
-                    document.head.appendChild(styleSheet);
-                }
 
                 // Create marker
                 const marker = new mapboxgl.Marker({
