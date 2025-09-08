@@ -33,7 +33,7 @@
                         <!-- Camera Placement History Toggle -->
                         <div class="mb-3 d-flex align-items-center justify-content-between">
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showHistoricalPlacements" checked>
+                                <input class="form-check-input " type="checkbox" id="showHistoricalPlacements" checked>
                                 <label class="form-check-label fs-7" for="showHistoricalPlacements">
                                     <i class="fas fa-history me-1"></i>Show Historical Camera Placements
                                 </label>
@@ -84,14 +84,14 @@
                 <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)" title="View details">
                     <i class="fas fa-circle-info"></i>
                 </button>
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-primary btn-sm fs-7 d-flex align-items-center justify-content-center" title="View photos" onclick="event.stopPropagation();">
+                    <i class="fas fa-images"></i>
+                </a>
                 <a href="/properties/@Model.Id/cameras/@camera.Id/edit" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="Edit camera" onclick="event.stopPropagation();">
                     <i class="fas fa-edit"></i>
                 </a>
                 <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm fs-7 d-flex align-items-center justify-content-center" title="Delete camera" onclick="event.stopPropagation();">
                     <i class="fas fa-trash"></i>
-                </a>
-                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="View photos" onclick="event.stopPropagation();">
-                    <i class="fas fa-images"></i>
                 </a>
             </div>
         </div>
@@ -101,7 +101,7 @@
                                 }
                             </div>
                         </div>
-                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7" style="min-width:unset; padding:0.25rem 0.75rem;">
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" style="min-width:unset; padding:0.25rem 0.75rem;">
                             <i class="fas fa-plus me-1"></i> Add Camera
                         </a>
                     }
@@ -149,7 +149,7 @@
                                 </div>
                             }
                         </div>
-                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm mt-2 fs-7" onclick="event.stopPropagation();">
+                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" onclick="event.stopPropagation();">
                             <i class="fas fa-plus me-1"></i> Add Profile
                         </a>
                     }
@@ -175,12 +175,6 @@
             </h2>
             <div id="featuresCollapse" class="accordion-collapse collapse" aria-labelledby="featuresHeading" data-bs-parent="#propertyDetailsAccordion">
                 <div class="accordion-body">
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-custom-primary btn-sm fs-7" onclick="startDrawingFeature()">
-                            <i class="fas fa-crosshairs me-1"></i> Add Feature
-                        </button>
-                        <small class="text-muted ms-2 fs-7">Use the drawing tools on the map to add property features</small>
-                    </div>
                     
                     @if (Model.Features.Any())
                     {
@@ -227,14 +221,14 @@
                                                             <div class="d-flex justify-content-between align-items-start">
                                                                 <div class="flex-grow-1">
                                                                     <h6 class="card-title mb-1 fs-6">@feature.Name</h6>
-                                                                    <small class="text-muted fs-7">@feature.TypeName</small>
+                                                                    <small class="text-muted fs-7">Type: @feature.TypeName</small>
                                                                     @if (!string.IsNullOrEmpty(feature.Notes))
                                                                     {
-                                                                        <p class="card-text text-muted mb-1 mt-1 fs-7">@feature.Notes</p>
+                                                                        <p class="card-text text-muted mb-1 mt-1 fs-7">Notes: @feature.Notes</p>
                                                                     }
                                                                     @if (feature.CreatedAt.HasValue)
                                                                     {
-                                                                        <small class="text-muted d-block fs-7">Added @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                        <small class="text-muted d-block fs-7">Added: @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
                                                                     }
                                                                 </div>
                                                                 <div class="btn-group" role="group">
@@ -258,6 +252,15 @@
                                 </div>
                             </div>
                         }
+                        <div class="mb-3">
+                        <button type="button" class="btn btn-custom-primary btn-sm fs-7 col-12" onclick="startDrawingFeature()">
+                            <i class="fas fa-crosshairs me-1"></i> Add Feature
+                        </button>
+                        <div class="text-center">
+                          <small class="text-muted ms-2 fs-7">Use the drawing tools to add property features</small>
+                        </div>
+
+                    </div>
                     }
                     else
                     {
@@ -340,7 +343,7 @@
         
         /* Optimize accordion body padding */
         .accordion-body {
-            padding: 1rem 1.25rem;
+            padding: 1rem;
         }
         
         /* Optimize card spacing */
