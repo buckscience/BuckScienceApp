@@ -376,7 +376,7 @@ window.App = window.App || {};
         }
 
         // Function to create SVG directional indicator
-        function createDirectionalIndicatorSVG(compassDirection, size = 24) {
+        function createDirectionalIndicatorSVG(compassDirection, size = 28) {
             return `
                 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -391,7 +391,7 @@ window.App = window.App || {};
         }
 
         // Function to create smaller SVG for placement markers
-        function createPlacementDirectionalIndicatorSVG(compassDirection, size = 20) {
+        function createPlacementDirectionalIndicatorSVG(compassDirection, size = 24) {
             return `
                 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -579,8 +579,11 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Note: displayCamerasOnMap() will be called by the map:updateLayers event handler
-        // to avoid duplicate calls
+        // Explicitly trigger camera display for property details view
+        // Use a small delay to ensure features are loaded first
+        setTimeout(() => {
+            displayCamerasOnMap();
+        }, 100);
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {

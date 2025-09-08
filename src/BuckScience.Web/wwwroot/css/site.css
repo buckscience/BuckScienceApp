@@ -740,8 +740,8 @@ html, body {
 /* SVG-based directional indicators */
 .camera-direction-indicator {
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     z-index: 1;
     transform: translate(-50%, -50%);
     pointer-events: none;
@@ -755,7 +755,7 @@ html, body {
 
 .camera-direction-indicator text {
     font-family: Arial, sans-serif;
-    font-size: 8px;
+    font-size: 9px;
     font-weight: bold;
     text-anchor: middle;
     dominant-baseline: central;
@@ -803,8 +803,8 @@ html, body {
 /* Directional indicators for placement markers */
 .camera-placement-direction-indicator {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     z-index: 1;
     transform: translate(-50%, -50%);
     pointer-events: none;
@@ -818,7 +818,7 @@ html, body {
 
 .camera-placement-direction-indicator text {
     font-family: Arial, sans-serif;
-    font-size: 7px;
+    font-size: 8px;
     font-weight: bold;
     text-anchor: middle;
     dominant-baseline: central;
