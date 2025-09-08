@@ -165,6 +165,9 @@ window.App = window.App || {};
         let needsDisplayCameras = false;
         
         if (context.propertyId) {
+            // Store the current property ID
+            window.App._currentPropertyId = context.propertyId;
+            
             // Load property features
             loadPropertyFeatures(context.propertyId);
             needsDisplayCameras = true;
