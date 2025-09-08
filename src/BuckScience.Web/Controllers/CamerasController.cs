@@ -201,7 +201,7 @@ public class CamerasController : Controller
             ct);
 
         TempData["CreatedId"] = id;
-        return RedirectToAction(nameof(Index), new { propertyId });
+        return Redirect($"/properties/{propertyId}/details");
     }
 
     // EDIT: GET /properties/{propertyId}/cameras/{id}/edit
@@ -297,7 +297,7 @@ public class CamerasController : Controller
         if (!ok) return NotFound();
 
         TempData["UpdatedId"] = id;
-        return RedirectToAction(nameof(Index), new { propertyId });
+        return Redirect($"/properties/{propertyId}/details");
     }
 
     // DELETE (confirm): GET /properties/{propertyId}/cameras/{id}/delete
@@ -346,7 +346,7 @@ public class CamerasController : Controller
         if (!ok) return NotFound();
 
         TempData["DeletedId"] = id;
-        return RedirectToAction(nameof(Index), new { propertyId });
+        return Redirect($"/properties/{propertyId}/details");
     }
 
     // UPLOAD PHOTO: GET
