@@ -859,9 +859,9 @@ window.App = window.App || {};
                 properties: {
                     id: feature.id,
                     classificationType: feature.classificationType,
-                    notes: feature.notes || '',
+                    notes: feature.Notes || feature.notes || '',
                     createdAt: feature.createdAt,
-                    name: getFeatureName(feature.classificationType),
+                    name: feature.Name || feature.name || getFeatureName(feature.classificationType),
                     color: getFeatureColor(feature.classificationType)
                 },
                 geometry: geometry
