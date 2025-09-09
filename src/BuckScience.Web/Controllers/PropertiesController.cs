@@ -220,7 +220,7 @@ public class PropertiesController : Controller
         [FromQuery] DateTime? dateUploadedFrom = null,
         [FromQuery] DateTime? dateUploadedTo = null,
         // Camera filters
-        [FromQuery] string? cameras = null, // comma-separated camera IDs
+        [FromQuery] string? cameras = null, // comma-separated camera placement history IDs
         // Weather filters
         [FromQuery] double? tempMin = null,
         [FromQuery] double? tempMax = null,
@@ -373,10 +373,11 @@ public class PropertiesController : Controller
         // Then format the display names in memory - create separate options for each placement history
         var cameras = cameraData
             .Select(x => new CameraOption { 
-                Id = x.CameraId, 
+                Id = x.PlacementHistory?.Id ?? 0, // Use placement history ID, not camera ID
                 LocationName = x.PlacementHistory != null ? GetCameraDisplayName(x.PlacementHistory.LocationName, x.PlacementHistory.DirectionDegrees) : $"Camera {x.CameraId}" 
             })
-            .GroupBy(c => new { c.Id, c.LocationName }) // Group by camera ID and location display name
+            .Where(c => c.Id > 0) // Only include valid placement histories
+            .GroupBy(c => new { c.Id, c.LocationName }) // Group by placement history ID and location display name
             .Select(g => g.First()) // Take first from each group to eliminate duplicates
             .OrderBy(c => c.LocationName)
             .ToList();
@@ -460,13 +461,13 @@ public class PropertiesController : Controller
         // Parse comma-separated lists
         if (!string.IsNullOrWhiteSpace(cameras))
         {
-            var cameraIds = cameras.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var placementHistoryIds = cameras.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => int.TryParse(s.Trim(), out var id) ? id : (int?)null)
                 .Where(id => id.HasValue)
                 .Select(id => id!.Value)
                 .ToList();
-            if (cameraIds.Count > 0)
-                filters.CameraIds = cameraIds;
+            if (placementHistoryIds.Count > 0)
+                filters.CameraPlacementHistoryIds = placementHistoryIds;
         }
 
         if (!string.IsNullOrWhiteSpace(conditions))

@@ -124,6 +124,13 @@ public static class ListPropertyPhotos
             query = query.Where(p => filters.CameraIds.Contains(p.CameraId));
         }
 
+        // Camera placement history filters - use Contains for placement history ID filtering
+        if (filters.CameraPlacementHistoryIds?.Count > 0)
+        {
+            query = query.Where(p => p.CameraPlacementHistoryId.HasValue && 
+                                   filters.CameraPlacementHistoryIds.Contains(p.CameraPlacementHistoryId.Value));
+        }
+
         // Weather filters - only apply if photo has weather data
         if (filters.HasWeatherFilters)
         {
