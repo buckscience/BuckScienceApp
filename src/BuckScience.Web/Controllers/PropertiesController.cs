@@ -355,10 +355,10 @@ public class PropertiesController : Controller
         return "Unknown";
     }
 
-    private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
+    private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)>
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
-        // Get cameras for this property using explicit join
+        // Get cameras for this property using explicit join, including direction information
         var cameras = await db.Cameras
             .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
@@ -369,7 +369,7 @@ public class PropertiesController : Controller
             })
             .Select(x => new CameraOption { 
                 Id = x.Camera.Id, 
-                LocationName = x.CurrentPlacement != null ? x.CurrentPlacement.LocationName : "" 
+                LocationName = x.CurrentPlacement != null ? GetCameraDisplayName(x.CurrentPlacement.LocationName, x.CurrentPlacement.DirectionDegrees) : $"Camera {x.Camera.Id}" 
             })
             .OrderBy(c => c.LocationName)
             .ToListAsync(ct);
@@ -528,5 +528,16 @@ public class PropertiesController : Controller
             .ToList();
 
         vm.TimeZones = timeZones;
+    }
+
+    private static string GetCameraDisplayName(string locationName, float directionDegrees)
+    {
+        if (string.IsNullOrWhiteSpace(locationName))
+            return "Unknown Location";
+
+        var direction = DirectionHelper.FromFloat(directionDegrees);
+        var directionDisplay = DirectionHelper.GetDisplayName(direction);
+        
+        return $"{locationName} - {directionDisplay}";
     }
 }
