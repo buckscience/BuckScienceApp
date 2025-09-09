@@ -280,16 +280,9 @@ else
                                 <div class="col-md-4 mb-3">
                                     <label for="windDirections" class="form-label fw-semibold">Wind Directions</label>
                                     <select class="form-select" name="windDirections" id="windDirections" multiple>
-                                        @foreach (var direction in Model.WindDirectionOptions)
+                                        @foreach (var direction in Model.WindDirectionOptions.Where(d => d.IsAvailable))
                                         {
-                                            @if (direction.IsAvailable)
-                                            {
-                                                <option value="@direction.Value" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction.Value) == true)">@direction.DisplayName</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="@direction.Value" disabled class="text-muted">@direction.DisplayName (no data)</option>
-                                            }
+                                            <option value="@direction.Value" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction.Value) == true)">@direction.DisplayName</option>
                                         }
                                     </select>
                                 </div>
