@@ -17,7 +17,9 @@ public static class GetFeatureWeights
         Dictionary<Season, float>? SeasonalWeights,
         float EffectiveWeight,
         bool IsCustom,
-        DateTime? UpdatedAt);
+        DateTime? UpdatedAt,
+        int IndividualFeatureCount,
+        int IndividualFeatureOverrides);
 
     public static async Task<IReadOnlyList<Result>> HandleAsync(
         IAppDbContext db,
@@ -31,6 +33,21 @@ public static class GetFeatureWeights
             .Where(fw => fw.PropertyId == propertyId)
             .ToListAsync(ct);
 
+        // Get feature count and override statistics for each classification type
+        var featureStats = await db.PropertyFeatures
+            .AsNoTracking()
+            .Where(pf => pf.PropertyId == propertyId)
+            .GroupBy(pf => pf.ClassificationType)
+            .Select(g => new
+            {
+                ClassificationType = g.Key,
+                TotalCount = g.Count(),
+                OverrideCount = g.Count(pf => pf.Weight.HasValue)
+            })
+            .ToListAsync(ct);
+
+        var featureStatsLookup = featureStats.ToDictionary(fs => fs.ClassificationType, fs => fs);
+
         var results = new List<Result>();
 
         foreach (var featureWeight in propertyWeights)
@@ -39,6 +56,11 @@ public static class GetFeatureWeights
             var effectiveWeight = featureWeight.GetEffectiveWeight(currentSeason);
             var classificationName = FeatureWeightHelper.GetDisplayName(featureWeight.ClassificationType);
             var category = FeatureWeightHelper.GetCategory(featureWeight.ClassificationType);
+
+            // Get feature count and override statistics
+            var stats = featureStatsLookup.GetValueOrDefault(featureWeight.ClassificationType);
+            var featureCount = stats?.TotalCount ?? 0;
+            var featureOverrides = stats?.OverrideCount ?? 0;
 
             results.Add(new Result(
                 featureWeight.ClassificationType,
@@ -49,7 +71,9 @@ public static class GetFeatureWeights
                 seasonalWeights,
                 effectiveWeight,
                 featureWeight.IsCustom,
-                featureWeight.UpdatedAt));
+                featureWeight.UpdatedAt,
+                featureCount,
+                featureOverrides));
         }
 
         return results.OrderBy(r => r.Category).ThenBy(r => r.ClassificationName).ToList();

@@ -75,9 +75,46 @@ public class FeatureWeightsController : ControllerBase
         }
     }
 
+    // PUT /properties/{propertyId}/feature-weights/defaults
+    [HttpPut]
+    [Route("/properties/{propertyId:int}/feature-weights/defaults")]
+    public async Task<IActionResult> UpdatePropertyDefaultFeatureWeights(int propertyId, [FromBody] UpdateDefaultFeatureWeightsRequest request, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify user has access to this property
+        var hasAccess = await _db.Properties
+            .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        
+        if (!hasAccess) return Forbid();
+
+        try
+        {
+            var defaultWeights = request.DefaultWeights.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value);
+
+            var command = new UpdateDefaultFeatureWeights.Command(defaultWeights);
+            var success = await UpdateDefaultFeatureWeights.HandleAsync(command, _db, propertyId, ct);
+            
+            if (!success) return NotFound();
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     public class UpdateFeatureWeightsRequest
     {
         public Dictionary<ClassificationType, FeatureWeightUpdateRequest> FeatureWeights { get; set; } = new();
+    }
+
+    public class UpdateDefaultFeatureWeightsRequest
+    {
+        public Dictionary<ClassificationType, float> DefaultWeights { get; set; } = new();
     }
 
     public class FeatureWeightUpdateRequest
