@@ -14,6 +14,7 @@ public static class ListPropertyFeatures
         string GeometryWkt,
         string? Name,
         string? Notes,
+        float? Weight,
         int? CreatedBy,
         DateTime CreatedAt);
 
@@ -42,6 +43,7 @@ public static class ListPropertyFeatures
                 pf.Geometry.AsText(),
                 pf.Name,
                 pf.Notes,
+                pf.Weight,
                 pf.CreatedBy,
                 pf.CreatedAt))
             .ToListAsync(ct);

@@ -13,7 +13,8 @@ public static class UpdatePropertyFeature
         ClassificationType ClassificationType,
         string GeometryWkt,
         string? Name = null,
-        string? Notes = null);
+        string? Notes = null,
+        float? Weight = null);
 
     public static async Task<bool> HandleAsync(
         Command cmd,
@@ -47,6 +48,7 @@ public static class UpdatePropertyFeature
         feature.SetGeometry(geometry);
         feature.UpdateName(cmd.Name);
         feature.UpdateNotes(cmd.Notes);
+        feature.UpdateWeight(cmd.Weight);
 
         await db.SaveChangesAsync(ct);
         return true;

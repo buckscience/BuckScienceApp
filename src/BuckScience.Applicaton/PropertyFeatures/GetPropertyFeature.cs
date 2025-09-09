@@ -13,6 +13,7 @@ public static class GetPropertyFeature
         string GeometryWkt,
         string? Name,
         string? Notes,
+        float? Weight,
         int? CreatedBy,
         DateTime CreatedAt);
 
@@ -33,6 +34,7 @@ public static class GetPropertyFeature
                 pf.Geometry.AsText(),
                 pf.Name,
                 pf.Notes,
+                pf.Weight,
                 pf.CreatedBy,
                 pf.CreatedAt))
             .FirstOrDefaultAsync(ct);

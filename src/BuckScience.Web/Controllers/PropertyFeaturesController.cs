@@ -51,7 +51,8 @@ public class PropertyFeaturesController : ControllerBase
                 request.ClassificationType,
                 request.GeometryWkt,
                 request.Name,
-                request.Notes);
+                request.Notes,
+                request.Weight);
 
             var featureId = await Application.PropertyFeatures.CreatePropertyFeature.HandleAsync(cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
             return CreatedAtAction(nameof(GetPropertyFeature), new { featureId }, new { Id = featureId });
@@ -59,6 +60,10 @@ public class PropertyFeaturesController : ControllerBase
         catch (UnauthorizedAccessException)
         {
             return Forbid();
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -93,12 +98,17 @@ public class PropertyFeaturesController : ControllerBase
                 request.ClassificationType,
                 request.GeometryWkt,
                 request.Name,
-                request.Notes);
+                request.Notes,
+                request.Weight);
 
             var success = await Application.PropertyFeatures.UpdatePropertyFeature.HandleAsync(cmd, _db, _geometryFactory, _currentUser.Id.Value, ct);
             if (!success) return NotFound();
 
             return NoContent();
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
@@ -125,6 +135,7 @@ public class PropertyFeaturesController : ControllerBase
         public string GeometryWkt { get; set; } = string.Empty;
         public string? Name { get; set; }
         public string? Notes { get; set; }
+        public float? Weight { get; set; }
     }
 
     public class UpdatePropertyFeatureRequest
@@ -133,5 +144,6 @@ public class PropertyFeaturesController : ControllerBase
         public string GeometryWkt { get; set; } = string.Empty;
         public string? Name { get; set; }
         public string? Notes { get; set; }
+        public float? Weight { get; set; }
     }
 }

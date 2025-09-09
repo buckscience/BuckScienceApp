@@ -14,7 +14,8 @@ public static class CreatePropertyFeature
         ClassificationType ClassificationType,
         string GeometryWkt,
         string? Name = null,
-        string? Notes = null);
+        string? Notes = null,
+        float? Weight = null);
 
     public static async Task<int> HandleAsync(
         Command cmd,
@@ -48,6 +49,7 @@ public static class CreatePropertyFeature
             geometry,
             cmd.Name,
             cmd.Notes,
+            cmd.Weight,
             userId);
 
         db.PropertyFeatures.Add(feature);
