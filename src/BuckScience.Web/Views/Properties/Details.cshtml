@@ -762,9 +762,6 @@
             const contentDiv = document.getElementById('feature-weights-content');
             if (!contentDiv) return;
 
-            // Debug: log the received data
-            console.log('Received feature weights data:', featureWeights);
-            
             // Group by category
             const categories = {
                 'ResourceFood': { name: 'Food Resources', icon: 'fas fa-wheat-awn', items: [] },
@@ -774,26 +771,15 @@
             };
 
             featureWeights.forEach(fw => {
-                // Debug: log each feature weight item
-                console.log('Processing feature weight:', fw);
-                
                 const categoryKey = fw.category === 1 ? 'Topographical' :
                                    fw.category === 2 ? 'ResourceFood' :
                                    fw.category === 3 ? 'ResourceWater' :
                                    fw.category === 4 ? 'ResourceBedding' : 'Other';
                 
-                console.log(`Mapped category ${fw.category} to ${categoryKey}`);
-                
                 if (categories[categoryKey]) {
                     categories[categoryKey].items.push(fw);
-                    console.log(`Added to ${categoryKey}, now has ${categories[categoryKey].items.length} items`);
-                } else {
-                    console.log(`Category ${categoryKey} not found in categories object`);
                 }
             });
-
-            // Debug: log categorized data
-            console.log('Categorized data:', categories);
 
             let html = `
                 <div class="feature-weights-panel">
