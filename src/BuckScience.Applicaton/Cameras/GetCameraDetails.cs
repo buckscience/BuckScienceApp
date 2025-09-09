@@ -7,7 +7,7 @@ public static class GetCameraDetails
 {
     public sealed record Result(
         int Id,
-        string Name,
+        string LocationName,
         string Brand,
         string? Model,
         double Latitude,
@@ -51,7 +51,7 @@ public static class GetCameraDetails
 
         return new Result(
             camera.Camera.Id,
-            camera.Camera.Name,
+            camera.CurrentPlacement?.LocationName ?? "",
             camera.Camera.Brand,
             camera.Camera.Model,
             camera.CurrentPlacement?.Latitude ?? 0d,

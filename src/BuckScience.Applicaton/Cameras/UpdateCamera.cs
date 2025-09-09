@@ -8,7 +8,7 @@ public static class UpdateCamera
 {
     public sealed record Command(
         int Id,
-        string Name,
+        string LocationName,
         string Brand,
         string? Model,
         double Latitude,
@@ -39,20 +39,20 @@ public static class UpdateCamera
         if (camera is null)
             return false;
 
-        camera.Rename(cmd.Name);
         camera.SetBrand(cmd.Brand);
         camera.SetModel(cmd.Model);
 
-        // Check if location or direction changed
+        // Check if location, direction, or location name changed
         var currentPlacement = camera.GetCurrentPlacement();
         bool locationChanged = currentPlacement == null || 
                               Math.Abs(currentPlacement.Latitude - cmd.Latitude) > 0.0001 ||
                               Math.Abs(currentPlacement.Longitude - cmd.Longitude) > 0.0001 ||
-                              Math.Abs(currentPlacement.DirectionDegrees - cmd.DirectionDegrees) > 0.1;
+                              Math.Abs(currentPlacement.DirectionDegrees - cmd.DirectionDegrees) > 0.1 ||
+                              !string.Equals(currentPlacement.LocationName, cmd.LocationName, StringComparison.OrdinalIgnoreCase);
 
         if (locationChanged)
         {
-            camera.Move(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees);
+            camera.Move(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees, cmd.LocationName);
         }
 
         camera.SetActive(cmd.IsActive);

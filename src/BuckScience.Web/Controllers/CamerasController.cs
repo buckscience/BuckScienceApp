@@ -65,7 +65,7 @@ public class CamerasController : Controller
         var vms = items.Select(x => new CameraListItemVm
         {
             Id = x.Id,
-            Name = x.Name,
+            LocationName = x.LocationName,
             Brand = x.Brand,
             Model = x.Model,
             Latitude = x.Latitude,
@@ -101,7 +101,7 @@ public class CamerasController : Controller
             var cameraData = new
             {
                 id = camera.Id,
-                name = camera.Name,
+                locationName = camera.LocationName,
                 brand = camera.Brand,
                 model = camera.Model,
                 latitude = camera.Latitude,
@@ -187,7 +187,7 @@ public class CamerasController : Controller
 
         var id = await CreateCamera.HandleAsync(
             new CreateCamera.Command(
-                vm.Name,
+                vm.LocationName,
                 vm.Brand,
                 vm.Model,
                 vm.Latitude,
@@ -236,7 +236,7 @@ public class CamerasController : Controller
         {
             PropertyId = propertyId,
             Id = result.Camera.Id,
-            Name = result.Camera.Name,
+            LocationName = result.CurrentPlacement?.LocationName ?? "",
             Brand = result.Camera.Brand,
             Model = result.Camera.Model,
             Latitude = result.CurrentPlacement?.Latitude ?? 0d,
@@ -281,7 +281,7 @@ public class CamerasController : Controller
         var ok = await UpdateCamera.HandleAsync(
             new UpdateCamera.Command(
                 id,
-                vm.Name,
+                vm.LocationName,
                 vm.Brand,
                 vm.Model,
                 vm.Latitude,
@@ -309,10 +309,18 @@ public class CamerasController : Controller
 
         // Use explicit join to avoid LINQ translation errors with navigation properties
         var result = await _db.Cameras.AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == id &&
                        x.Camera.PropertyId == propertyId &&
                        x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .Select(x => new {
+                Camera = x.Camera,
+                Property = x.Property,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(ct);
 
         if (result is null) return NotFound();
@@ -321,11 +329,11 @@ public class CamerasController : Controller
         {
             PropertyId = propertyId,
             Id = result.Camera.Id,
-            Name = result.Camera.Name,
+            LocationName = result.CurrentPlacement?.LocationName ?? "",
             Brand = result.Camera.Brand,
             Model = result.Camera.Model,
-            Latitude = result.Camera.Latitude,
-            Longitude = result.Camera.Longitude,
+            Latitude = result.CurrentPlacement?.Latitude ?? 0d,
+            Longitude = result.CurrentPlacement?.Longitude ?? 0d,
             IsActive = result.Camera.IsActive,
             PropertyName = result.Property.Name
         };
@@ -360,15 +368,23 @@ public class CamerasController : Controller
         // Use explicit join to avoid LINQ translation errors with navigation properties
         var result = await _db.Cameras
             .AsNoTracking()
+            .Include(c => c.PlacementHistories)
             .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+            .Select(x => new {
+                Camera = x.Camera,
+                Property = x.Property,
+                CurrentPlacement = x.Camera.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
+                    .FirstOrDefault()
+            })
             .FirstOrDefaultAsync(ct);
 
         if (result is null) return NotFound();
 
         ViewBag.PropertyId = result.Camera.PropertyId;
         ViewBag.CameraId = result.Camera.Id;
-        ViewBag.CameraName = result.Camera.Name;
+        ViewBag.CameraLocationName = result.CurrentPlacement?.LocationName ?? "";
         ViewBag.PropertyName = result.Property.Name;
 
         var vm = new PhotoUploadVm
@@ -406,15 +422,23 @@ public class CamerasController : Controller
             // Reload view data for error display using explicit join
             var result = await _db.Cameras
                 .AsNoTracking()
+                .Include(c => c.PlacementHistories)
                 .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
                 .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+                .Select(x => new {
+                    Camera = x.Camera,
+                    Property = x.Property,
+                    CurrentPlacement = x.Camera.PlacementHistories
+                        .Where(ph => ph.EndDateTime == null)
+                        .FirstOrDefault()
+                })
                 .FirstOrDefaultAsync(ct);
 
             if (result is null) return NotFound();
 
             ViewBag.PropertyId = result.Camera.PropertyId;
             ViewBag.CameraId = result.Camera.Id;
-            ViewBag.CameraName = result.Camera.Name;
+            ViewBag.CameraLocationName = result.CurrentPlacement?.LocationName ?? "";
             ViewBag.PropertyName = result.Property.Name;
 
             return View("Upload", vm);
@@ -427,15 +451,23 @@ public class CamerasController : Controller
             // Reload view data for error display using explicit join
             var result = await _db.Cameras
                 .AsNoTracking()
+                .Include(c => c.PlacementHistories)
                 .Join(_db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
                 .Where(x => x.Camera.Id == id && x.Property.ApplicationUserId == _currentUser.Id.Value)
+                .Select(x => new {
+                    Camera = x.Camera,
+                    Property = x.Property,
+                    CurrentPlacement = x.Camera.PlacementHistories
+                        .Where(ph => ph.EndDateTime == null)
+                        .FirstOrDefault()
+                })
                 .FirstOrDefaultAsync(ct);
 
             if (result is null) return NotFound();
 
             ViewBag.PropertyId = result.Camera.PropertyId;
             ViewBag.CameraId = result.Camera.Id;
-            ViewBag.CameraName = result.Camera.Name;
+            ViewBag.CameraLocationName = result.CurrentPlacement?.LocationName ?? "";
             ViewBag.PropertyName = result.Property.Name;
 
             return View("Upload", vm);
@@ -492,7 +524,7 @@ public class CamerasController : Controller
         var vm = new CameraDetailsVm
         {
             Id = camera.Id,
-            Name = camera.Name,
+            LocationName = camera.LocationName,
             Brand = camera.Brand,
             Model = camera.Model,
             Latitude = camera.Latitude,
@@ -512,6 +544,7 @@ public class CamerasController : Controller
             PlacementHistory = placementHistory.Select(ph => new CameraDetailsVm.PlacementHistoryItemVm
             {
                 Id = ph.Id,
+                LocationName = ph.LocationName,
                 Latitude = ph.Latitude,
                 Longitude = ph.Longitude,
                 DirectionDegrees = ph.DirectionDegrees,

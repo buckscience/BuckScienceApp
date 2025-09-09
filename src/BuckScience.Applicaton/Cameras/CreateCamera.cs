@@ -8,7 +8,7 @@ namespace BuckScience.Application.Cameras;
 public static class CreateCamera
 {
     public sealed record Command(
-        string Name,
+        string LocationName,
         string Brand,
         string? Model,
         double Latitude,
@@ -33,9 +33,9 @@ public static class CreateCamera
         if (property is null)
             throw new KeyNotFoundException("Property not found or not owned by user.");
 
-        var camera = new Camera(cmd.Name, cmd.Brand, cmd.Model, cmd.IsActive, DateTime.UtcNow);
+        var camera = new Camera("Camera Device", cmd.Brand, cmd.Model, cmd.IsActive, DateTime.UtcNow);
         camera.PlaceInProperty(propertyId);
-        camera.PlaceAt(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees, DateTime.UtcNow);
+        camera.PlaceAt(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees, DateTime.UtcNow, cmd.LocationName);
 
         db.Cameras.Add(camera);
         await db.SaveChangesAsync(ct);

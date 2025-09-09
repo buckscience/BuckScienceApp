@@ -62,7 +62,7 @@ public class Camera
         Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim();
     }
 
-    public void PlaceAt(double latitude, double longitude, float directionDegrees, DateTime? placementTime = null)
+    public void PlaceAt(double latitude, double longitude, float directionDegrees, DateTime? placementTime = null, string locationName = "")
     {
         var currentPlacement = GetCurrentPlacement();
         var now = placementTime ?? DateTime.UtcNow;
@@ -74,13 +74,13 @@ public class Camera
         }
 
         // Create new placement
-        var newPlacement = new CameraPlacementHistory(Id, latitude, longitude, directionDegrees, now);
+        var newPlacement = new CameraPlacementHistory(Id, latitude, longitude, directionDegrees, now, locationName);
         PlacementHistories.Add(newPlacement);
     }
 
-    public void Move(double latitude, double longitude, float directionDegrees)
+    public void Move(double latitude, double longitude, float directionDegrees, string locationName = "")
     {
-        PlaceAt(latitude, longitude, directionDegrees);
+        PlaceAt(latitude, longitude, directionDegrees, null, locationName);
     }
 
     public CameraPlacementHistory? GetCurrentPlacement()
