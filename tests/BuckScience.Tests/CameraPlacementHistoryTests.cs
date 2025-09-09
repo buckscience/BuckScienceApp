@@ -75,7 +75,7 @@ namespace BuckScience.Tests
             var vm = new CameraCreateVm
             {
                 PropertyId = 1,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Latitude = 40.7128,
                 Longitude = -74.0060,
@@ -95,7 +95,7 @@ namespace BuckScience.Tests
             {
                 PropertyId = 1,
                 Id = 1,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Latitude = 40.7128,
                 Longitude = -74.0060,

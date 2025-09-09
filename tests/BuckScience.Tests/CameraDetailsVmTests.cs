@@ -11,7 +11,7 @@ namespace BuckScience.Tests
             var vm = new CameraDetailsVm
             {
                 Id = 1,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Model = "Test Model",
                 Latitude = 40.7128,
@@ -25,7 +25,7 @@ namespace BuckScience.Tests
 
             // Assert
             Assert.Equal(1, vm.Id);
-            Assert.Equal("Test Camera", vm.Name);
+            Assert.Equal("Test Location", vm.LocationName);
             Assert.Equal("Test Brand", vm.Brand);
             Assert.Equal("Test Model", vm.Model);
             Assert.Equal(40.7128, vm.Latitude);
@@ -43,7 +43,7 @@ namespace BuckScience.Tests
             // Arrange & Act
             var vm = new CameraDetailsVm
             {
-                Name = "Camera without model",
+                LocationName = "Location without model",
                 Brand = "Brand",
                 Model = null
             };

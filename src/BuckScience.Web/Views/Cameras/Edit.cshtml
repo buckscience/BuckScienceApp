@@ -12,9 +12,10 @@
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
     <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
+        <label asp-for="LocationName" class="form-label"></label>
+        <input asp-for="LocationName" class="form-control" />
+        <span asp-validation-for="LocationName" class="text-danger"></span>
+        <small class="form-text text-muted">Name this camera location, e.g., 'Bean Field South', 'Creek Crossing', etc.</small>
     </div>
 
     <div class="mb-3">

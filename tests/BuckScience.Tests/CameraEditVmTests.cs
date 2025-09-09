@@ -13,7 +13,7 @@ namespace BuckScience.Tests
             {
                 PropertyId = 1,
                 Id = 2,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Model = "Test Model",
                 Latitude = 40.7128,
@@ -24,7 +24,7 @@ namespace BuckScience.Tests
             // Assert
             Assert.Equal(1, vm.PropertyId);
             Assert.Equal(2, vm.Id);
-            Assert.Equal("Test Camera", vm.Name);
+            Assert.Equal("Test Location", vm.LocationName);
             Assert.Equal("Test Brand", vm.Brand);
             Assert.Equal("Test Model", vm.Model);
             Assert.Equal(40.7128, vm.Latitude);
@@ -41,7 +41,7 @@ namespace BuckScience.Tests
             // Assert
             Assert.Equal(0, vm.PropertyId);
             Assert.Equal(0, vm.Id);
-            Assert.Equal(string.Empty, vm.Name);
+            Assert.Equal(string.Empty, vm.LocationName);
             Assert.Equal(string.Empty, vm.Brand);
             Assert.Null(vm.Model);
             Assert.Equal(0, vm.Latitude);
@@ -57,7 +57,7 @@ namespace BuckScience.Tests
 
             // Act & Assert - Testing that properties can be set without validation errors in this context
             vm.PropertyId = -1; // This should fail validation when model state is checked
-            vm.Name = new string('x', 201); // This should fail validation (max 200 chars)
+            vm.LocationName = new string('x', 201); // This should fail validation (max 200 chars)
             vm.Brand = new string('x', 101); // This should fail validation (max 100 chars)
             vm.Model = new string('x', 201); // This should fail validation (max 200 chars)
             vm.Latitude = -91; // This should fail validation (range -90 to 90)
@@ -65,7 +65,7 @@ namespace BuckScience.Tests
 
             // Properties are set successfully (validation occurs at model binding/validation time)
             Assert.Equal(-1, vm.PropertyId);
-            Assert.Equal(201, vm.Name.Length);
+            Assert.Equal(201, vm.LocationName.Length);
             Assert.Equal(101, vm.Brand.Length);
             Assert.Equal(201, vm.Model.Length);
             Assert.Equal(-91, vm.Latitude);

@@ -51,7 +51,7 @@ public class CameraPhotosVm
 {
     public int CameraId { get; set; }
     public int PropertyId { get; set; }
-    public string CameraName { get; set; } = string.Empty;
+    public string CameraLocationName { get; set; } = string.Empty;
     public string PropertyName { get; set; } = string.Empty;
     public List<PhotoListItemVm> Photos { get; set; } = new();
     public List<CameraPhotoMonthGroup> PhotoGroups { get; set; } = new();
