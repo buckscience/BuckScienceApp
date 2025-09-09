@@ -360,10 +360,18 @@ public class PropertiesController : Controller
     {
         // Get cameras for this property using explicit join
         var cameras = await db.Cameras
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
-            .Select(x => new CameraOption { Id = x.Camera.Id, Name = x.Camera.Name })
-            .OrderBy(c => c.Name)
+            .Select(x => new { 
+                Camera = x.Camera,
+                CurrentPlacement = x.Camera.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
+            })
+            .Select(x => new CameraOption { 
+                Id = x.Camera.Id, 
+                LocationName = x.CurrentPlacement != null ? x.CurrentPlacement.LocationName : "" 
+            })
+            .OrderBy(c => c.LocationName)
             .ToListAsync(ct);
 
         // Get distinct weather conditions from photos with weather data using explicit joins

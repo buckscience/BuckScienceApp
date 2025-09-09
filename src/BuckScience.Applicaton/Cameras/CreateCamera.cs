@@ -33,7 +33,7 @@ public static class CreateCamera
         if (property is null)
             throw new KeyNotFoundException("Property not found or not owned by user.");
 
-        var camera = new Camera("Camera Device", cmd.Brand, cmd.Model, cmd.IsActive, DateTime.UtcNow);
+        var camera = new Camera(cmd.Brand, cmd.Model, cmd.IsActive, DateTime.UtcNow);
         camera.PlaceInProperty(propertyId);
         camera.PlaceAt(cmd.Latitude, cmd.Longitude, cmd.DirectionDegrees, DateTime.UtcNow, cmd.LocationName);
 

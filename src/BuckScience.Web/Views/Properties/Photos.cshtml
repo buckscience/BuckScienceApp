@@ -155,7 +155,7 @@ else
                                 <select class="form-select" name="cameras" id="cameras" multiple>
                                     @foreach (var camera in Model.AvailableCameras)
                                     {
-                                        <option value="@camera.Id" selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true)">@camera.Name</option>
+                                        <option value="@camera.Id" selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true)">@camera.LocationName</option>
                                     }
                                 </select>
                             }
@@ -400,7 +400,7 @@ else
                                            value="@photo.Id" style="z-index: 10;" />
                                     <img src="@photo.EncodedPhotoUrl" 
                                          class="card-img-top" 
-                                         alt="Photo from @photo.CameraName" 
+                                         alt="Photo from @photo.CameraLocationName" 
                                          style="height: 250px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="modal" 
                                          data-bs-target="#photoModal"
@@ -408,10 +408,10 @@ else
                                          data-photo-url="@photo.EncodedPhotoUrl"
                                          data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
                                          data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
-                                         data-camera-name="@photo.CameraName"
+                                         data-camera-name="@photo.CameraLocationName"
                                          loading="lazy" />
                                     <div class="position-absolute top-0 end-0 m-2">
-                                        <span class="badge bg-dark bg-opacity-75">@photo.CameraName</span>
+                                        <span class="badge bg-dark bg-opacity-75">@photo.CameraLocationName</span>
                                     </div>
                                 </div>
                                 <div class="card-body p-3">

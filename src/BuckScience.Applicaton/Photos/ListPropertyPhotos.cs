@@ -12,7 +12,7 @@ public static class ListPropertyPhotos
         DateTime DateTaken,
         DateTime DateUploaded,
         int CameraId,
-        string CameraName
+        string CameraLocationName
     );
 
     public enum SortBy
@@ -46,7 +46,11 @@ public static class ListPropertyPhotos
             .Join(db.Properties, x => x.Camera.PropertyId, prop => prop.Id, (x, prop) => new { x.Photo, x.Camera, Property = prop })
             .Where(x => x.Camera.PropertyId == propertyId)
             .Where(x => x.Property.ApplicationUserId == userId)
-            .Select(x => new { x.Photo, x.Camera }); // Project back to the original structure
+            .Select(x => new { 
+                Photo = x.Photo, 
+                Camera = x.Camera,
+                CurrentPlacement = x.Camera.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
+            });
 
         // Apply filters if provided - but we need to handle this differently with the join
         if (filters?.HasAnyFilters == true)
@@ -68,7 +72,11 @@ public static class ListPropertyPhotos
 
             // Now join with cameras for the final selection
             baseQuery = photosQuery
-                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { Photo = p, Camera = c });
+                .Join(db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { 
+                    Photo = p, 
+                    Camera = c,
+                    CurrentPlacement = c.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
+                });
         }
 
         // Apply sorting
@@ -88,7 +96,7 @@ public static class ListPropertyPhotos
                 x.Photo.DateTaken,
                 x.Photo.DateUploaded,
                 x.Photo.CameraId,
-                x.Camera.Name
+                x.CurrentPlacement != null ? x.CurrentPlacement.LocationName : ""
             ))
             .ToListAsync(ct);
 

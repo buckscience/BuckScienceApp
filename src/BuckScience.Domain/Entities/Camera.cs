@@ -7,13 +7,11 @@ public class Camera
     protected Camera() { } // For EF
 
     public Camera(
-        string name,
         string brand,
         string? model,
         bool isActive = true,
         DateTime? createdDate = null)
     {
-        Rename(name);
         SetBrand(brand);
         SetModel(model);
         IsActive = isActive;
@@ -22,7 +20,6 @@ public class Camera
 
     public int Id { get; private set; }
 
-    public string Name { get; private set; } = string.Empty;
     public string Brand { get; private set; } = string.Empty;
     public string? Model { get; private set; }
 
@@ -44,12 +41,6 @@ public class Camera
     {
         if (propertyId <= 0) throw new ArgumentOutOfRangeException(nameof(propertyId));
         PropertyId = propertyId;
-    }
-
-    public void Rename(string newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("Name is required.", nameof(newName));
-        Name = newName.Trim();
     }
 
     public void SetBrand(string brand)
