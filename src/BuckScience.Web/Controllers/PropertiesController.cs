@@ -359,23 +359,25 @@ public class PropertiesController : Controller
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
         // Get cameras for this property using explicit join, including direction information
-        // First fetch the raw data from the database
+        // First fetch the raw data from the database - get ALL placement histories (current and historical)
         var cameraData = await db.Cameras
             .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
-            .Select(x => new { 
+            .SelectMany(x => x.Camera.PlacementHistories.Select(ph => new { 
                 CameraId = x.Camera.Id,
-                CurrentPlacement = x.Camera.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
-            })
+                PlacementHistory = ph
+            }))
             .ToListAsync(ct);
 
-        // Then format the display names in memory
+        // Then format the display names in memory - create separate options for each placement history
         var cameras = cameraData
             .Select(x => new CameraOption { 
                 Id = x.CameraId, 
-                LocationName = x.CurrentPlacement != null ? GetCameraDisplayName(x.CurrentPlacement.LocationName, x.CurrentPlacement.DirectionDegrees) : $"Camera {x.CameraId}" 
+                LocationName = x.PlacementHistory != null ? GetCameraDisplayName(x.PlacementHistory.LocationName, x.PlacementHistory.DirectionDegrees) : $"Camera {x.CameraId}" 
             })
+            .GroupBy(c => new { c.Id, c.LocationName }) // Group by camera ID and location display name
+            .Select(g => g.First()) // Take first from each group to eliminate duplicates
             .OrderBy(c => c.LocationName)
             .ToList();
 
