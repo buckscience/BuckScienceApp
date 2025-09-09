@@ -1,6 +1,7 @@
 using BuckScience.Application.PropertyFeatures;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
+using BuckScience.Domain.Helpers;
 using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
@@ -80,7 +81,7 @@ public class PropertyFeatureApplicationTests : IDisposable
     }
 
     [Fact]
-    public async Task CreatePropertyFeature_WithoutWeight_CreatesFeatureWithNullWeight()
+    public async Task CreatePropertyFeature_WithoutWeight_CreatesFeatureWithDefaultWeight()
     {
         // Arrange
         var command = new CreatePropertyFeature.Command(
@@ -96,7 +97,8 @@ public class PropertyFeatureApplicationTests : IDisposable
         // Assert
         var feature = await _context.PropertyFeatures.FindAsync(featureId);
         Assert.NotNull(feature);
-        Assert.Null(feature.Weight);
+        Assert.Equal(FeatureWeightHelper.GetDefaultWeight(ClassificationType.BeddingArea), feature.Weight);
+        Assert.Equal(0.9f, feature.Weight); // BeddingArea default weight
     }
 
     [Fact]
@@ -235,7 +237,7 @@ public class PropertyFeatureApplicationTests : IDisposable
     public async Task ListPropertyFeatures_ReturnsWeightsCorrectly()
     {
         // Arrange
-        // Create multiple features with different weights
+        // Create multiple features: one with explicit weight, one with default weight
         var feature1Command = new CreatePropertyFeature.Command(
             PropertyId: _propertyId,
             ClassificationType: ClassificationType.FoodPlot,
@@ -246,7 +248,7 @@ public class PropertyFeatureApplicationTests : IDisposable
             PropertyId: _propertyId,
             ClassificationType: ClassificationType.Creek,
             GeometryWkt: "POINT(-94.6 39.2)",
-            Weight: null);
+            Weight: null); // Will get default weight
 
         await CreatePropertyFeature.HandleAsync(
             feature1Command, _context, _geometryFactory, _userId, CancellationToken.None);
@@ -264,7 +266,8 @@ public class PropertyFeatureApplicationTests : IDisposable
         Assert.Equal(0.8f, foodPlot.Weight);
 
         var waterSource = results.First(r => r.ClassificationType == ClassificationType.Creek);
-        Assert.Null(waterSource.Weight);
+        Assert.Equal(FeatureWeightHelper.GetDefaultWeight(ClassificationType.Creek), waterSource.Weight);
+        Assert.Equal(0.6f, waterSource.Weight); // Creek default weight
     }
 
     public void Dispose()

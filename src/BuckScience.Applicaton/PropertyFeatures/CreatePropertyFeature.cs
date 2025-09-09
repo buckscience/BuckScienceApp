@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
+using BuckScience.Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
@@ -49,7 +50,7 @@ public static class CreatePropertyFeature
             geometry,
             cmd.Name,
             cmd.Notes,
-            cmd.Weight,
+            cmd.Weight ?? FeatureWeightHelper.GetDefaultWeight(cmd.ClassificationType),
             userId);
 
         db.PropertyFeatures.Add(feature);
