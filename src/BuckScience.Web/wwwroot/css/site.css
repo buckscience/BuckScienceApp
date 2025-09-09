@@ -106,7 +106,7 @@ html, body {
 }
 
     .sidebar-overlay.sidebar-wide {
-        width: 1200px;
+        width: 1400px;
         min-width: 320px;
         max-width: calc(100vw - 80px);
     }
