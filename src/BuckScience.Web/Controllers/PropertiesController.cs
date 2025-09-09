@@ -359,20 +359,25 @@ public class PropertiesController : Controller
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
         // Get cameras for this property using explicit join, including direction information
-        var cameras = await db.Cameras
+        // First fetch the raw data from the database
+        var cameraData = await db.Cameras
             .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
             .Select(x => new { 
-                Camera = x.Camera,
+                CameraId = x.Camera.Id,
                 CurrentPlacement = x.Camera.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
             })
+            .ToListAsync(ct);
+
+        // Then format the display names in memory
+        var cameras = cameraData
             .Select(x => new CameraOption { 
-                Id = x.Camera.Id, 
-                LocationName = x.CurrentPlacement != null ? GetCameraDisplayName(x.CurrentPlacement.LocationName, x.CurrentPlacement.DirectionDegrees) : $"Camera {x.Camera.Id}" 
+                Id = x.CameraId, 
+                LocationName = x.CurrentPlacement != null ? GetCameraDisplayName(x.CurrentPlacement.LocationName, x.CurrentPlacement.DirectionDegrees) : $"Camera {x.CameraId}" 
             })
             .OrderBy(c => c.LocationName)
-            .ToListAsync(ct);
+            .ToList();
 
         // Get distinct weather conditions from photos with weather data using explicit joins
         var weatherData = await db.Photos
