@@ -13,6 +13,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ApplicationUser> ApplicationUsers => Set<ApplicationUser>();
     public DbSet<Property> Properties => Set<Property>();
     public DbSet<PropertyFeature> PropertyFeatures => Set<PropertyFeature>();
+    public DbSet<FeatureWeight> FeatureWeights => Set<FeatureWeight>();
 
     public DbSet<Camera> Cameras => Set<Camera>();
     public DbSet<CameraPlacementHistory> CameraPlacementHistories => Set<CameraPlacementHistory>();
