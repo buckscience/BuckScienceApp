@@ -10,7 +10,6 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
         {
             entity.HasKey(c => c.Id);
 
-            entity.Property(c => c.Name).HasMaxLength(100).IsRequired();
             entity.Property(c => c.Brand).HasMaxLength(100);
             entity.Property(c => c.Model).HasMaxLength(100);
 
@@ -22,7 +21,6 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
 
             // Useful indexes
             entity.HasIndex(c => c.PropertyId);
-            entity.HasIndex(c => new { c.PropertyId, c.Name });
 
             // Relationships
             entity.HasOne(c => c.Property)

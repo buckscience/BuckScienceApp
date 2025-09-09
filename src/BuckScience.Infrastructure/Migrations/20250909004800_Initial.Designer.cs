@@ -13,7 +13,7 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250904225016_Initial")]
+    [Migration("20250909004800_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -112,19 +112,12 @@ namespace BuckScience.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("PropertyId");
-
-                    b.HasIndex("PropertyId", "Name");
 
                     b.ToTable("Cameras");
                 });
@@ -148,6 +141,11 @@ namespace BuckScience.Infrastructure.Migrations
 
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
+
+                    b.Property<string>("LocationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
@@ -176,6 +174,9 @@ namespace BuckScience.Infrastructure.Migrations
                     b.Property<int>("CameraId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("CameraPlacementHistoryId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("DateTaken")
                         .HasColumnType("datetime2");
 
@@ -195,6 +196,8 @@ namespace BuckScience.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CameraId");
+
+                    b.HasIndex("CameraPlacementHistoryId");
 
                     b.HasIndex("DateTaken");
 
@@ -521,8 +524,13 @@ namespace BuckScience.Infrastructure.Migrations
                     b.HasOne("BuckScience.Domain.Entities.Camera", "Camera")
                         .WithMany("Photos")
                         .HasForeignKey("CameraId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("BuckScience.Domain.Entities.CameraPlacementHistory", "PlacementHistory")
+                        .WithMany()
+                        .HasForeignKey("CameraPlacementHistoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("BuckScience.Domain.Entities.Weather", "Weather")
                         .WithMany()
@@ -530,6 +538,8 @@ namespace BuckScience.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Camera");
+
+                    b.Navigation("PlacementHistory");
 
                     b.Navigation("Weather");
                 });

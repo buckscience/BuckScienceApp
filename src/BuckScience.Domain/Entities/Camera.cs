@@ -7,13 +7,11 @@ public class Camera
     protected Camera() { } // For EF
 
     public Camera(
-        string name,
         string brand,
         string? model,
         bool isActive = true,
         DateTime? createdDate = null)
     {
-        Rename(name);
         SetBrand(brand);
         SetModel(model);
         IsActive = isActive;
@@ -22,7 +20,6 @@ public class Camera
 
     public int Id { get; private set; }
 
-    public string Name { get; private set; } = string.Empty;
     public string Brand { get; private set; } = string.Empty;
     public string? Model { get; private set; }
 
@@ -46,12 +43,6 @@ public class Camera
         PropertyId = propertyId;
     }
 
-    public void Rename(string newName)
-    {
-        if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("Name is required.", nameof(newName));
-        Name = newName.Trim();
-    }
-
     public void SetBrand(string brand)
     {
         Brand = brand?.Trim() ?? string.Empty;
@@ -62,7 +53,7 @@ public class Camera
         Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim();
     }
 
-    public void PlaceAt(double latitude, double longitude, float directionDegrees, DateTime? placementTime = null)
+    public void PlaceAt(double latitude, double longitude, float directionDegrees, DateTime? placementTime = null, string locationName = "")
     {
         var currentPlacement = GetCurrentPlacement();
         var now = placementTime ?? DateTime.UtcNow;
@@ -74,13 +65,13 @@ public class Camera
         }
 
         // Create new placement
-        var newPlacement = new CameraPlacementHistory(Id, latitude, longitude, directionDegrees, now);
+        var newPlacement = new CameraPlacementHistory(Id, latitude, longitude, directionDegrees, now, locationName);
         PlacementHistories.Add(newPlacement);
     }
 
-    public void Move(double latitude, double longitude, float directionDegrees)
+    public void Move(double latitude, double longitude, float directionDegrees, string locationName = "")
     {
-        PlaceAt(latitude, longitude, directionDegrees);
+        PlaceAt(latitude, longitude, directionDegrees, null, locationName);
     }
 
     public CameraPlacementHistory? GetCurrentPlacement()

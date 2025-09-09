@@ -31,7 +31,7 @@ public class PropertyPhotosVm
 public class CameraOption
 {
     public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public string LocationName { get; set; } = string.Empty;
 }
 
 public class PhotoMonthGroup
@@ -47,7 +47,7 @@ public class PropertyPhotoListItemVm
     public DateTime DateTaken { get; set; }
     public DateTime DateUploaded { get; set; }
     public int CameraId { get; set; }
-    public string CameraName { get; set; } = string.Empty;
+    public string CameraLocationName { get; set; } = string.Empty;
     public List<TagInfo> Tags { get; set; } = new();
     
     /// <summary>
@@ -112,7 +112,7 @@ public static class PhotoGroupingExtensions
                     DateTaken = p.DateTaken,
                     DateUploaded = p.DateUploaded,
                     CameraId = p.CameraId,
-                    CameraName = p.CameraName
+                    CameraLocationName = p.CameraLocationName
                 }).ToList()
             })
             .ToList();

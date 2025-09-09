@@ -100,8 +100,8 @@ public class PhotoFilteringComprehensiveTests
             AppliedFilters = filters,
             AvailableCameras = new List<CameraOption>
             {
-                new() { Id = 1, Name = "Trail Cam 1" },
-                new() { Id = 2, Name = "Trail Cam 2" }
+                new() { Id = 1, LocationName = "Trail Cam 1" },
+                new() { Id = 2, LocationName = "Trail Cam 2" }
             },
             AvailableConditions = new List<string> { "Clear", "Cloudy", "Rainy" },
             AvailableMoonPhases = new List<string> { "Full Moon", "New Moon", "Half Moon" }
@@ -117,7 +117,7 @@ public class PhotoFilteringComprehensiveTests
         Assert.Equal(2, vm.AvailableCameras.Count);
         Assert.Equal(3, vm.AvailableConditions.Count);
         Assert.Equal(3, vm.AvailableMoonPhases.Count);
-        Assert.Equal("Trail Cam 1", vm.AvailableCameras[0].Name);
+        Assert.Equal("Trail Cam 1", vm.AvailableCameras[0].LocationName);
         Assert.Contains("Clear", vm.AvailableConditions);
         Assert.Contains("Full Moon", vm.AvailableMoonPhases);
     }
@@ -192,10 +192,10 @@ public class PhotoFilteringComprehensiveTests
         var camera = new CameraOption
         {
             Id = 123,
-            Name = "Test Camera"
+            LocationName = "Test Camera"
         };
         
         Assert.Equal(123, camera.Id);
-        Assert.Equal("Test Camera", camera.Name);
+        Assert.Equal("Test Camera", camera.LocationName);
     }
 }

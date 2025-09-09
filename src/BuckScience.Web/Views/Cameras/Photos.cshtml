@@ -1,11 +1,11 @@
 @model BuckScience.Web.ViewModels.Photos.CameraPhotosVm
 @{
-    ViewData["Title"] = $"Photos - {Model.CameraName}";
+    ViewData["Title"] = $"Photos - {Model.CameraLocationName}";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1>Photos from @Model.CameraName</h1>
+        <h1>Photos from @Model.CameraLocationName</h1>
     </div>
     <div>
         <a href="/cameras/@Model.CameraId/upload" 
@@ -34,7 +34,7 @@
                                  data-photo-url="@photo.EncodedPhotoUrl"
                                  data-date-taken="@photo.DateTaken.ToString("MMMM dd, yyyy 'at' h:mm tt")"
                                  data-date-uploaded="@photo.DateUploaded.ToString("MMMM dd, yyyy 'at' h:mm tt")"
-                                 data-camera-name="@Model.CameraName"
+                                 data-camera-name="@Model.CameraLocationName"
                                  loading="lazy"
                                  onerror="this.style.backgroundColor='#f8f9fa'; this.alt='Failed to load photo: @photo.EncodedPhotoUrl';" />
                             <div class="position-absolute top-0 end-0 m-2">

@@ -47,15 +47,20 @@ public class ProfilesController : Controller
                 .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == profile.TagId))
                 .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
                 .Where(pc => pc.c.PropertyId == profile.PropertyId)
+                .Select(pc => new { 
+                    Photo = pc.p, 
+                    Camera = pc.c,
+                    CurrentPlacement = pc.c.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault()
+                })
                 .Select(pc => new BuckScience.Web.ViewModels.Photos.PropertyPhotoListItemVm
                 {
-                    Id = pc.p.Id,
-                    PhotoUrl = pc.p.PhotoUrl,
-                    DateTaken = pc.p.DateTaken,
-                    DateUploaded = pc.p.DateUploaded,
-                    CameraId = pc.c.Id,
-                    CameraName = pc.c.Name,
-                    Tags = _db.PhotoTags.Where(pt => pt.PhotoId == pc.p.Id)
+                    Id = pc.Photo.Id,
+                    PhotoUrl = pc.Photo.PhotoUrl,
+                    DateTaken = pc.Photo.DateTaken,
+                    DateUploaded = pc.Photo.DateUploaded,
+                    CameraId = pc.Camera.Id,
+                    CameraLocationName = pc.CurrentPlacement != null ? pc.CurrentPlacement.LocationName : "",
+                    Tags = _db.PhotoTags.Where(pt => pt.PhotoId == pc.Photo.Id)
                         .Join(_db.Tags, pt => pt.TagId, t => t.Id, (pt, t) => new BuckScience.Web.ViewModels.Photos.TagInfo { Id = t.Id, Name = t.TagName })
                         .ToList()
                 })

@@ -14,6 +14,9 @@ public class PhotoFilters
     // Camera filters
     public List<int>? CameraIds { get; set; }
     
+    // Camera placement history filters
+    public List<int>? CameraPlacementHistoryIds { get; set; }
+    
     // Weather-related filters
     public double? TemperatureMin { get; set; }
     public double? TemperatureMax { get; set; }
@@ -59,5 +62,6 @@ public class PhotoFilters
         DateTakenFrom.HasValue || DateTakenTo.HasValue ||
         DateUploadedFrom.HasValue || DateUploadedTo.HasValue ||
         (CameraIds?.Count > 0) ||
+        (CameraPlacementHistoryIds?.Count > 0) ||
         HasWeatherFilters;
 }

@@ -11,6 +11,7 @@ namespace BuckScience.Infrastructure.Persistence.Configurations
             entity.HasKey(cph => cph.Id);
 
             entity.Property(cph => cph.CameraId).IsRequired();
+            entity.Property(cph => cph.LocationName).HasMaxLength(200);
             entity.Property(cph => cph.Latitude).IsRequired();
             entity.Property(cph => cph.Longitude).IsRequired();
             entity.Property(cph => cph.DirectionDegrees).IsRequired();

@@ -151,13 +151,15 @@ else
                             <h6 class="fw-bold mb-3"><i class="fas fa-camera me-2"></i>Camera Filters</h6>
                             @if (Model.AvailableCameras.Any())
                             {
-                                <label for="cameras" class="form-label fw-semibold">Cameras</label>
-                                <select class="form-select" name="cameras" id="cameras" multiple>
+                                <label for="cameraSelect" class="form-label fw-semibold">Camera Locations</label>
+                                <select class="form-select" id="cameraSelect" multiple size="4">
                                     @foreach (var camera in Model.AvailableCameras)
                                     {
-                                        <option value="@camera.Id" selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true)">@camera.Name</option>
+                                        <option value="@camera.Id" data-selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true ? "true" : "false")">@camera.LocationName</option>
                                     }
                                 </select>
+                                <input type="hidden" name="cameras" id="cameraIds" />
+                                <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple camera locations</small>
                             }
                             else
                             {
@@ -278,16 +280,9 @@ else
                                 <div class="col-md-4 mb-3">
                                     <label for="windDirections" class="form-label fw-semibold">Wind Directions</label>
                                     <select class="form-select" name="windDirections" id="windDirections" multiple>
-                                        @foreach (var direction in Model.WindDirectionOptions)
+                                        @foreach (var direction in Model.WindDirectionOptions.Where(d => d.IsAvailable))
                                         {
-                                            @if (direction.IsAvailable)
-                                            {
-                                                <option value="@direction.Value" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction.Value) == true)">@direction.DisplayName</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="@direction.Value" disabled class="text-muted">@direction.DisplayName (no data)</option>
-                                            }
+                                            <option value="@direction.Value" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction.Value) == true)">@direction.DisplayName</option>
                                         }
                                     </select>
                                 </div>
@@ -400,7 +395,7 @@ else
                                            value="@photo.Id" style="z-index: 10;" />
                                     <img src="@photo.EncodedPhotoUrl" 
                                          class="card-img-top" 
-                                         alt="Photo from @photo.CameraName" 
+                                         alt="Photo from @photo.CameraLocationName" 
                                          style="height: 250px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="modal" 
                                          data-bs-target="#photoModal"
@@ -408,10 +403,10 @@ else
                                          data-photo-url="@photo.EncodedPhotoUrl"
                                          data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
                                          data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
-                                         data-camera-name="@photo.CameraName"
+                                         data-camera-name="@photo.CameraLocationName"
                                          loading="lazy" />
                                     <div class="position-absolute top-0 end-0 m-2">
-                                        <span class="badge bg-dark bg-opacity-75">@photo.CameraName</span>
+                                        <span class="badge bg-dark bg-opacity-75">@photo.CameraLocationName</span>
                                     </div>
                                 </div>
                                 <div class="card-body p-3">
@@ -537,6 +532,9 @@ else
             // Load tags for all photos
             loadAllPhotoTags();
             
+            // Initialize camera filter
+            initializeCameraFilter();
+            
             // Bulk selection handlers
             document.addEventListener('change', function(e) {
                 if (e.target.classList.contains('photo-select')) {
@@ -549,6 +547,44 @@ else
             document.getElementById('clearSelectionBtn')?.addEventListener('click', clearSelection);
             document.getElementById('addTagBtn')?.addEventListener('click', addTagToBulk);
             document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
+        }
+        
+        // Initialize camera filter handling
+        function initializeCameraFilter() {
+            const cameraSelect = document.getElementById('cameraSelect');
+            const cameraIdsInput = document.getElementById('cameraIds');
+            
+            if (!cameraSelect || !cameraIdsInput) return;
+            
+            // Set initial selections based on applied filters
+            const options = cameraSelect.querySelectorAll('option');
+            options.forEach(option => {
+                if (option.getAttribute('data-selected') === 'true') {
+                    option.selected = true;
+                }
+            });
+            
+            // Update hidden input when selection changes
+            const updateCameraIds = () => {
+                const selectedIds = Array.from(cameraSelect.selectedOptions)
+                    .map(option => option.value)
+                    .filter(id => id && id.trim() !== '');
+                cameraIdsInput.value = selectedIds.join(',');
+            };
+            
+            // Update initial value
+            updateCameraIds();
+            
+            // Listen for changes
+            cameraSelect.addEventListener('change', updateCameraIds);
+            
+            // Also update before form submission
+            const form = document.getElementById('photoFiltersForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    updateCameraIds();
+                });
+            }
         }
         
         // Load tags for all photos on the page

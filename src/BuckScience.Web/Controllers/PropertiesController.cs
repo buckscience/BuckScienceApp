@@ -220,7 +220,7 @@ public class PropertiesController : Controller
         [FromQuery] DateTime? dateUploadedFrom = null,
         [FromQuery] DateTime? dateUploadedTo = null,
         // Camera filters
-        [FromQuery] string? cameras = null, // comma-separated camera IDs
+        [FromQuery] string? cameras = null, // comma-separated camera placement history IDs
         // Weather filters
         [FromQuery] double? tempMin = null,
         [FromQuery] double? tempMax = null,
@@ -355,16 +355,32 @@ public class PropertiesController : Controller
         return "Unknown";
     }
 
-    private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)> 
+    private static async Task<(List<CameraOption> Cameras, List<string> Conditions, List<string> MoonPhases, List<string> PressureTrends, List<string> WindDirections)>
         GetAvailableFilterOptions(IAppDbContext db, int userId, int propertyId, CancellationToken ct)
     {
-        // Get cameras for this property using explicit join
-        var cameras = await db.Cameras
+        // Get cameras for this property using explicit join, including direction information
+        // First fetch the raw data from the database - get ALL placement histories (current and historical)
+        var cameraData = await db.Cameras
+            .Include(c => c.PlacementHistories)
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
-            .Select(x => new CameraOption { Id = x.Camera.Id, Name = x.Camera.Name })
-            .OrderBy(c => c.Name)
+            .SelectMany(x => x.Camera.PlacementHistories.Select(ph => new { 
+                CameraId = x.Camera.Id,
+                PlacementHistory = ph
+            }))
             .ToListAsync(ct);
+
+        // Then format the display names in memory - create separate options for each placement history
+        var cameras = cameraData
+            .Select(x => new CameraOption { 
+                Id = x.PlacementHistory?.Id ?? 0, // Use placement history ID, not camera ID
+                LocationName = x.PlacementHistory != null ? GetCameraDisplayNameWithDates(x.PlacementHistory.LocationName, x.PlacementHistory.DirectionDegrees, x.PlacementHistory.StartDateTime, x.PlacementHistory.EndDateTime) : $"Camera {x.CameraId}" 
+            })
+            .Where(c => c.Id > 0) // Only include valid placement histories
+            .GroupBy(c => new { c.Id, c.LocationName }) // Group by placement history ID and location display name
+            .Select(g => g.First()) // Take first from each group to eliminate duplicates
+            .OrderBy(c => c.LocationName)
+            .ToList();
 
         // Get distinct weather conditions from photos with weather data using explicit joins
         var weatherData = await db.Photos
@@ -445,13 +461,13 @@ public class PropertiesController : Controller
         // Parse comma-separated lists
         if (!string.IsNullOrWhiteSpace(cameras))
         {
-            var cameraIds = cameras.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var placementHistoryIds = cameras.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => int.TryParse(s.Trim(), out var id) ? id : (int?)null)
                 .Where(id => id.HasValue)
                 .Select(id => id!.Value)
                 .ToList();
-            if (cameraIds.Count > 0)
-                filters.CameraIds = cameraIds;
+            if (placementHistoryIds.Count > 0)
+                filters.CameraPlacementHistoryIds = placementHistoryIds;
         }
 
         if (!string.IsNullOrWhiteSpace(conditions))
@@ -520,5 +536,44 @@ public class PropertiesController : Controller
             .ToList();
 
         vm.TimeZones = timeZones;
+    }
+
+    private static string GetCameraDisplayName(string locationName, float directionDegrees)
+    {
+        if (string.IsNullOrWhiteSpace(locationName))
+            return "Unknown Location";
+
+        var direction = DirectionHelper.FromFloat(directionDegrees);
+        var directionDisplay = DirectionHelper.GetDisplayName(direction);
+        
+        return $"{locationName} - {directionDisplay}";
+    }
+
+    private static string GetCameraDisplayNameWithDates(string locationName, float directionDegrees, DateTime startDateTime, DateTime? endDateTime)
+    {
+        if (string.IsNullOrWhiteSpace(locationName))
+            return "Unknown Location";
+
+        var direction = DirectionHelper.FromFloat(directionDegrees);
+        var directionDisplay = DirectionHelper.GetDisplayName(direction);
+        
+        var dateRange = FormatDateRange(startDateTime, endDateTime);
+        
+        return $"{locationName} (Facing: {directionDisplay} / {dateRange})";
+    }
+
+    private static string FormatDateRange(DateTime startDateTime, DateTime? endDateTime)
+    {
+        var startText = startDateTime.ToString("MMM ''yy"); // e.g., "Mar '24"
+        
+        if (endDateTime.HasValue)
+        {
+            var endText = endDateTime.Value.ToString("MMM ''yy"); // e.g., "Dec '25"
+            return $"{startText} - {endText}";
+        }
+        else
+        {
+            return $"{startText} - Current";
+        }
     }
 }

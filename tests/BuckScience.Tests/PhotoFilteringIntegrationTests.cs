@@ -54,7 +54,7 @@ public class PhotoFilteringIntegrationTests
     }
 
     [Fact]
-    public void BuildFilters_WithCameraIds_ReturnsFiltersWithCameras()
+    public void BuildFilters_WithCameraPlacementHistoryIds_ReturnsFiltersWithPlacementHistories()
     {
         // This test uses reflection to access the private BuildFilters method
         var method = typeof(PropertiesController).GetMethod("BuildFilters",
@@ -64,7 +64,7 @@ public class PhotoFilteringIntegrationTests
         var result = method?.Invoke(null, new object?[] 
         {
             null, null, null, null, // dates
-            "1,2,3", null, null, null, null, // cameras and temp
+            "1,2,3", null, null, null, null, // cameras (now placement history IDs) and temp
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
@@ -73,11 +73,11 @@ public class PhotoFilteringIntegrationTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.CameraIds);
-        Assert.Equal(3, result.CameraIds.Count);
-        Assert.Contains(1, result.CameraIds);
-        Assert.Contains(2, result.CameraIds);
-        Assert.Contains(3, result.CameraIds);
+        Assert.NotNull(result.CameraPlacementHistoryIds);
+        Assert.Equal(3, result.CameraPlacementHistoryIds.Count);
+        Assert.Contains(1, result.CameraPlacementHistoryIds);
+        Assert.Contains(2, result.CameraPlacementHistoryIds);
+        Assert.Contains(3, result.CameraPlacementHistoryIds);
         Assert.False(result.HasWeatherFilters);
         Assert.True(result.HasAnyFilters);
     }
@@ -141,17 +141,17 @@ public class PhotoFilteringIntegrationTests
     }
 
     [Fact]
-    public void BuildFilters_WithInvalidCameraIds_IgnoresInvalidIds()
+    public void BuildFilters_WithInvalidCameraPlacementHistoryIds_IgnoresInvalidIds()
     {
         // This test uses reflection to access the private BuildFilters method
         var method = typeof(PropertiesController).GetMethod("BuildFilters",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         
-        // Act - mix of valid and invalid camera IDs
+        // Act - mix of valid and invalid placement history IDs
         var result = method?.Invoke(null, new object?[] 
         {
             null, null, null, null, // dates
-            "1,invalid,3,", null, null, null, null, // cameras and temp
+            "1,invalid,3,", null, null, null, null, // cameras (now placement history IDs) and temp
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
@@ -160,10 +160,10 @@ public class PhotoFilteringIntegrationTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.CameraIds);
-        Assert.Equal(2, result.CameraIds.Count); // Only valid IDs should be included
-        Assert.Contains(1, result.CameraIds);
-        Assert.Contains(3, result.CameraIds);
-        Assert.DoesNotContain(0, result.CameraIds); // Invalid parse results in 0, which shouldn't be included
+        Assert.NotNull(result.CameraPlacementHistoryIds);
+        Assert.Equal(2, result.CameraPlacementHistoryIds.Count); // Only valid IDs should be included
+        Assert.Contains(1, result.CameraPlacementHistoryIds);
+        Assert.Contains(3, result.CameraPlacementHistoryIds);
+        Assert.DoesNotContain(0, result.CameraPlacementHistoryIds); // Invalid parse results in 0, which shouldn't be included
     }
 }

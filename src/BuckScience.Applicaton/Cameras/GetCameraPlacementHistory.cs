@@ -7,6 +7,7 @@ public static class GetCameraPlacementHistory
 {
     public sealed record PlacementHistoryItem(
         int Id,
+        string LocationName,
         double Latitude,
         double Longitude,
         float DirectionDegrees,
@@ -32,6 +33,7 @@ public static class GetCameraPlacementHistory
             .OrderByDescending(ph => ph.StartDateTime) // Most recent first
             .Select(ph => new PlacementHistoryItem(
                 ph.Id,
+                ph.LocationName,
                 ph.Latitude,
                 ph.Longitude,
                 ph.DirectionDegrees,

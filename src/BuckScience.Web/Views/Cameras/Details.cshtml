@@ -1,6 +1,6 @@
 @model BuckScience.Web.ViewModels.Cameras.CameraDetailsVm
 @{
-    ViewData["Title"] = $"{Model.Name} - Camera Details";
+    ViewData["Title"] = $"{Model.LocationName} - Camera Details";
     
     string GetDirectionName(float degrees)
     {
@@ -23,7 +23,7 @@
 <div class="camera-details">
     <!-- Header with Back Button -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="sidebar-title">@Model.Name</h2>
+        <h2 class="sidebar-title">@Model.LocationName</h2>
         <a href="/properties/@Model.PropertyId/details" class="btn btn-custom-cancel btn-sm">
             <i class="fas fa-arrow-left"></i> Back to Property
         </a>
@@ -116,7 +116,7 @@
             {
                 <div class="d-grid">
                     <a href="/properties/@Model.PropertyId/photos?cameras=@Model.Id" class="btn btn-outline-primary">
-                        <i class="fas fa-images me-2"></i>View All Photos from @Model.Name
+                        <i class="fas fa-images me-2"></i>View All Photos from @Model.LocationName
                     </a>
                 </div>
             }
@@ -277,7 +277,7 @@
         // Current camera data
         window.currentCamera = {
             id: @Model.Id,
-            name: '@Html.Raw(Json.Serialize(Model.Name))',
+            name: '@Html.Raw(Json.Serialize(Model.LocationName))',
             isActive: @Model.IsActive.ToString().ToLower(),
             propertyId: @Model.PropertyId
         };

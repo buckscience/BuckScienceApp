@@ -104,7 +104,6 @@ namespace BuckScience.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Brand = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Model = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
@@ -208,6 +207,7 @@ namespace BuckScience.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     CameraId = table.Column<int>(type: "int", nullable: false),
+                    LocationName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Latitude = table.Column<double>(type: "float", nullable: false),
                     Longitude = table.Column<double>(type: "float", nullable: false),
                     DirectionDegrees = table.Column<float>(type: "real", nullable: false),
@@ -235,11 +235,18 @@ namespace BuckScience.Infrastructure.Migrations
                     DateUploaded = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     PhotoUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
                     CameraId = table.Column<int>(type: "int", nullable: false),
+                    CameraPlacementHistoryId = table.Column<int>(type: "int", nullable: true),
                     WeatherId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Photos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Photos_CameraPlacementHistories_CameraPlacementHistoryId",
+                        column: x => x.CameraPlacementHistoryId,
+                        principalTable: "CameraPlacementHistories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Photos_Cameras_CameraId",
                         column: x => x.CameraId,
@@ -305,14 +312,14 @@ namespace BuckScience.Infrastructure.Migrations
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Cameras_PropertyId_Name",
-                table: "Cameras",
-                columns: new[] { "PropertyId", "Name" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Photos_CameraId",
                 table: "Photos",
                 column: "CameraId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Photos_CameraPlacementHistoryId",
+                table: "Photos",
+                column: "CameraPlacementHistoryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Photos_DateTaken",
@@ -418,9 +425,6 @@ namespace BuckScience.Infrastructure.Migrations
                 name: "ApplicationUsers");
 
             migrationBuilder.DropTable(
-                name: "CameraPlacementHistories");
-
-            migrationBuilder.DropTable(
                 name: "PhotoTags");
 
             migrationBuilder.DropTable(
@@ -439,10 +443,13 @@ namespace BuckScience.Infrastructure.Migrations
                 name: "Tags");
 
             migrationBuilder.DropTable(
-                name: "Cameras");
+                name: "CameraPlacementHistories");
 
             migrationBuilder.DropTable(
                 name: "Weathers");
+
+            migrationBuilder.DropTable(
+                name: "Cameras");
 
             migrationBuilder.DropTable(
                 name: "Properties");

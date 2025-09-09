@@ -11,17 +11,20 @@ public class CameraPlacementHistory
         double latitude,
         double longitude,
         float directionDegrees,
-        DateTime startDateTime)
+        DateTime startDateTime,
+        string locationName = "")
     {
         CameraId = cameraId;
         Latitude = latitude;
         Longitude = longitude;
         DirectionDegrees = directionDegrees;
         StartDateTime = startDateTime;
+        SetLocationName(locationName);
     }
 
     public int Id { get; private set; }
     public int CameraId { get; private set; }
+    public string LocationName { get; private set; } = string.Empty;
     public double Latitude { get; private set; }
     public double Longitude { get; private set; }
     public float DirectionDegrees { get; private set; } // 0-360, 0=North
@@ -49,4 +52,10 @@ public class CameraPlacementHistory
     public bool IsCurrentPlacement => !EndDateTime.HasValue;
 
     public TimeSpan? Duration => EndDateTime?.Subtract(StartDateTime);
+
+    // Domain behavior for location name
+    public void SetLocationName(string locationName)
+    {
+        LocationName = string.IsNullOrWhiteSpace(locationName) ? string.Empty : locationName.Trim();
+    }
 }

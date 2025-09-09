@@ -7,7 +7,7 @@ public static class ListPropertyCameras
 {
     public sealed record Result(
         int Id,
-        string Name,
+        string LocationName,
         string Brand,
         string? Model,
         double Latitude,
@@ -32,7 +32,7 @@ public static class ListPropertyCameras
             .Join(db.Properties, c => c.PropertyId, p => p.Id, (c, p) => new { Camera = c, Property = p })
             .Where(x => x.Camera.PropertyId == propertyId && x.Property.ApplicationUserId == userId)
             .GroupJoin(db.Photos, x => x.Camera.Id, photo => photo.CameraId, (x, photos) => new { x.Camera, x.Property, PhotoCount = photos.Count() })
-            .OrderBy(x => x.Camera.Name)
+            .OrderBy(x => x.Camera.PlacementHistories.Where(ph => ph.EndDateTime == null).FirstOrDefault().LocationName)
             .Select(x => new {
                 Camera = x.Camera,
                 PhotoCount = x.PhotoCount,
@@ -42,7 +42,7 @@ public static class ListPropertyCameras
             })
             .Select(x => new Result(
                 x.Camera.Id,
-                x.Camera.Name,
+                x.CurrentPlacement != null ? x.CurrentPlacement.LocationName : "",
                 x.Camera.Brand,
                 x.Camera.Model,
                 x.CurrentPlacement != null ? x.CurrentPlacement.Latitude : 0d,

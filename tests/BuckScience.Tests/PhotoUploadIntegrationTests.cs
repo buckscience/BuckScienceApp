@@ -8,7 +8,7 @@ namespace BuckScience.Tests
         public void PhotoUpload_WithCameraPlacement_ShouldAssociatePlacementHistory()
         {
             // Arrange - Set up a camera with placement history
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
             
             // Place camera at a specific location
@@ -45,7 +45,7 @@ namespace BuckScience.Tests
         public void PhotoUpload_WithoutCameraPlacement_ShouldHaveNullPlacementHistory()
         {
             // Arrange - Camera with no placement history
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
             
             var currentPlacement = camera.GetCurrentPlacement();
@@ -68,7 +68,7 @@ namespace BuckScience.Tests
         public void PhotoUpload_AfterCameraMove_ShouldUseNewPlacement()
         {
             // Arrange - Camera that has been moved
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
             
             // Initial placement

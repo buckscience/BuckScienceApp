@@ -39,7 +39,7 @@ public class TagCleanupTests
 
         // Create camera and two photos on this property
         var cameraLocation = geometryFactory.CreatePoint(new Coordinate(-74.0060, 40.7128));
-        var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+        var camera = new Camera("Test Brand", "Test Model");
         camera.PlaceInProperty(propertyId);
         camera.PlaceAt(40.7128, -74.0060, 0f, DateTime.UtcNow);
         context.Cameras.Add(camera);
@@ -121,7 +121,7 @@ public class TagCleanupTests
 
         // Create camera and photo
         var cameraLocation = geometryFactory.CreatePoint(new Coordinate(-74.0060, 40.7128));
-        var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+        var camera = new Camera("Test Brand", "Test Model");
         camera.PlaceAt(40.7128, -74.0060, 0f, DateTime.UtcNow);
         camera.PlaceInProperty(propertyId);
         context.Cameras.Add(camera);
@@ -175,7 +175,7 @@ public class TagCleanupTests
 
         // Create camera and photo
         var cameraLocation = geometryFactory.CreatePoint(new Coordinate(-74.0060, 40.7128));
-        var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+        var camera = new Camera("Test Brand", "Test Model");
         camera.PlaceAt(40.7128, -74.0060, 0f, DateTime.UtcNow);
         camera.PlaceInProperty(propertyId);
         context.Cameras.Add(camera);
@@ -224,12 +224,12 @@ public class TagCleanupTests
 
         // Create cameras and photos on both properties
         var camera1Location = geometryFactory.CreatePoint(new Coordinate(-74.0060, 40.7128));
-        var camera1 = new Camera("Camera 1", "Brand", "Model");
+        var camera1 = new Camera("Brand", "Model");
         camera1.PlaceInProperty(property1Id);
         camera1.PlaceAt(40.7128, -74.0060, 0f, DateTime.UtcNow);
 
         var camera2Location = geometryFactory.CreatePoint(new Coordinate(-75.0060, 41.7128));
-        var camera2 = new Camera("Camera 2", "Brand", "Model");
+        var camera2 = new Camera("Brand", "Model");
         camera2.PlaceInProperty(property2Id);
         camera2.PlaceAt(41.7128, -75.0060, 0f, DateTime.UtcNow);
 

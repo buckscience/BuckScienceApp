@@ -12,7 +12,8 @@ public class CameraEditVm
     public int Id { get; set; }
 
     [Required, StringLength(200)]
-    public string Name { get; set; } = string.Empty;
+    [Display(Name = "Location Name")]
+    public string LocationName { get; set; } = string.Empty;
 
     [StringLength(100)]
     public string Brand { get; set; } = string.Empty;

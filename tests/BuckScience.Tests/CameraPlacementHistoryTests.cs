@@ -9,7 +9,7 @@ namespace BuckScience.Tests
         public void Camera_PlaceAt_ShouldCreateNewPlacementHistory()
         {
             // Arrange
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
 
             // Act
@@ -29,7 +29,7 @@ namespace BuckScience.Tests
         public void Camera_Move_ShouldEndCurrentPlacementAndCreateNew()
         {
             // Arrange
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
             var initialTime = DateTime.UtcNow.AddHours(-1);
             camera.PlaceAt(40.7128, -74.0060, 180f, initialTime);
@@ -57,7 +57,7 @@ namespace BuckScience.Tests
         public void Camera_CurrentLocationProperties_ShouldReturnFromPlacementHistory()
         {
             // Arrange
-            var camera = new Camera("Test Camera", "Test Brand", "Test Model");
+            var camera = new Camera("Test Brand", "Test Model");
             camera.PlaceInProperty(1);
             camera.PlaceAt(40.7128, -74.0060, 270f, DateTime.UtcNow);
 
@@ -75,7 +75,7 @@ namespace BuckScience.Tests
             var vm = new CameraCreateVm
             {
                 PropertyId = 1,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Latitude = 40.7128,
                 Longitude = -74.0060,
@@ -95,7 +95,7 @@ namespace BuckScience.Tests
             {
                 PropertyId = 1,
                 Id = 1,
-                Name = "Test Camera",
+                LocationName = "Test Location",
                 Brand = "Test Brand",
                 Latitude = 40.7128,
                 Longitude = -74.0060,
