@@ -18,19 +18,19 @@ public static class UpdateFeatureWeights
     public static async Task<bool> HandleAsync(
         Command command,
         IAppDbContext db,
-        int userId,
+        int propertyId,
         CancellationToken ct = default)
     {
-        // Validate user exists
-        var userExists = await db.ApplicationUsers
-            .AnyAsync(u => u.Id == userId, ct);
+        // Validate property exists
+        var propertyExists = await db.Properties
+            .AnyAsync(p => p.Id == propertyId, ct);
 
-        if (!userExists)
+        if (!propertyExists)
             return false;
 
-        // Get existing feature weights for the user
+        // Get existing feature weights for the property
         var existingWeights = await db.FeatureWeights
-            .Where(fw => fw.ApplicationUserId == userId)
+            .Where(fw => fw.PropertyId == propertyId)
             .ToListAsync(ct);
 
         var existingWeightLookup = existingWeights.ToDictionary(fw => fw.ClassificationType, fw => fw);
@@ -64,7 +64,7 @@ public static class UpdateFeatureWeights
                 // Create new feature weight
                 var defaultWeight = FeatureWeightHelper.GetDefaultWeight(classificationType);
                 var newFeatureWeight = new FeatureWeight(
-                    userId,
+                    propertyId,
                     classificationType,
                     defaultWeight,
                     update.UserWeight,

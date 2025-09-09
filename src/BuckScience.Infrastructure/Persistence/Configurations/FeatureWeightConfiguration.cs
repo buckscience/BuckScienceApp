@@ -11,7 +11,7 @@ public class FeatureWeightConfiguration : IEntityTypeConfiguration<FeatureWeight
     {
         entity.HasKey(fw => fw.Id);
 
-        entity.Property(fw => fw.ApplicationUserId)
+        entity.Property(fw => fw.PropertyId)
               .IsRequired();
 
         entity.Property(fw => fw.ClassificationType)
@@ -33,16 +33,16 @@ public class FeatureWeightConfiguration : IEntityTypeConfiguration<FeatureWeight
               .IsRequired();
 
         // Foreign key relationship
-        entity.HasOne(fw => fw.ApplicationUser)
-              .WithMany(u => u.FeatureWeights)
-              .HasForeignKey(fw => fw.ApplicationUserId)
+        entity.HasOne(fw => fw.Property)
+              .WithMany(p => p.FeatureWeights)
+              .HasForeignKey(fw => fw.PropertyId)
               .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
-        entity.HasIndex(fw => fw.ApplicationUserId);
+        entity.HasIndex(fw => fw.PropertyId);
         entity.HasIndex(fw => fw.ClassificationType);
-        entity.HasIndex(fw => new { fw.ApplicationUserId, fw.ClassificationType })
+        entity.HasIndex(fw => new { fw.PropertyId, fw.ClassificationType })
               .IsUnique()
-              .HasDatabaseName("IX_FeatureWeights_User_Classification");
+              .HasDatabaseName("IX_FeatureWeights_Property_Classification");
     }
 }

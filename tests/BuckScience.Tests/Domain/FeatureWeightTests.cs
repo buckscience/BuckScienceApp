@@ -12,7 +12,7 @@ public class FeatureWeightTests
     public void FeatureWeight_Constructor_SetsPropertiesCorrectly()
     {
         // Arrange
-        var userId = 1;
+        var propertyId = 1;
         var classificationType = ClassificationType.BeddingArea;
         var defaultWeight = 0.8f;
         var userWeight = 0.9f;
@@ -24,10 +24,10 @@ public class FeatureWeightTests
         };
 
         // Act
-        var featureWeight = new FeatureWeight(userId, classificationType, defaultWeight, userWeight, seasonalWeights);
+        var featureWeight = new FeatureWeight(propertyId, classificationType, defaultWeight, userWeight, seasonalWeights);
 
         // Assert
-        Assert.Equal(userId, featureWeight.ApplicationUserId);
+        Assert.Equal(propertyId, featureWeight.PropertyId);
         Assert.Equal(classificationType, featureWeight.ClassificationType);
         Assert.Equal(defaultWeight, featureWeight.DefaultWeight);
         Assert.Equal(userWeight, featureWeight.UserWeight);

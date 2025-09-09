@@ -8,13 +8,13 @@ public class FeatureWeight
     protected FeatureWeight() { }
 
     public FeatureWeight(
-        int applicationUserId,
+        int propertyId,
         ClassificationType classificationType,
         float defaultWeight,
         float? userWeight = null,
         Dictionary<Season, float>? seasonalWeights = null)
     {
-        ApplicationUserId = applicationUserId;
+        PropertyId = propertyId;
         ClassificationType = classificationType;
         DefaultWeight = defaultWeight;
         UserWeight = userWeight;
@@ -23,7 +23,7 @@ public class FeatureWeight
     }
 
     public int Id { get; private set; }
-    public int ApplicationUserId { get; private set; }
+    public int PropertyId { get; private set; }
     public ClassificationType ClassificationType { get; private set; }
     public float DefaultWeight { get; private set; }
     public float? UserWeight { get; private set; }
@@ -31,7 +31,7 @@ public class FeatureWeight
     public DateTime UpdatedAt { get; private set; }
 
     // Navigation properties
-    public virtual ApplicationUser ApplicationUser { get; private set; } = default!;
+    public virtual Property Property { get; private set; } = default!;
 
     public void UpdateUserWeight(float? userWeight)
     {

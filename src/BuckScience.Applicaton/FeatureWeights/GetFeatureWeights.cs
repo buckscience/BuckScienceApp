@@ -20,17 +20,17 @@ public static class GetFeatureWeights
 
     public static async Task<IReadOnlyList<Result>> HandleAsync(
         IAppDbContext db,
-        int userId,
+        int propertyId,
         Season? currentSeason = null,
         CancellationToken ct = default)
     {
-        // Get user's existing feature weights
-        var userWeights = await db.FeatureWeights
+        // Get property's existing feature weights
+        var propertyWeights = await db.FeatureWeights
             .AsNoTracking()
-            .Where(fw => fw.ApplicationUserId == userId)
+            .Where(fw => fw.PropertyId == propertyId)
             .ToListAsync(ct);
 
-        var userWeightLookup = userWeights.ToDictionary(fw => fw.ClassificationType, fw => fw);
+        var propertyWeightLookup = propertyWeights.ToDictionary(fw => fw.ClassificationType, fw => fw);
 
         // Get all available classification types with default weights
         var allClassificationTypes = Enum.GetValues<ClassificationType>()
@@ -42,10 +42,10 @@ public static class GetFeatureWeights
         foreach (var classificationType in allClassificationTypes)
         {
             var defaultWeight = FeatureWeightHelper.GetDefaultWeight(classificationType);
-            var userWeight = userWeightLookup.TryGetValue(classificationType, out var fw) ? fw : null;
+            var propertyWeight = propertyWeightLookup.TryGetValue(classificationType, out var fw) ? fw : null;
             
-            var seasonalWeights = userWeight?.GetSeasonalWeights();
-            var effectiveWeight = userWeight?.GetEffectiveWeight(currentSeason) ?? defaultWeight;
+            var seasonalWeights = propertyWeight?.GetSeasonalWeights();
+            var effectiveWeight = propertyWeight?.GetEffectiveWeight(currentSeason) ?? defaultWeight;
             var classificationName = FeatureWeightHelper.GetDisplayName(classificationType);
             var category = FeatureWeightHelper.GetCategory(classificationType);
 
@@ -54,10 +54,10 @@ public static class GetFeatureWeights
                 classificationName,
                 category,
                 defaultWeight,
-                userWeight?.UserWeight,
+                propertyWeight?.UserWeight,
                 seasonalWeights,
                 effectiveWeight,
-                userWeight?.UpdatedAt));
+                propertyWeight?.UpdatedAt));
         }
 
         return results.OrderBy(r => r.Category).ThenBy(r => r.ClassificationName).ToList();

@@ -14,5 +14,4 @@ public class ApplicationUser
     public DateTime? TrialStartDate { get; set; }
 
     // Navigation properties
-    public virtual ICollection<FeatureWeight> FeatureWeights { get; set; } = new List<FeatureWeight>();
 }

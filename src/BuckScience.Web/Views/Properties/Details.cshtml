@@ -728,8 +728,10 @@
             const contentDiv = document.getElementById('feature-weights-content');
             if (!contentDiv) return;
 
+            const propertyId = @Model.Id;
+
             try {
-                const response = await fetch('/feature-weights', {
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
@@ -958,7 +960,8 @@
                     };
                 });
 
-                const response = await fetch('/feature-weights', {
+                const propertyId = @Model.Id;
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
