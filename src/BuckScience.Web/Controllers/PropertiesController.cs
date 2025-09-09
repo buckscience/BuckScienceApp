@@ -559,7 +559,7 @@ public class PropertiesController : Controller
         
         var dateRange = FormatDateRange(startDateTime, endDateTime);
         
-        return $"{locationName} - {directionDisplay} ({dateRange})";
+        return $"{locationName} (Facing: {directionDisplay} / {dateRange})";
     }
 
     private static string FormatDateRange(DateTime startDateTime, DateTime? endDateTime)
