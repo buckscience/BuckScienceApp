@@ -16,6 +16,7 @@ public static class GetFeatureWeights
         float? UserWeight,
         Dictionary<Season, float>? SeasonalWeights,
         float EffectiveWeight,
+        bool IsCustom,
         DateTime? UpdatedAt);
 
     public static async Task<IReadOnlyList<Result>> HandleAsync(
@@ -24,40 +25,31 @@ public static class GetFeatureWeights
         Season? currentSeason = null,
         CancellationToken ct = default)
     {
-        // Get property's existing feature weights
+        // Get property's existing feature weights - all should be materialized
         var propertyWeights = await db.FeatureWeights
             .AsNoTracking()
             .Where(fw => fw.PropertyId == propertyId)
             .ToListAsync(ct);
 
-        var propertyWeightLookup = propertyWeights.ToDictionary(fw => fw.ClassificationType, fw => fw);
-
-        // Get all available classification types with default weights
-        var allClassificationTypes = Enum.GetValues<ClassificationType>()
-            .Where(ct => ct != ClassificationType.Other)
-            .ToList();
-
         var results = new List<Result>();
 
-        foreach (var classificationType in allClassificationTypes)
+        foreach (var featureWeight in propertyWeights)
         {
-            var defaultWeight = FeatureWeightHelper.GetDefaultWeight(classificationType);
-            var propertyWeight = propertyWeightLookup.TryGetValue(classificationType, out var fw) ? fw : null;
-            
-            var seasonalWeights = propertyWeight?.GetSeasonalWeights();
-            var effectiveWeight = propertyWeight?.GetEffectiveWeight(currentSeason) ?? defaultWeight;
-            var classificationName = FeatureWeightHelper.GetDisplayName(classificationType);
-            var category = FeatureWeightHelper.GetCategory(classificationType);
+            var seasonalWeights = featureWeight.GetSeasonalWeights();
+            var effectiveWeight = featureWeight.GetEffectiveWeight(currentSeason);
+            var classificationName = FeatureWeightHelper.GetDisplayName(featureWeight.ClassificationType);
+            var category = FeatureWeightHelper.GetCategory(featureWeight.ClassificationType);
 
             results.Add(new Result(
-                classificationType,
+                featureWeight.ClassificationType,
                 classificationName,
                 category,
-                defaultWeight,
-                propertyWeight?.UserWeight,
+                featureWeight.DefaultWeight,
+                featureWeight.UserWeight,
                 seasonalWeights,
                 effectiveWeight,
-                propertyWeight?.UpdatedAt));
+                featureWeight.IsCustom,
+                featureWeight.UpdatedAt));
         }
 
         return results.OrderBy(r => r.Category).ThenBy(r => r.ClassificationName).ToList();

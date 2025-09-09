@@ -59,7 +59,8 @@ public class FeatureWeightsController : ControllerBase
                 kvp => kvp.Key,
                 kvp => new UpdateFeatureWeights.FeatureWeightUpdate(
                     kvp.Value.UserWeight,
-                    kvp.Value.SeasonalWeights));
+                    kvp.Value.SeasonalWeights,
+                    kvp.Value.ResetToDefault));
 
             var command = new UpdateFeatureWeights.Command(featureWeights);
             var success = await UpdateFeatureWeights.HandleAsync(command, _db, propertyId, ct);
@@ -83,5 +84,6 @@ public class FeatureWeightsController : ControllerBase
     {
         public float? UserWeight { get; set; }
         public Dictionary<Season, float>? SeasonalWeights { get; set; }
+        public bool? ResetToDefault { get; set; }
     }
 }

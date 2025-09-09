@@ -13,7 +13,8 @@ public static class UpdateFeatureWeights
 
     public sealed record FeatureWeightUpdate(
         float? UserWeight,
-        Dictionary<Season, float>? SeasonalWeights);
+        Dictionary<Season, float>? SeasonalWeights,
+        bool? ResetToDefault = null);
 
     public static async Task<bool> HandleAsync(
         Command command,
@@ -55,20 +56,31 @@ public static class UpdateFeatureWeights
 
             if (existingWeightLookup.TryGetValue(classificationType, out var existingWeight))
             {
-                // Update existing feature weight
-                existingWeight.UpdateUserWeight(update.UserWeight);
-                existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                // Handle reset to default
+                if (update.ResetToDefault == true)
+                {
+                    existingWeight.ResetToDefault();
+                }
+                else
+                {
+                    // Update existing feature weight
+                    existingWeight.UpdateUserWeight(update.UserWeight);
+                    existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                }
             }
             else
             {
-                // Create new feature weight
+                // This should not happen after materialization, but handle gracefully
+                // Create new feature weight with proper IsCustom flag
                 var defaultWeight = FeatureWeightHelper.GetDefaultWeight(classificationType);
+                var hasCustomization = update.UserWeight.HasValue || update.SeasonalWeights != null;
                 var newFeatureWeight = new FeatureWeight(
                     propertyId,
                     classificationType,
                     defaultWeight,
                     update.UserWeight,
-                    update.SeasonalWeights);
+                    update.SeasonalWeights,
+                    hasCustomization);
 
                 db.FeatureWeights.Add(newFeatureWeight);
             }

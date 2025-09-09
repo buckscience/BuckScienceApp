@@ -12,13 +12,15 @@ public class FeatureWeight
         ClassificationType classificationType,
         float defaultWeight,
         float? userWeight = null,
-        Dictionary<Season, float>? seasonalWeights = null)
+        Dictionary<Season, float>? seasonalWeights = null,
+        bool isCustom = false)
     {
         PropertyId = propertyId;
         ClassificationType = classificationType;
         DefaultWeight = defaultWeight;
         UserWeight = userWeight;
-        SetSeasonalWeights(seasonalWeights);
+        IsCustom = isCustom;
+        SetSeasonalWeightsInternal(seasonalWeights);
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -28,6 +30,7 @@ public class FeatureWeight
     public float DefaultWeight { get; private set; }
     public float? UserWeight { get; private set; }
     public string? SeasonalWeightsJson { get; private set; }
+    public bool IsCustom { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
     // Navigation properties
@@ -36,6 +39,7 @@ public class FeatureWeight
     public void UpdateUserWeight(float? userWeight)
     {
         UserWeight = userWeight;
+        IsCustom = userWeight.HasValue;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -50,6 +54,13 @@ public class FeatureWeight
 
     public void SetSeasonalWeights(Dictionary<Season, float>? seasonalWeights)
     {
+        SetSeasonalWeightsInternal(seasonalWeights);
+        IsCustom = seasonalWeights != null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private void SetSeasonalWeightsInternal(Dictionary<Season, float>? seasonalWeights)
+    {
         if (seasonalWeights != null)
         {
             // Validate weights are in valid range
@@ -61,7 +72,6 @@ public class FeatureWeight
         }
 
         SeasonalWeightsJson = seasonalWeights != null ? JsonSerializer.Serialize(seasonalWeights) : null;
-        UpdatedAt = DateTime.UtcNow;
     }
 
     public Dictionary<Season, float>? GetSeasonalWeights()
@@ -93,5 +103,13 @@ public class FeatureWeight
 
         // Otherwise use user weight if set, or default weight
         return UserWeight ?? DefaultWeight;
+    }
+
+    public void ResetToDefault()
+    {
+        UserWeight = null;
+        SeasonalWeightsJson = null;
+        IsCustom = false;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

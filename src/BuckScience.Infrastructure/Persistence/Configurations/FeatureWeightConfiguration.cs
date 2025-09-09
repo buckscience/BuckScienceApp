@@ -28,6 +28,10 @@ public class FeatureWeightConfiguration : IEntityTypeConfiguration<FeatureWeight
         entity.Property(fw => fw.SeasonalWeightsJson)
               .HasMaxLength(1000);
 
+        entity.Property(fw => fw.IsCustom)
+              .IsRequired()
+              .HasDefaultValue(false);
+
         entity.Property(fw => fw.UpdatedAt)
               .HasDefaultValueSql("GETUTCDATE()")
               .IsRequired();
