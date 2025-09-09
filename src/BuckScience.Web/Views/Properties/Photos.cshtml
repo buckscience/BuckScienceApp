@@ -151,13 +151,15 @@ else
                             <h6 class="fw-bold mb-3"><i class="fas fa-camera me-2"></i>Camera Filters</h6>
                             @if (Model.AvailableCameras.Any())
                             {
-                                <label for="cameras" class="form-label fw-semibold">Cameras</label>
-                                <select class="form-select" name="cameras" id="cameras" multiple>
+                                <label for="cameraSelect" class="form-label fw-semibold">Camera Locations</label>
+                                <select class="form-select" id="cameraSelect" multiple size="4">
                                     @foreach (var camera in Model.AvailableCameras)
                                     {
-                                        <option value="@camera.Id" selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true)">@camera.LocationName</option>
+                                        <option value="@camera.Id" data-selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true ? "true" : "false")">@camera.LocationName</option>
                                     }
                                 </select>
+                                <input type="hidden" name="cameras" id="cameraIds" />
+                                <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple camera locations</small>
                             }
                             else
                             {
@@ -537,6 +539,9 @@ else
             // Load tags for all photos
             loadAllPhotoTags();
             
+            // Initialize camera filter
+            initializeCameraFilter();
+            
             // Bulk selection handlers
             document.addEventListener('change', function(e) {
                 if (e.target.classList.contains('photo-select')) {
@@ -549,6 +554,44 @@ else
             document.getElementById('clearSelectionBtn')?.addEventListener('click', clearSelection);
             document.getElementById('addTagBtn')?.addEventListener('click', addTagToBulk);
             document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
+        }
+        
+        // Initialize camera filter handling
+        function initializeCameraFilter() {
+            const cameraSelect = document.getElementById('cameraSelect');
+            const cameraIdsInput = document.getElementById('cameraIds');
+            
+            if (!cameraSelect || !cameraIdsInput) return;
+            
+            // Set initial selections based on applied filters
+            const options = cameraSelect.querySelectorAll('option');
+            options.forEach(option => {
+                if (option.getAttribute('data-selected') === 'true') {
+                    option.selected = true;
+                }
+            });
+            
+            // Update hidden input when selection changes
+            const updateCameraIds = () => {
+                const selectedIds = Array.from(cameraSelect.selectedOptions)
+                    .map(option => option.value)
+                    .filter(id => id && id.trim() !== '');
+                cameraIdsInput.value = selectedIds.join(',');
+            };
+            
+            // Update initial value
+            updateCameraIds();
+            
+            // Listen for changes
+            cameraSelect.addEventListener('change', updateCameraIds);
+            
+            // Also update before form submission
+            const form = document.getElementById('photoFiltersForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    updateCameraIds();
+                });
+            }
         }
         
         // Load tags for all photos on the page

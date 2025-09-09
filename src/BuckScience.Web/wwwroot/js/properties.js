@@ -185,8 +185,16 @@ window.App = window.App || {};
         }
         
         // Only call displayCamerasOnMap once, even if both propertyId and cameraId are set
+        // Add a small delay to prevent rapid successive calls and ensure features load first
         if (needsDisplayCameras) {
-            displayCamerasOnMap();
+            // Clear any existing timeout to prevent multiple delayed calls
+            if (window.App._displayCamerasTimeout) {
+                clearTimeout(window.App._displayCamerasTimeout);
+            }
+            window.App._displayCamerasTimeout = setTimeout(() => {
+                displayCamerasOnMap();
+                window.App._displayCamerasTimeout = null;
+            }, 250);
         }
         
         if (context.profileId) {
@@ -584,11 +592,7 @@ window.App = window.App || {};
         // Load and display existing features for this property
         loadPropertyFeatures(propertyId);
 
-        // Explicitly trigger camera display for property details view
-        // Use a small delay to ensure features are loaded first
-        setTimeout(() => {
-            displayCamerasOnMap();
-        }, 100);
+        // Camera display will be triggered by the map:updateLayers event to prevent duplication
 
         // Set up drawing event handlers for features (ensure this is only done once)
         if (!window.App._featureDrawingSetup) {
