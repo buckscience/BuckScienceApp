@@ -374,7 +374,7 @@ public class PropertiesController : Controller
         var cameras = cameraData
             .Select(x => new CameraOption { 
                 Id = x.PlacementHistory?.Id ?? 0, // Use placement history ID, not camera ID
-                LocationName = x.PlacementHistory != null ? GetCameraDisplayName(x.PlacementHistory.LocationName, x.PlacementHistory.DirectionDegrees) : $"Camera {x.CameraId}" 
+                LocationName = x.PlacementHistory != null ? GetCameraDisplayNameWithDates(x.PlacementHistory.LocationName, x.PlacementHistory.DirectionDegrees, x.PlacementHistory.StartDateTime, x.PlacementHistory.EndDateTime) : $"Camera {x.CameraId}" 
             })
             .Where(c => c.Id > 0) // Only include valid placement histories
             .GroupBy(c => new { c.Id, c.LocationName }) // Group by placement history ID and location display name
@@ -547,5 +547,33 @@ public class PropertiesController : Controller
         var directionDisplay = DirectionHelper.GetDisplayName(direction);
         
         return $"{locationName} - {directionDisplay}";
+    }
+
+    private static string GetCameraDisplayNameWithDates(string locationName, float directionDegrees, DateTime startDateTime, DateTime? endDateTime)
+    {
+        if (string.IsNullOrWhiteSpace(locationName))
+            return "Unknown Location";
+
+        var direction = DirectionHelper.FromFloat(directionDegrees);
+        var directionDisplay = DirectionHelper.GetDisplayName(direction);
+        
+        var dateRange = FormatDateRange(startDateTime, endDateTime);
+        
+        return $"{locationName} - {directionDisplay} ({dateRange})";
+    }
+
+    private static string FormatDateRange(DateTime startDateTime, DateTime? endDateTime)
+    {
+        var startText = startDateTime.ToString("MMM ''yy"); // e.g., "Mar '24"
+        
+        if (endDateTime.HasValue)
+        {
+            var endText = endDateTime.Value.ToString("MMM ''yy"); // e.g., "Dec '25"
+            return $"{startText} - {endText}";
+        }
+        else
+        {
+            return $"{startText} - Current";
+        }
     }
 }
