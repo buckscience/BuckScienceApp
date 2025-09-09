@@ -31,14 +31,19 @@
                     @if (Model.Cameras.Any())
                     {
                         <!-- Camera Placement History Toggle -->
-                        <div class="mb-3 d-flex align-items-center justify-content-between">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input " type="checkbox" id="showHistoricalPlacements" checked>
-                                <label class="form-check-label fs-7" for="showHistoricalPlacements">
-                                    <i class="fas fa-history me-1"></i>Show Historical Camera Placements
-                                </label>
+                        <div class="mb-3 d-flex align-items-center">
+                            <!-- Toggle on the left -->
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="showHistoricalPlacements" checked>
                             </div>
+
+                            <!-- Text with exact 30px spacing -->
+                            <label class="mb-0 fs-7" for="showHistoricalPlacements" style="margin-left: 20px;">
+                                <i class="fas fa-history me-1"></i>
+                                Show Historical Camera Placements
+                            </label>
                         </div>
+
                         
                         <div class="container-fluid px-0">
                             <div class="row g-3">
@@ -234,12 +239,6 @@
                                                                 <div class="btn-group" role="group">
                                                                     <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
                                                                         <i class="fas fa-eye"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm fs-7" onclick="editFeature(@feature.Id)">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-outline-danger btn-sm fs-7" onclick="deleteFeature(@feature.Id)">
-                                                                        <i class="fas fa-trash"></i>
                                                                     </button>
                                                                 </div>
                                                             </div>
