@@ -30,7 +30,8 @@ public class FeatureWeightConfiguration : IEntityTypeConfiguration<FeatureWeight
 
         entity.Property(fw => fw.IsCustom)
               .IsRequired()
-              .HasDefaultValue(false);
+              .HasDefaultValue(false)
+              .ValueGeneratedNever();
 
         entity.Property(fw => fw.UpdatedAt)
               .HasDefaultValueSql("GETUTCDATE()")
