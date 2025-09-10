@@ -1627,18 +1627,34 @@
 
                 const seasonOverrides = [];
 
-                // Collect all season override data
+                // Collect all season override data - we need to process ALL seasons
                 document.querySelectorAll('.season-override-item').forEach(item => {
-                    const season = item.dataset.season;
+                    const season = parseInt(item.dataset.season); // Convert to integer for enum
                     const checkboxes = item.querySelectorAll('input[type="checkbox"]');
                     const selectedMonths = Array.from(checkboxes)
                         .filter(cb => cb.checked)
                         .map(cb => parseInt(cb.dataset.month));
 
-                    if (selectedMonths.length > 0) {
+                    // Get the original season data to compare with defaults
+                    const originalSeasonData = window.originalSeasonOverrides?.seasons.find(s => s.season == season);
+                    const defaultMonths = originalSeasonData ? originalSeasonData.defaultMonths : [];
+                    
+                    // Check if this is different from default
+                    const isCustom = !arraysEqual(selectedMonths.sort(), defaultMonths.sort());
+                    
+                    if (isCustom && selectedMonths.length > 0) {
+                        // Send custom months
                         seasonOverrides.push({
                             season: season,
-                            customMonths: selectedMonths
+                            customMonths: selectedMonths,
+                            removeOverride: false
+                        });
+                    } else if (!isCustom) {
+                        // Reset to default (remove override)
+                        seasonOverrides.push({
+                            season: season,
+                            customMonths: null,
+                            removeOverride: true
                         });
                     }
                 });
