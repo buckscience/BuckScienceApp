@@ -39,7 +39,7 @@ public class FeatureWeight
     public void UpdateUserWeight(float? userWeight)
     {
         UserWeight = userWeight;
-        IsCustom = userWeight.HasValue;
+        IsCustom = (userWeight.HasValue && userWeight.Value != DefaultWeight) || GetSeasonalWeights() != null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -55,7 +55,7 @@ public class FeatureWeight
     public void SetSeasonalWeights(Dictionary<Season, float>? seasonalWeights)
     {
         SetSeasonalWeightsInternal(seasonalWeights);
-        IsCustom = seasonalWeights != null;
+        IsCustom = (UserWeight.HasValue && UserWeight.Value != DefaultWeight) || seasonalWeights != null;
         UpdatedAt = DateTime.UtcNow;
     }
 

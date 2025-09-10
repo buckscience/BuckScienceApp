@@ -63,9 +63,24 @@ public static class UpdateFeatureWeights
                 }
                 else
                 {
-                    // Update existing feature weight
-                    existingWeight.UpdateUserWeight(update.UserWeight);
-                    existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                    // Only update properties that represent actual changes from the current state
+                    bool hasUserWeightChange = update.UserWeight.HasValue && 
+                                             (!existingWeight.UserWeight.HasValue || 
+                                              existingWeight.UserWeight.Value != update.UserWeight.Value);
+                    
+                    bool hasSeasonalWeightsChange = update.SeasonalWeights != null && 
+                                                  !AreSeasonalWeightsEqual(existingWeight.GetSeasonalWeights(), update.SeasonalWeights);
+                    
+                    // Only call update methods if there are actual changes
+                    if (hasUserWeightChange)
+                    {
+                        existingWeight.UpdateUserWeight(update.UserWeight);
+                    }
+                    
+                    if (hasSeasonalWeightsChange)
+                    {
+                        existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                    }
                 }
             }
             else
@@ -87,6 +102,24 @@ public static class UpdateFeatureWeights
         }
 
         await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private static bool AreSeasonalWeightsEqual(Dictionary<Season, float>? existing, Dictionary<Season, float>? incoming)
+    {
+        if (existing == null && incoming == null) return true;
+        if (existing == null || incoming == null) return false;
+        if (existing.Count != incoming.Count) return false;
+        
+        foreach (var kvp in existing)
+        {
+            if (!incoming.TryGetValue(kvp.Key, out var incomingValue) || 
+                Math.Abs(kvp.Value - incomingValue) > 0.0001f)
+            {
+                return false;
+            }
+        }
+        
         return true;
     }
 }

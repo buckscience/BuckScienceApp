@@ -12,6 +12,7 @@ public interface IAppDbContext
     DbSet<PhotoTag> PhotoTags { get; }
     DbSet<Property> Properties { get; }
     DbSet<PropertyFeature> PropertyFeatures { get; }
+    DbSet<PropertySeasonMonthsOverride> PropertySeasonMonthsOverrides { get; }
     DbSet<PropertyTag> PropertyTags { get; }
     DbSet<Tag> Tags { get; }
     DbSet<Profile> Profiles { get; }

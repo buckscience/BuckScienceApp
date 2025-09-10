@@ -122,6 +122,31 @@ namespace BuckScience.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "FeatureWeights",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PropertyId = table.Column<int>(type: "int", nullable: false),
+                    ClassificationType = table.Column<int>(type: "int", nullable: false),
+                    DefaultWeight = table.Column<float>(type: "real", nullable: false),
+                    UserWeight = table.Column<float>(type: "real", nullable: true),
+                    SeasonalWeightsJson = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsCustom = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FeatureWeights", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FeatureWeights_Properties_PropertyId",
+                        column: x => x.PropertyId,
+                        principalTable: "Properties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PropertyFeatures",
                 columns: table => new
                 {
@@ -132,6 +157,7 @@ namespace BuckScience.Infrastructure.Migrations
                     Geometry = table.Column<Geometry>(type: "geometry", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Weight = table.Column<float>(type: "real", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
                 },
@@ -140,6 +166,29 @@ namespace BuckScience.Infrastructure.Migrations
                     table.PrimaryKey("PK_PropertyFeatures", x => x.Id);
                     table.ForeignKey(
                         name: "FK_PropertyFeatures_Properties_PropertyId",
+                        column: x => x.PropertyId,
+                        principalTable: "Properties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PropertySeasonMonthsOverrides",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PropertyId = table.Column<int>(type: "int", nullable: false),
+                    Season = table.Column<int>(type: "int", nullable: false),
+                    MonthsJson = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PropertySeasonMonthsOverrides", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PropertySeasonMonthsOverrides_Properties_PropertyId",
                         column: x => x.PropertyId,
                         principalTable: "Properties",
                         principalColumn: "Id",
@@ -312,6 +361,22 @@ namespace BuckScience.Infrastructure.Migrations
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_FeatureWeights_ClassificationType",
+                table: "FeatureWeights",
+                column: "ClassificationType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FeatureWeights_Property_Classification",
+                table: "FeatureWeights",
+                columns: new[] { "PropertyId", "ClassificationType" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FeatureWeights_PropertyId",
+                table: "FeatureWeights",
+                column: "PropertyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Photos_CameraId",
                 table: "Photos",
                 column: "CameraId");
@@ -382,6 +447,12 @@ namespace BuckScience.Infrastructure.Migrations
                 column: "PropertyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PropertySeasonMonthsOverride_Property_Season",
+                table: "PropertySeasonMonthsOverrides",
+                columns: new[] { "PropertyId", "Season" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PropertyTags_PropertyId",
                 table: "PropertyTags",
                 column: "PropertyId");
@@ -425,6 +496,9 @@ namespace BuckScience.Infrastructure.Migrations
                 name: "ApplicationUsers");
 
             migrationBuilder.DropTable(
+                name: "FeatureWeights");
+
+            migrationBuilder.DropTable(
                 name: "PhotoTags");
 
             migrationBuilder.DropTable(
@@ -432,6 +506,9 @@ namespace BuckScience.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "PropertyFeatures");
+
+            migrationBuilder.DropTable(
+                name: "PropertySeasonMonthsOverrides");
 
             migrationBuilder.DropTable(
                 name: "PropertyTags");
