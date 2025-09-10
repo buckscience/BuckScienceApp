@@ -33,23 +33,32 @@ namespace BuckScience.Domain.Enums
         }
 
         /// <summary>
-        /// Gets the months for a season for a specific property.
-        /// Checks for property-specific overrides first, then falls back to default months.
+        /// Gets the months for a season for a specific property using default mapping only.
+        /// This extension method does not check for property-specific overrides.
         /// </summary>
         /// <param name="season">The season to get months for.</param>
-        /// <param name="property">The property to check for custom overrides.</param>
-        /// <returns>Array of month integers (1-12) representing the months for the season and property.</returns>
+        /// <param name="property">The property (parameter kept for API compatibility but not used).</param>
+        /// <returns>Array of month integers (1-12) representing the default months for the season.</returns>
         /// <remarks>
-        /// This method requires a database context to check for overrides. In practice, this would be
-        /// called from a service or repository that has access to the database context.
-        /// For now, this is a placeholder that returns default months only.
-        /// The actual override logic should be implemented in a service class with database access.
+        /// <para>
+        /// This extension method provides default month mappings only and does not access the database.
+        /// For hybrid logic that includes property-specific overrides, use the SeasonMonthMappingService
+        /// which implements the complete hybrid mapping logic:
+        /// 1. Check for property-specific overrides in PropertySeasonMonthsOverride table
+        /// 2. Fall back to default months from MonthsAttribute if no override exists
+        /// </para>
+        /// <para>
+        /// <strong>Usage Recommendations:</strong><br/>
+        /// - Use this extension method when you only need default season mappings<br/>
+        /// - Use SeasonMonthMappingService.GetMonthsForPropertyAsync() for hybrid logic with overrides<br/>
+        /// - The service approach is recommended for application logic that needs override support
+        /// </para>
         /// </remarks>
         public static int[] GetMonthsForProperty(this Season season, Property property)
         {
-            // TODO: Implement database lookup for PropertySeasonMonthsOverride
-            // For now, return default months as this extension method doesn't have database access
-            // The actual implementation should be in a service class with IAppDbContext dependency
+            // This extension method intentionally returns only default months
+            // Property-specific override logic is implemented in SeasonMonthMappingService
+            // to maintain proper separation of concerns (extensions shouldn't have DB dependencies)
             return season.GetDefaultMonths();
         }
     }
