@@ -220,6 +220,37 @@ public class FeatureWeightTests
     }
 
     [Fact]
+    public void FeatureWeight_UpdateUserWeight_WithSameAsDefaultWeight_DoesNotSetIsCustom()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+        Assert.False(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Set UserWeight to the same value as DefaultWeight
+        featureWeight.UpdateUserWeight(0.6f);
+
+        // Assert - Should not be considered custom since it's the same as default
+        Assert.False(featureWeight.IsCustom);
+        Assert.Equal(0.6f, featureWeight.UserWeight);
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_WithSameAsDefaultWeight_StaysCustomIfSeasonalWeightsExist()
+    {
+        // Arrange - Start with seasonal weights
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.7f } };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, null, seasonalWeights, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Set UserWeight to the same value as DefaultWeight
+        featureWeight.UpdateUserWeight(0.6f);
+
+        // Assert - Should still be custom because seasonal weights exist
+        Assert.True(featureWeight.IsCustom);
+        Assert.Equal(0.6f, featureWeight.UserWeight);
+    }
+
+    [Fact]
     public void FeatureWeight_UpdateUserWeight_WithNullSetsIsCustomToFalse()
     {
         // Arrange
@@ -265,6 +296,23 @@ public class FeatureWeightTests
 
         // Assert
         Assert.False(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_SetSeasonalWeights_WithNullStaysCustomIfUserWeightDiffersFromDefault()
+    {
+        // Arrange - Start with custom user weight
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.7f } };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, 0.8f, seasonalWeights, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Clear seasonal weights but keep different user weight
+        featureWeight.SetSeasonalWeights(null);
+
+        // Assert - Should still be custom because user weight differs from default
+        Assert.True(featureWeight.IsCustom);
+        Assert.Equal(0.8f, featureWeight.UserWeight);
+        Assert.Null(featureWeight.GetSeasonalWeights());
     }
 
     [Fact]
