@@ -352,6 +352,40 @@ public class UpdateFeatureWeightsTests : IDisposable
         Assert.Equal(0.90f, updatedSeasonalWeights[Season.Rut]); // New
     }
 
+    [Fact]
+    public async Task UpdateFeatureWeights_ClearUserWeight_KeepsCustomIfSeasonalWeightsExist()
+    {
+        // Arrange - Start with both user weight and seasonal weights customized
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.85f } };
+        var beddingArea = new FeatureWeight(
+            _testProperty.Id,
+            ClassificationType.BeddingArea,
+            0.9f,
+            userWeight: 0.95f, // has custom user weight
+            seasonalWeights: seasonalWeights, // has custom seasonal weights
+            isCustom: true);
+
+        _context.FeatureWeights.Add(beddingArea);
+        await _context.SaveChangesAsync();
+
+        // Test the entity method directly - clear user weight while seasonal weights exist
+        beddingArea.UpdateUserWeight(null);
+
+        // Save changes
+        await _context.SaveChangesAsync();
+
+        // Assert
+        var updatedBeddingArea = await _context.FeatureWeights
+            .FirstAsync(fw => fw.PropertyId == _testProperty.Id && fw.ClassificationType == ClassificationType.BeddingArea);
+
+        // Should still be custom because seasonal weights exist
+        Assert.True(updatedBeddingArea.IsCustom);
+        Assert.Null(updatedBeddingArea.UserWeight); // Cleared
+        
+        var existingSeasonalWeights = updatedBeddingArea.GetSeasonalWeights()!;
+        Assert.Equal(0.85f, existingSeasonalWeights[Season.PreRut]); // Preserved
+    }
+
     public void Dispose()
     {
         _context.Dispose();

@@ -1,13 +1,10 @@
-using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Photos;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
 using BuckScience.Web.Middleware;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -19,21 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Authentication: check if we should bypass authentication for testing/CI environments
-var bypassAuth = builder.Configuration.GetValue<bool>("BypassAuthentication", false) || 
-                 Environment.GetEnvironmentVariable("BYPASS_AUTHENTICATION") == "true";
-
 // Register CurrentUserService for dependency injection
 builder.Services.AddHttpContextAccessor();
-if (bypassAuth)
-{
-    // For bypass authentication, use a mock user service that always returns user ID 1
-    builder.Services.AddScoped<ICurrentUserService>(provider => new TestCurrentUserService());
-}
-else
-{
-    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-}
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Register Azure Blob Storage service
 var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");
@@ -51,73 +36,36 @@ else
     throw new InvalidOperationException("StorageConnectionString is required in configuration.");
 }
 
-if (bypassAuth)
+// Authentication: set defaults, then bind from AzureADB2C section
+builder.Services.AddAuthentication(options =>
 {
-    // Simple cookie authentication without external dependencies for testing
-    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-        .AddCookie(options =>
-        {
-            options.Cookie.Name = ".BuckScience.Auth";
-            options.Cookie.HttpOnly = true;
-            options.SlidingExpiration = true;
-            options.LoginPath = "/test-login";
-        });
-}
-else
-{
-    // Normal authentication: set defaults, then bind from AzureADB2C section
-    builder.Services.AddAuthentication(options =>
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureADB2C"));
+
+// Enrich identity with app_user_id at sign-in (applies to your default OIDC handler)
+builder.Services.PostConfigureAll<OpenIdConnectOptions>(OidcClaimsEnricher.Configure);
+
+builder.Services.Configure<CookieAuthenticationOptions>(
+    CookieAuthenticationDefaults.AuthenticationScheme,
+    cookie =>
     {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-    })
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureADB2C"));
+        cookie.Cookie.Name = ".BuckScience.Auth";
+        cookie.Cookie.HttpOnly = true;
+        cookie.SlidingExpiration = true;
+        cookie.Cookie.SameSite = SameSiteMode.None;
+        cookie.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+    });
 
-    // Enrich identity with app_user_id at sign-in (applies to your default OIDC handler)
-    builder.Services.PostConfigureAll<OpenIdConnectOptions>(OidcClaimsEnricher.Configure);
-}
-
-// Only configure this for normal authentication (not bypass mode)
-if (!bypassAuth)
-{
-    builder.Services.Configure<CookieAuthenticationOptions>(
-        CookieAuthenticationDefaults.AuthenticationScheme,
-        cookie =>
-        {
-            cookie.Cookie.Name = ".BuckScience.Auth";
-            cookie.Cookie.HttpOnly = true;
-            cookie.SlidingExpiration = true;
-            cookie.Cookie.SameSite = SameSiteMode.None;
-            cookie.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-                ? CookieSecurePolicy.SameAsRequest
-                : CookieSecurePolicy.Always;
-        });
-}
-
-if (bypassAuth)
-{
-    builder.Services.AddRazorPages();
-}
-else
-{
-    builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
-}
+builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
 
 builder.Services.AddAuthorization(options =>
 {
-    if (bypassAuth)
-    {
-        // For bypass mode, create a policy that allows anonymous access
-        options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-            .RequireAssertion(_ => true) // Always allow
-            .Build();
-        options.FallbackPolicy = options.DefaultPolicy;
-    }
-    else
-    {
-        options.FallbackPolicy = options.DefaultPolicy;
-    }
+    options.FallbackPolicy = options.DefaultPolicy;
 });
 
 var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
@@ -186,13 +134,3 @@ app.UseMiddleware<SetupFlowMiddleware>();
 app.MapRazorPages();
 
 app.Run();
-
-// Test implementation of ICurrentUserService for bypass authentication mode
-public class TestCurrentUserService : ICurrentUserService
-{
-    public bool IsAuthenticated => true;
-    public int? Id => 1; // Always return user ID 1 for testing
-    public string? AzureEntraB2CId => "test-user-id";
-    public string? Name => "Test User";
-    public string? Email => "test@example.com";
-}
