@@ -13,8 +13,8 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250909215602_FixIsCustomValueGeneration")]
-    partial class FixIsCustomValueGeneration
+    [Migration("20250910155220_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -401,6 +401,42 @@ namespace BuckScience.Infrastructure.Migrations
                     b.ToTable("PropertyFeatures");
                 });
 
+            modelBuilder.Entity("BuckScience.Domain.Entities.PropertySeasonMonthsOverride", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("MonthsJson")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Season")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId", "Season")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PropertySeasonMonthsOverride_Property_Season");
+
+                    b.ToTable("PropertySeasonMonthsOverrides");
+                });
+
             modelBuilder.Entity("BuckScience.Domain.Entities.PropertyTag", b =>
                 {
                     b.Property<int>("PropertyId")
@@ -646,6 +682,17 @@ namespace BuckScience.Infrastructure.Migrations
                 {
                     b.HasOne("BuckScience.Domain.Entities.Property", "Property")
                         .WithMany("PropertyFeatures")
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("BuckScience.Domain.Entities.PropertySeasonMonthsOverride", b =>
+                {
+                    b.HasOne("BuckScience.Domain.Entities.Property", "Property")
+                        .WithMany()
                         .HasForeignKey("PropertyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
