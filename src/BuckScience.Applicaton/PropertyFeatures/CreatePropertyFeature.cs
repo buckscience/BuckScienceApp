@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
+using BuckScience.Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
@@ -14,7 +15,8 @@ public static class CreatePropertyFeature
         ClassificationType ClassificationType,
         string GeometryWkt,
         string? Name = null,
-        string? Notes = null);
+        string? Notes = null,
+        float? Weight = null);
 
     public static async Task<int> HandleAsync(
         Command cmd,
@@ -48,6 +50,7 @@ public static class CreatePropertyFeature
             geometry,
             cmd.Name,
             cmd.Notes,
+            cmd.Weight ?? FeatureWeightHelper.GetDefaultWeight(cmd.ClassificationType),
             userId);
 
         db.PropertyFeatures.Add(feature);

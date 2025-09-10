@@ -1,4 +1,5 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Application.FeatureWeights;
 using BuckScience.Application.Tags;
 using BuckScience.Domain.Entities;
 using NetTopologySuite.Geometries;
@@ -34,6 +35,9 @@ public static class CreateProperty
 
         // Assign default tags to the newly created property
         await AssignDefaultTagsToProperty.HandleAsync(prop.Id, db, ct);
+
+        // Materialize all feature weights for the new property
+        await MaterializeFeatureWeights.HandleAsync(prop.Id, db, ct);
 
         return prop.Id;
     }

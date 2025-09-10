@@ -4,6 +4,7 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,13 +13,15 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250909181905_AddWeightToPropertyFeature")]
+    partial class AddWeightToPropertyFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -168,18 +171,14 @@ namespace BuckScience.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApplicationUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ClassificationType")
                         .HasColumnType("int");
 
                     b.Property<float>("DefaultWeight")
                         .HasColumnType("real");
-
-                    b.Property<bool>("IsCustom")
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<int>("PropertyId")
-                        .HasColumnType("int");
 
                     b.Property<string>("SeasonalWeightsJson")
                         .HasMaxLength(1000)
@@ -195,13 +194,13 @@ namespace BuckScience.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApplicationUserId");
+
                     b.HasIndex("ClassificationType");
 
-                    b.HasIndex("PropertyId");
-
-                    b.HasIndex("PropertyId", "ClassificationType")
+                    b.HasIndex("ApplicationUserId", "ClassificationType")
                         .IsUnique()
-                        .HasDatabaseName("IX_FeatureWeights_Property_Classification");
+                        .HasDatabaseName("IX_FeatureWeights_User_Classification");
 
                     b.ToTable("FeatureWeights");
                 });
@@ -567,13 +566,13 @@ namespace BuckScience.Infrastructure.Migrations
 
             modelBuilder.Entity("BuckScience.Domain.Entities.FeatureWeight", b =>
                 {
-                    b.HasOne("BuckScience.Domain.Entities.Property", "Property")
+                    b.HasOne("BuckScience.Domain.Entities.ApplicationUser", "ApplicationUser")
                         .WithMany("FeatureWeights")
-                        .HasForeignKey("PropertyId")
+                        .HasForeignKey("ApplicationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Property");
+                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Photo", b =>
@@ -669,6 +668,11 @@ namespace BuckScience.Infrastructure.Migrations
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("BuckScience.Domain.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("FeatureWeights");
+                });
+
             modelBuilder.Entity("BuckScience.Domain.Entities.Camera", b =>
                 {
                     b.Navigation("Photos");
@@ -684,8 +688,6 @@ namespace BuckScience.Infrastructure.Migrations
             modelBuilder.Entity("BuckScience.Domain.Entities.Property", b =>
                 {
                     b.Navigation("Cameras");
-
-                    b.Navigation("FeatureWeights");
 
                     b.Navigation("PropertyFeatures");
                 });

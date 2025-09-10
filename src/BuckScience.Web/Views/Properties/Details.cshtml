@@ -273,6 +273,28 @@
             </div>
         </div>
 
+        <!-- Feature Weights Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="featureWeightsHeading">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#featureWeightsCollapse" aria-expanded="false" aria-controls="featureWeightsCollapse">
+                    <i class="fas fa-balance-scale me-2"></i>
+                    Feature Weights & Season Settings
+                </button>
+            </h2>
+            <div id="featureWeightsCollapse" class="accordion-collapse collapse" aria-labelledby="featureWeightsHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    <div id="feature-weights-content">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Loading feature weights...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -403,6 +425,100 @@
             font-size: 0.65rem !important;
             padding: 0.2em 0.4em;
         }
+
+        /* Feature weights styling */
+        .feature-weights-panel {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .feature-weight-item {
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .weight-slider {
+            margin: 0;
+        }
+
+        .seasonal-weights-panel {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+        }
+
+        .seasonal-weights-panel .form-label {
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .seasonal-weight-display {
+            display: block;
+            text-align: center;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .fs-8 {
+            font-size: 0.7rem !important;
+        }
+
+        .weight-display {
+            font-weight: 600;
+            color: #0d6efd;
+            background-color: #e7f1ff;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .feature-category-weights h6 {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.25rem;
+        }
+
+        .weighting-summary {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .weighting-summary .summary-content p {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .weighting-summary .alert-heading {
+            color: #0d6efd;
+        }
+
+        /* Category collapse styling */
+        .category-header {
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .category-header:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .category-chevron {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        /* Season notice styling */
+        .season-notice {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        .alert-sm {
+            padding: 0.375rem 0.75rem;
+        }
     </style>
 }
 
@@ -511,6 +627,9 @@
 
             // Initialize camera placement history toggle
             initializeCameraPlacementHistoryToggle();
+
+            // Initialize feature weights loading
+            initializeFeatureWeights();
         });
 
         // Function to initialize camera placement history toggle functionality
@@ -615,5 +734,554 @@
                 });
             });
         });
+
+        // Feature weights functionality
+        function initializeFeatureWeights() {
+            const accordion = document.getElementById('featureWeightsCollapse');
+            if (!accordion) return;
+
+            let featureWeightsLoaded = false;
+
+            // Load feature weights when accordion is shown
+            accordion.addEventListener('shown.bs.collapse', function() {
+                if (!featureWeightsLoaded) {
+                    loadFeatureWeights();
+                    featureWeightsLoaded = true;
+                }
+            });
+        }
+
+        async function loadFeatureWeights() {
+            const contentDiv = document.getElementById('feature-weights-content');
+            if (!contentDiv) return;
+
+            const propertyId = @Model.Id;
+
+            try {
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const featureWeights = await response.json();
+                renderFeatureWeights(featureWeights);
+            } catch (error) {
+                console.error('Error loading feature weights:', error);
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load feature weights. Please try again.
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadFeatureWeights()">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderFeatureWeights(featureWeights) {
+            const contentDiv = document.getElementById('feature-weights-content');
+            if (!contentDiv) return;
+
+            // Group by category
+            const categories = {
+                'ResourceFood': { name: 'Food Resources', icon: 'fas fa-wheat-awn', items: [] },
+                'ResourceWater': { name: 'Water Resources', icon: 'fas fa-water', items: [] },
+                'ResourceBedding': { name: 'Bedding & Cover', icon: 'fas fa-tree', items: [] },
+                'Topographical': { name: 'Topographical', icon: 'fas fa-route', items: [] }
+            };
+
+            featureWeights.forEach(fw => {
+                const categoryKey = fw.category === 1 ? 'Topographical' :
+                                   fw.category === 2 ? 'ResourceFood' :
+                                   fw.category === 3 ? 'ResourceWater' :
+                                   fw.category === 4 ? 'ResourceBedding' : 'Other';
+                
+                if (categories[categoryKey]) {
+                    categories[categoryKey].items.push(fw);
+                }
+            });
+
+            let html = `
+                <div class="feature-weights-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Adjust Feature Importance</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetToDefaults()">
+                                <i class="fas fa-undo me-1"></i> Reset
+                            </button>
+                            <button type="button" class="btn btn-custom-primary" onclick="saveFeatureWeights()">
+                                <i class="fas fa-save me-1"></i> Save
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted small mb-3">
+                        Adjust how much each feature type influences deer movement on your property. 
+                        Higher values mean greater importance. You can also set seasonal overrides.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fs-7 mb-1">Season View:</label>
+                        <select class="form-select form-select-sm" id="seasonSelector" onchange="updateSeasonView()">
+                            <option value="all">All Seasons (Default)</option>
+                            <option value="PreRut">Pre-Rut</option>
+                            <option value="Rut">Rut</option>
+                            <option value="PostRut">Post-Rut</option>
+                        </select>
+                    </div>
+            `;
+
+            Object.entries(categories).forEach(([key, category]) => {
+                if (category.items.length === 0) return;
+
+                const categoryId = `category-${key}`;
+                html += `
+                    <div class="feature-category-weights mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2 category-header" 
+                             data-bs-toggle="collapse" data-bs-target="#${categoryId}" 
+                             aria-expanded="true" aria-controls="${categoryId}" 
+                             style="cursor: pointer;">
+                            <h6 class="text-muted mb-0 fs-6">
+                                <i class="${category.icon} me-1"></i>
+                                ${category.name}
+                                <span class="badge badge-custom-secondary ms-2 fs-7">${category.items.length}</span>
+                            </h6>
+                            <i class="fas fa-chevron-down category-chevron" style="transition: transform 0.2s ease;"></i>
+                        </div>
+                        <div class="collapse show feature-weights-list" id="${categoryId}">
+                `;
+
+                category.items.forEach(fw => {
+                    html += `
+                        <div class="feature-weight-item mb-3" data-classification="${fw.classificationType}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0 fs-7">${fw.classificationName}</label>
+                                <small class="text-muted weight-display">${fw.effectiveWeight.toFixed(2)}</small>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <input type="range" 
+                                           class="form-range weight-slider" 
+                                           min="0" max="1" step="0.1" 
+                                           value="${fw.userWeight ?? fw.defaultWeight}"
+                                           data-classification="${fw.classificationType}"
+                                           data-default="${fw.defaultWeight}"
+                                           data-prerutweight="${fw.seasonalWeights?.PreRut ?? fw.effectiveWeight}"
+                                           data-rutweight="${fw.seasonalWeights?.Rut ?? fw.effectiveWeight}"
+                                           data-postrutweight="${fw.seasonalWeights?.PostRut ?? fw.effectiveWeight}"
+                                           onchange="updateWeightDisplay(this)">
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-outline-secondary btn-sm w-100 fs-7" 
+                                            onclick="toggleSeasonalWeights(${fw.classificationType})">
+                                        <i class="fas fa-calendar-alt me-1"></i> Seasons
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="seasonal-weights-panel mt-2" id="seasonal-${fw.classificationType}" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Pre-Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.PreRut ?? fw.effectiveWeight}"
+                                               data-season="PreRut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.PreRut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.Rut ?? fw.effectiveWeight}"
+                                               data-season="Rut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.Rut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Post-Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.PostRut ?? fw.effectiveWeight}"
+                                               data-season="PostRut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.PostRut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            contentDiv.innerHTML = html;
+
+            // Store original data for reset functionality
+            window.originalFeatureWeights = featureWeights;
+            
+            // Initialize category collapse functionality
+            initializeCategoryCollapse();
+        }
+
+        function initializeCategoryCollapse() {
+            // Add click handlers for category headers
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const chevron = this.querySelector('.category-chevron');
+                    const targetId = this.getAttribute('data-bs-target');
+                    const target = document.querySelector(targetId);
+                    
+                    if (target) {
+                        // Toggle chevron rotation
+                        if (target.classList.contains('show')) {
+                            chevron.style.transform = 'rotate(180deg)';
+                        } else {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                });
+            });
+            
+            // Add event listeners for Bootstrap collapse events
+            document.querySelectorAll('.feature-weights-list').forEach(collapse => {
+                collapse.addEventListener('hidden.bs.collapse', function() {
+                    const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
+                    if (header) {
+                        const chevron = header.querySelector('.category-chevron');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                });
+                
+                collapse.addEventListener('shown.bs.collapse', function() {
+                    const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
+                    if (header) {
+                        const chevron = header.querySelector('.category-chevron');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(180deg)';
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateWeightDisplay(slider) {
+            const weightDisplay = slider.closest('.feature-weight-item').querySelector('.weight-display');
+            weightDisplay.textContent = parseFloat(slider.value).toFixed(2);
+        }
+
+        function updateSeasonalWeight(slider) {
+            const weightDisplay = slider.parentNode.querySelector('.seasonal-weight-display');
+            weightDisplay.textContent = parseFloat(slider.value).toFixed(2);
+        }
+
+        function toggleSeasonalWeights(classification) {
+            const panel = document.getElementById(`seasonal-${classification}`);
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function resetToDefaults() {
+            if (!window.originalFeatureWeights) return;
+
+            window.originalFeatureWeights.forEach(fw => {
+                const slider = document.querySelector(`input[data-classification="${fw.classificationType}"].weight-slider`);
+                if (slider) {
+                    slider.value = fw.defaultWeight;
+                    updateWeightDisplay(slider);
+                }
+
+                // Reset seasonal weights
+                ['PreRut', 'Rut', 'PostRut'].forEach(season => {
+                    const seasonalSlider = document.querySelector(`input[data-season="${season}"][data-classification="${fw.classificationType}"]`);
+                    if (seasonalSlider) {
+                        seasonalSlider.value = fw.defaultWeight;
+                        updateSeasonalWeight(seasonalSlider);
+                    }
+                });
+            });
+        }
+
+        async function saveFeatureWeights() {
+            const saveButton = document.querySelector('button[onclick="saveFeatureWeights()"]');
+            const originalText = saveButton.innerHTML;
+            
+            try {
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                saveButton.disabled = true;
+
+                const featureWeights = {};
+
+                // Collect all weight data
+                document.querySelectorAll('.feature-weight-item').forEach(item => {
+                    const classification = parseInt(item.dataset.classification);
+                    const slider = item.querySelector('.weight-slider');
+                    const userWeight = parseFloat(slider.value);
+
+                    // Collect seasonal weights
+                    const seasonalWeights = {};
+                    const seasonalSliders = item.querySelectorAll('input[data-season]');
+                    seasonalSliders.forEach(seasonalSlider => {
+                        const season = seasonalSlider.dataset.season;
+                        seasonalWeights[season] = parseFloat(seasonalSlider.value);
+                    });
+
+                    featureWeights[classification] = {
+                        userWeight: userWeight,
+                        seasonalWeights: Object.keys(seasonalWeights).length > 0 ? seasonalWeights : null
+                    };
+                });
+
+                const propertyId = @Model.Id;
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ featureWeights })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Show success message
+                showFeatureWeightsFeedback('success', 'Feature weights saved successfully!');
+                
+                // Generate and show summary
+                setTimeout(() => {
+                    showWeightingSummary();
+                }, 500);
+                
+                // Reload to get the latest effective weights
+                setTimeout(() => {
+                    loadFeatureWeights();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error saving feature weights:', error);
+                showFeatureWeightsFeedback('error', 'Failed to save feature weights. Please try again.');
+            } finally {
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }
+        }
+
+        function showFeatureWeightsFeedback(type, message) {
+            const existingAlert = document.querySelector('.feature-weights-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show feature-weights-alert`;
+            alertDiv.innerHTML = `
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const contentDiv = document.getElementById('feature-weights-content');
+            contentDiv.insertBefore(alertDiv, contentDiv.firstChild);
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function updateSeasonView() {
+            const selector = document.getElementById('seasonSelector');
+            const selectedSeason = selector.value;
+            
+            console.log('Season view changed to:', selectedSeason);
+            
+            // Update all weight sliders to show the appropriate seasonal values
+            document.querySelectorAll('.weight-slider').forEach(slider => {
+                const classification = slider.dataset.classification;
+                let newValue;
+                
+                if (selectedSeason === 'all') {
+                    // Show default/user weight
+                    newValue = slider.dataset.default;
+                } else {
+                    // Show seasonal weight (fallback to default if no seasonal weight)
+                    const seasonalAttr = `data-${selectedSeason.toLowerCase()}weight`;
+                    newValue = slider.getAttribute(seasonalAttr) || slider.dataset.default;
+                }
+                
+                slider.value = newValue;
+                updateWeightDisplay(slider);
+            });
+            
+            // Update the season selector display style to indicate active season
+            if (selectedSeason === 'all') {
+                selector.style.backgroundColor = '';
+                selector.style.borderColor = '';
+            } else {
+                selector.style.backgroundColor = '#e7f1ff';
+                selector.style.borderColor = '#0d6efd';
+            }
+            
+            // Show helpful text
+            const existingNotice = document.querySelector('.season-notice');
+            if (existingNotice) {
+                existingNotice.remove();
+            }
+            
+            if (selectedSeason !== 'all') {
+                const notice = document.createElement('div');
+                notice.className = 'alert alert-info alert-sm season-notice mt-2';
+                notice.innerHTML = `
+                    <i class="fas fa-info-circle me-1"></i>
+                    <small>Now viewing <strong>${selectedSeason === 'PreRut' ? 'Pre-Rut' : selectedSeason === 'PostRut' ? 'Post-Rut' : selectedSeason}</strong> seasonal weights. 
+                    Adjust sliders to set seasonal overrides, or switch back to "All Seasons" to edit default weights.</small>
+                `;
+                
+                selector.parentNode.appendChild(notice);
+            }
+        }
+
+        function showWeightingSummary() {
+            if (!window.originalFeatureWeights) return;
+
+            const summaryData = generateWeightingSummary();
+            const contentDiv = document.getElementById('feature-weights-content');
+            
+            // Remove existing summary
+            const existingSummary = contentDiv.querySelector('.weighting-summary');
+            if (existingSummary) {
+                existingSummary.remove();
+            }
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'alert alert-info weighting-summary mt-3';
+            summaryDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-2">
+                            <i class="fas fa-chart-line me-2"></i>Your Current Weighting Summary
+                        </h6>
+                        <div class="summary-content">
+                            ${summaryData.summary}
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+
+            contentDiv.appendChild(summaryDiv);
+        }
+
+        function generateWeightingSummary() {
+            const weightData = [];
+            const seasonalData = { PreRut: [], Rut: [], PostRut: [] };
+
+            // Collect current weight data
+            document.querySelectorAll('.feature-weight-item').forEach(item => {
+                const classification = parseInt(item.dataset.classification);
+                const slider = item.querySelector('.weight-slider');
+                const name = item.querySelector('.form-label').textContent;
+                const weight = parseFloat(slider.value);
+
+                weightData.push({ name, weight, classification });
+
+                // Collect seasonal data
+                ['PreRut', 'Rut', 'PostRut'].forEach(season => {
+                    const seasonalSlider = item.querySelector(`input[data-season="${season}"]`);
+                    if (seasonalSlider) {
+                        const seasonalWeight = parseFloat(seasonalSlider.value);
+                        seasonalData[season].push({ name, weight: seasonalWeight, classification });
+                    }
+                });
+            });
+
+            // Sort by weight (highest first)
+            weightData.sort((a, b) => b.weight - a.weight);
+            Object.keys(seasonalData).forEach(season => {
+                seasonalData[season].sort((a, b) => b.weight - a.weight);
+            });
+
+            let summary = '<div class="row g-3">';
+
+            // Overall priorities
+            const topFeatures = weightData.slice(0, 3);
+            const lowFeatures = weightData.filter(f => f.weight <= 0.3);
+
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Overall Priorities:</strong></p>';
+            summary += '<p class="mb-1">Your current weighting gives highest importance to: ';
+            summary += topFeatures.map(f => `<strong>${f.name}</strong> (${f.weight.toFixed(1)})`).join(', ');
+            summary += '.</p>';
+
+            if (lowFeatures.length > 0) {
+                summary += '<p class="mb-1">Lower priority features: ';
+                summary += lowFeatures.map(f => f.name).join(', ');
+                summary += '.</p>';
+            }
+            summary += '</div>';
+
+            // Seasonal insights
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Seasonal Patterns:</strong></p>';
+
+            Object.entries(seasonalData).forEach(([season, features]) => {
+                if (features.length > 0) {
+                    const topSeasonal = features.slice(0, 2);
+                    const seasonName = season === 'PreRut' ? 'Pre-Rut' : 
+                                     season === 'PostRut' ? 'Post-Rut' : season;
+                    summary += `<p class="mb-1 small"><strong>${seasonName}:</strong> `;
+                    summary += topSeasonal.map(f => `${f.name} (${f.weight.toFixed(1)})`).join(', ');
+                    summary += '</p>';
+                }
+            });
+            summary += '</div>';
+
+            // Movement insights
+            const bedding = weightData.find(f => f.name.toLowerCase().includes('bedding'));
+            const water = weightData.find(f => f.name.toLowerCase().includes('water') || f.name.toLowerCase().includes('pond'));
+            const food = weightData.find(f => f.name.toLowerCase().includes('food') || f.name.toLowerCase().includes('crop'));
+            const pinchPoint = weightData.find(f => f.name.toLowerCase().includes('pinch'));
+
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Movement Prediction Impact:</strong></p>';
+            
+            if (bedding && bedding.weight > 0.7) {
+                summary += '<p class="mb-1 small">• High bedding area weights suggest deer will prefer secure resting locations.</p>';
+            }
+            if (food && food.weight > 0.7) {
+                summary += '<p class="mb-1 small">• Strong food source emphasis will highlight feeding patterns.</p>';
+            }
+            if (pinchPoint && pinchPoint.weight > 0.8) {
+                summary += '<p class="mb-1 small">• High pinch point weights will emphasize natural travel bottlenecks.</p>';
+            }
+            if (water && water.weight > 0.6) {
+                summary += '<p class="mb-1 small">• Water source importance will affect daily movement to drinking locations.</p>';
+            }
+            summary += '</div>';
+
+            summary += '</div>';
+
+            return { summary, weightData, seasonalData };
+        }
     </script>
 }

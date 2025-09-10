@@ -26,6 +26,9 @@ public class PropertyFeatureConfiguration : IEntityTypeConfiguration<PropertyFea
         entity.Property(pf => pf.Notes)
               .HasMaxLength(1000);
 
+        entity.Property(pf => pf.Weight)
+              .HasColumnType("real");
+
         entity.Property(pf => pf.CreatedBy);
 
         entity.Property(pf => pf.CreatedAt)

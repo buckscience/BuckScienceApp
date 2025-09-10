@@ -12,4 +12,6 @@ public class ApplicationUser
     public string Email { get; set; } = string.Empty;
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime? TrialStartDate { get; set; }
+
+    // Navigation properties
 }

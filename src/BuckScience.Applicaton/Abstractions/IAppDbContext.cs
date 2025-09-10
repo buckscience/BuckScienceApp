@@ -7,6 +7,7 @@ public interface IAppDbContext
 {
     DbSet<ApplicationUser> ApplicationUsers { get; }
     DbSet<Camera> Cameras { get; }
+    DbSet<FeatureWeight> FeatureWeights { get; }
     DbSet<Photo> Photos { get; }
     DbSet<PhotoTag> PhotoTags { get; }
     DbSet<Property> Properties { get; }
