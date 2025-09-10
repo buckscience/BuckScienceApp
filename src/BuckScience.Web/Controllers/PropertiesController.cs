@@ -635,6 +635,11 @@ public class PropertiesController : Controller
         
         if (property == null) return NotFound();
 
+        if (request == null || request.SeasonOverrides == null)
+        {
+            return BadRequest(new { message = "Invalid request data." });
+        }
+
         try
         {
             foreach (var override_ in request.SeasonOverrides)

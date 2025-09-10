@@ -53,6 +53,11 @@ public class FeatureWeightsController : ControllerBase
         
         if (!hasAccess) return Forbid();
 
+        if (request == null || request.FeatureWeights == null)
+        {
+            return BadRequest(new { message = "Invalid request data." });
+        }
+
         try
         {
             var featureWeights = request.FeatureWeights.ToDictionary(
@@ -87,6 +92,11 @@ public class FeatureWeightsController : ControllerBase
             .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
         
         if (!hasAccess) return Forbid();
+
+        if (request == null || request.DefaultWeights == null)
+        {
+            return BadRequest(new { message = "Invalid request data." });
+        }
 
         try
         {
