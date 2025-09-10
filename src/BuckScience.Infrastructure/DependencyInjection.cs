@@ -46,6 +46,9 @@ public static class DependencyInjection
         // Onboarding service
         services.AddScoped<IOnboardingService, Application.Onboarding.OnboardingService>();
 
+        // Season month mapping service
+        services.AddScoped<ISeasonMonthMappingService, Application.Services.SeasonMonthMappingService>();
+
         return services;
     }
 }

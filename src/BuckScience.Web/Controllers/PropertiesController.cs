@@ -26,12 +26,14 @@ public class PropertiesController : Controller
     private readonly IAppDbContext _db;
     private readonly GeometryFactory _geometryFactory;
     private readonly ICurrentUserService _currentUser;
+    private readonly ISeasonMonthMappingService _seasonMappingService;
 
-    public PropertiesController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser)
+    public PropertiesController(IAppDbContext db, GeometryFactory geometryFactory, ICurrentUserService currentUser, ISeasonMonthMappingService seasonMappingService)
     {
         _db = db;
         _geometryFactory = geometryFactory;
         _currentUser = currentUser;
+        _seasonMappingService = seasonMappingService;
     }
 
     // LIST: GET /Properties
@@ -575,5 +577,157 @@ public class PropertiesController : Controller
         {
             return $"{startText} - Current";
         }
+    }
+
+    // GET /properties/{propertyId}/season-overrides
+    [HttpGet]
+    [Route("/properties/{propertyId:int}/season-overrides")]
+    public async Task<IActionResult> GetPropertySeasonOverrides(int propertyId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify user has access to this property
+        var property = await _db.Properties
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        
+        if (property == null) return NotFound();
+
+        // Get all overrides for this property
+        var overrides = await _seasonMappingService.GetAllPropertyOverridesAsync(propertyId, ct);
+        
+        // Get default months for all seasons
+        var seasonOverrides = new List<SeasonOverrideResponse>();
+        var allSeasons = Enum.GetValues<Season>();
+        
+        foreach (var season in allSeasons)
+        {
+            var defaultMonths = season.GetDefaultMonths();
+            var customMonths = overrides.GetValueOrDefault(season);
+            var hasOverride = customMonths != null;
+            
+            seasonOverrides.Add(new SeasonOverrideResponse
+            {
+                Season = season,
+                SeasonName = season.ToString(),
+                DefaultMonths = defaultMonths,
+                CustomMonths = customMonths ?? defaultMonths,
+                HasOverride = hasOverride
+            });
+        }
+        
+        return Ok(new PropertySeasonOverridesResponse
+        {
+            PropertyId = propertyId,
+            SeasonOverrides = seasonOverrides.OrderBy(s => (int)s.Season).ToList()
+        });
+    }
+
+    // PUT /properties/{propertyId}/season-overrides
+    [HttpPut]
+    [Route("/properties/{propertyId:int}/season-overrides")]
+    public async Task<IActionResult> UpdatePropertySeasonOverrides(int propertyId, [FromBody] UpdatePropertySeasonOverridesRequest request, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify user has access to this property
+        var property = await _db.Properties
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        
+        if (property == null) return NotFound();
+
+        try
+        {
+            foreach (var override_ in request.SeasonOverrides)
+            {
+                if (override_.CustomMonths != null && override_.CustomMonths.Length > 0)
+                {
+                    await _seasonMappingService.SetPropertySeasonOverrideAsync(propertyId, override_.Season, override_.CustomMonths, ct);
+                }
+                else if (override_.RemoveOverride)
+                {
+                    await _seasonMappingService.RemovePropertySeasonOverrideAsync(propertyId, override_.Season, ct);
+                }
+            }
+
+            return NoContent();
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    // DELETE /properties/{propertyId}/season-overrides/{season}
+    [HttpDelete]
+    [Route("/properties/{propertyId:int}/season-overrides/{season}")]
+    public async Task<IActionResult> RemovePropertySeasonOverride(int propertyId, Season season, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify user has access to this property
+        var hasAccess = await _db.Properties
+            .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        
+        if (!hasAccess) return NotFound();
+
+        var removed = await _seasonMappingService.RemovePropertySeasonOverrideAsync(propertyId, season, ct);
+        
+        if (!removed) return NotFound();
+        
+        return NoContent();
+    }
+
+    // POST /properties/{propertyId}/season-overrides/reset
+    [HttpPost]
+    [Route("/properties/{propertyId:int}/season-overrides/reset")]
+    public async Task<IActionResult> ResetPropertySeasonOverrides(int propertyId, CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        // Verify user has access to this property
+        var hasAccess = await _db.Properties
+            .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
+        
+        if (!hasAccess) return NotFound();
+
+        // Remove all overrides for this property
+        var allSeasons = Enum.GetValues<Season>();
+        foreach (var season in allSeasons)
+        {
+            await _seasonMappingService.RemovePropertySeasonOverrideAsync(propertyId, season, ct);
+        }
+
+        return NoContent();
+    }
+
+    public class PropertySeasonOverridesResponse
+    {
+        public int PropertyId { get; set; }
+        public List<SeasonOverrideResponse> SeasonOverrides { get; set; } = new();
+    }
+
+    public class SeasonOverrideResponse
+    {
+        public Season Season { get; set; }
+        public string SeasonName { get; set; } = string.Empty;
+        public int[] DefaultMonths { get; set; } = Array.Empty<int>();
+        public int[] CustomMonths { get; set; } = Array.Empty<int>();
+        public bool HasOverride { get; set; }
+    }
+
+    public class UpdatePropertySeasonOverridesRequest
+    {
+        public List<SeasonOverrideUpdateRequest> SeasonOverrides { get; set; } = new();
+    }
+
+    public class SeasonOverrideUpdateRequest
+    {
+        public Season Season { get; set; }
+        public int[]? CustomMonths { get; set; }
+        public bool RemoveOverride { get; set; }
     }
 }

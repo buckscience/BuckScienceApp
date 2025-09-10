@@ -9,7 +9,7 @@ namespace BuckScience.Application.Services
     /// Service for managing season-to-month mappings with property-specific overrides.
     /// Provides access to both default mappings (from MonthsAttribute) and custom overrides (from database).
     /// </summary>
-    public class SeasonMonthMappingService
+    public class SeasonMonthMappingService : ISeasonMonthMappingService
     {
         private readonly IAppDbContext _dbContext;
 
