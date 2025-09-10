@@ -127,5 +127,54 @@ namespace BuckScience.Application.Services
 
             return result;
         }
+
+        /// <summary>
+        /// Determines the active season(s) for a given date and property using hybrid season-month mapping.
+        /// Checks property-specific overrides first, then falls back to default season mappings.
+        /// </summary>
+        /// <param name="date">The date to determine the season for.</param>
+        /// <param name="property">The property to check for custom season overrides.</param>
+        /// <param name="cancellationToken">Cancellation token for async operation.</param>
+        /// <returns>List of seasons that are active for the given date and property (ordered by season enum value).</returns>
+        /// <remarks>
+        /// This method handles edge cases where:
+        /// - Multiple seasons may overlap for a given month
+        /// - Property overrides may be incomplete or missing
+        /// - Date spans across year boundaries (e.g., late season spanning December-January)
+        /// </remarks>
+        public async Task<IReadOnlyList<Season>> GetActiveSeasonsForDateAsync(DateTime date, Property property, CancellationToken cancellationToken = default)
+        {
+            var month = date.Month;
+            var activeSeasons = new List<Season>();
+
+            // Get all seasons and check which ones are active for this month
+            var allSeasons = Enum.GetValues<Season>();
+            
+            foreach (var season in allSeasons)
+            {
+                var months = await GetMonthsForPropertyAsync(season, property, cancellationToken);
+                if (months.Contains(month))
+                {
+                    activeSeasons.Add(season);
+                }
+            }
+
+            // Sort by season enum value for consistent ordering
+            return activeSeasons.OrderBy(s => (int)s).ToList();
+        }
+
+        /// <summary>
+        /// Gets the primary active season for a given date and property using hybrid season-month mapping.
+        /// If multiple seasons are active, returns the first one by enum ordering.
+        /// </summary>
+        /// <param name="date">The date to determine the season for.</param>
+        /// <param name="property">The property to check for custom season overrides.</param>
+        /// <param name="cancellationToken">Cancellation token for async operation.</param>
+        /// <returns>The primary season for the given date and property, or null if no season matches.</returns>
+        public async Task<Season?> GetPrimarySeasonForDateAsync(DateTime date, Property property, CancellationToken cancellationToken = default)
+        {
+            var activeSeasons = await GetActiveSeasonsForDateAsync(date, property, cancellationToken);
+            return activeSeasons.Count > 0 ? activeSeasons[0] : null;
+        }
     }
 }
