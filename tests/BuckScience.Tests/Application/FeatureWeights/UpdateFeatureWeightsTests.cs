@@ -386,6 +386,119 @@ public class UpdateFeatureWeightsTests : IDisposable
         Assert.Equal(0.85f, existingSeasonalWeights[Season.PreRut]); // Preserved
     }
 
+    [Fact]
+    public async Task UpdateFeatureWeights_SendingUnchangedValues_DoesNotTriggerCustomFlag()
+    {
+        // Arrange
+        var beddingArea = new FeatureWeight(
+            _testProperty.Id,
+            ClassificationType.BeddingArea,
+            0.9f, // default
+            userWeight: null, // no custom user weight
+            seasonalWeights: null, // no custom seasonal weights
+            isCustom: false);
+
+        var cropField = new FeatureWeight(
+            _testProperty.Id,
+            ClassificationType.AgCropField,
+            0.8f, // default
+            userWeight: null,
+            seasonalWeights: null,
+            isCustom: false);
+
+        _context.FeatureWeights.AddRange(beddingArea, cropField);
+        await _context.SaveChangesAsync();
+
+        // Simulate what might happen if frontend sends all feature weights
+        // but the user only actually changed one of them
+        var featureWeights = new Dictionary<ClassificationType, UpdateFeatureWeights.FeatureWeightUpdate>
+        {
+            { 
+                ClassificationType.BeddingArea, 
+                new UpdateFeatureWeights.FeatureWeightUpdate(
+                    UserWeight: 0.95f, // Actually changed by user
+                    SeasonalWeights: null, 
+                    ResetToDefault: null)
+            },
+            { 
+                ClassificationType.AgCropField, 
+                new UpdateFeatureWeights.FeatureWeightUpdate(
+                    UserWeight: null, // Frontend sends current value (null), but it's unchanged
+                    SeasonalWeights: null, // Frontend sends current value (null), but it's unchanged
+                    ResetToDefault: null)
+            }
+        };
+
+        var command = new UpdateFeatureWeights.Command(featureWeights);
+
+        // Act
+        var result = await UpdateFeatureWeights.HandleAsync(command, _context, _testProperty.Id, CancellationToken.None);
+
+        // Assert
+        Assert.True(result);
+
+        var updatedBeddingArea = await _context.FeatureWeights
+            .FirstAsync(fw => fw.PropertyId == _testProperty.Id && fw.ClassificationType == ClassificationType.BeddingArea);
+        
+        var unchangedCropField = await _context.FeatureWeights
+            .FirstAsync(fw => fw.PropertyId == _testProperty.Id && fw.ClassificationType == ClassificationType.AgCropField);
+
+        // Only the bedding area should be marked as custom (it was actually changed)
+        Assert.True(updatedBeddingArea.IsCustom);
+        Assert.Equal(0.95f, updatedBeddingArea.UserWeight);
+
+        // The crop field should remain unchanged and not be marked as custom
+        Assert.False(unchangedCropField.IsCustom);
+        Assert.Null(unchangedCropField.UserWeight);
+    }
+
+    [Fact]
+    public async Task UpdateFeatureWeights_SendingCurrentUserWeightValue_DoesNotTriggerCustomFlag()
+    {
+        // This test addresses the specific issue the user mentioned:
+        // "when we initially add weights to the FeatureWeights table (upon property creation) 
+        // the UserWeight is populated with the default value"
+        
+        // Arrange - Simulate the problematic scenario where UserWeight already equals DefaultWeight
+        var beddingArea = new FeatureWeight(
+            _testProperty.Id,
+            ClassificationType.BeddingArea,
+            0.9f, // default
+            userWeight: 0.9f, // UserWeight populated with DefaultWeight during creation (the problem scenario)
+            seasonalWeights: null,
+            isCustom: false); // Should be false since it's not actually custom
+
+        _context.FeatureWeights.Add(beddingArea);
+        await _context.SaveChangesAsync();
+
+        // Frontend sends an update request with the current UserWeight value (which equals DefaultWeight)
+        var featureWeights = new Dictionary<ClassificationType, UpdateFeatureWeights.FeatureWeightUpdate>
+        {
+            { 
+                ClassificationType.BeddingArea, 
+                new UpdateFeatureWeights.FeatureWeightUpdate(
+                    UserWeight: 0.9f, // Same as current UserWeight, which equals DefaultWeight
+                    SeasonalWeights: null,
+                    ResetToDefault: null)
+            }
+        };
+
+        var command = new UpdateFeatureWeights.Command(featureWeights);
+
+        // Act
+        var result = await UpdateFeatureWeights.HandleAsync(command, _context, _testProperty.Id, CancellationToken.None);
+
+        // Assert
+        Assert.True(result);
+
+        var updatedBeddingArea = await _context.FeatureWeights
+            .FirstAsync(fw => fw.PropertyId == _testProperty.Id && fw.ClassificationType == ClassificationType.BeddingArea);
+
+        // Should NOT be marked as custom since UserWeight equals DefaultWeight
+        Assert.False(updatedBeddingArea.IsCustom);
+        Assert.Equal(0.9f, updatedBeddingArea.UserWeight);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
