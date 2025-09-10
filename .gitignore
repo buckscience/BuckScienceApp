@@ -2,6 +2,10 @@
 bin/
 obj/
 
+# Test Results
+TestResults/
+*.trx
+
 # Uploaded files
 src/BuckScience.Web/wwwroot/uploads/*
 !src/BuckScience.Web/wwwroot/uploads/photos/.gitkeep
