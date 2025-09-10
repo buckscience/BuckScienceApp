@@ -63,9 +63,17 @@ public static class UpdateFeatureWeights
                 }
                 else
                 {
-                    // Update existing feature weight
-                    existingWeight.UpdateUserWeight(update.UserWeight);
-                    existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                    // Only update the properties that are actually being changed
+                    // This prevents incorrectly setting IsCustom for unmodified properties
+                    if (update.UserWeight.HasValue)
+                    {
+                        existingWeight.UpdateUserWeight(update.UserWeight);
+                    }
+                    
+                    if (update.SeasonalWeights != null)
+                    {
+                        existingWeight.SetSeasonalWeights(update.SeasonalWeights);
+                    }
                 }
             }
             else

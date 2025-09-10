@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="40431936-2041-45d3-baa6-577e54d1de21" name="@runnervmf4ws1 2025-09-10 18:12:07" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2025-09-10T18:12:07.8652493+00:00" queuing="2025-09-10T18:12:07.8652494+00:00" start="2025-09-10T18:12:04.6861746+00:00" finish="2025-09-10T18:12:07.8756790+00:00" />
+  <TestSettings name="default" id="8c8f78a5-76dd-4f01-8276-36e6d77de9aa">
+    <Deployment runDeploymentRoot="_runnervmf4ws1_2025-09-10_18_12_07" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="a6e71da3-5844-4cab-8841-342e1e742a99" testId="d9e9dfd4-db91-4986-9bbe-4cae120c9790" testName="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_MultipleUpdates_SetsEachCorrectly" computerName="runnervmf4ws1" duration="00:00:01.0853734" startTime="2025-09-10T18:12:07.7100274+00:00" endTime="2025-09-10T18:12:07.7100736+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a6e71da3-5844-4cab-8841-342e1e742a99" />
+    <UnitTestResult executionId="c4f17436-758d-4c35-b55e-943d24b4405b" testId="7acc5254-e1e8-fc5e-ffbb-a06142942287" testName="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_OnlyUpdatesSeasonalWeights_SetsOnlyThatAsCustom" computerName="runnervmf4ws1" duration="00:00:00.0378166" startTime="2025-09-10T18:12:07.7473753+00:00" endTime="2025-09-10T18:12:07.7473754+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c4f17436-758d-4c35-b55e-943d24b4405b" />
+    <UnitTestResult executionId="16d30b3d-ddcf-4f3b-8aa9-dea337bc82c6" testId="2c3f2f16-fb94-3325-49ee-53aa9585411a" testName="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_OnlyUpdatesSpecificWeight_SetsOnlyThatAsCustom" computerName="runnervmf4ws1" duration="00:00:00.0161529" startTime="2025-09-10T18:12:07.7636089+00:00" endTime="2025-09-10T18:12:07.7636090+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="16d30b3d-ddcf-4f3b-8aa9-dea337bc82c6" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_OnlyUpdatesSeasonalWeights_SetsOnlyThatAsCustom" storage="/home/runner/work/buckscienceapp/buckscienceapp/tests/buckscience.tests/bin/debug/net8.0/buckscience.tests.dll" id="7acc5254-e1e8-fc5e-ffbb-a06142942287">
+      <Execution id="c4f17436-758d-4c35-b55e-943d24b4405b" />
+      <TestMethod codeBase="/home/runner/work/BuckScienceApp/BuckScienceApp/tests/BuckScience.Tests/bin/Debug/net8.0/BuckScience.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests" name="UpdateFeatureWeights_OnlyUpdatesSeasonalWeights_SetsOnlyThatAsCustom" />
+    </UnitTest>
+    <UnitTest name="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_OnlyUpdatesSpecificWeight_SetsOnlyThatAsCustom" storage="/home/runner/work/buckscienceapp/buckscienceapp/tests/buckscience.tests/bin/debug/net8.0/buckscience.tests.dll" id="2c3f2f16-fb94-3325-49ee-53aa9585411a">
+      <Execution id="16d30b3d-ddcf-4f3b-8aa9-dea337bc82c6" />
+      <TestMethod codeBase="/home/runner/work/BuckScienceApp/BuckScienceApp/tests/BuckScience.Tests/bin/Debug/net8.0/BuckScience.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests" name="UpdateFeatureWeights_OnlyUpdatesSpecificWeight_SetsOnlyThatAsCustom" />
+    </UnitTest>
+    <UnitTest name="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests.UpdateFeatureWeights_MultipleUpdates_SetsEachCorrectly" storage="/home/runner/work/buckscienceapp/buckscienceapp/tests/buckscience.tests/bin/debug/net8.0/buckscience.tests.dll" id="d9e9dfd4-db91-4986-9bbe-4cae120c9790">
+      <Execution id="a6e71da3-5844-4cab-8841-342e1e742a99" />
+      <TestMethod codeBase="/home/runner/work/BuckScienceApp/BuckScienceApp/tests/BuckScience.Tests/bin/Debug/net8.0/BuckScience.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="BuckScience.Tests.Application.FeatureWeights.UpdateFeatureWeightsTests" name="UpdateFeatureWeights_MultipleUpdates_SetsEachCorrectly" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="d9e9dfd4-db91-4986-9bbe-4cae120c9790" executionId="a6e71da3-5844-4cab-8841-342e1e742a99" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7acc5254-e1e8-fc5e-ffbb-a06142942287" executionId="c4f17436-758d-4c35-b55e-943d24b4405b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2c3f2f16-fb94-3325-49ee-53aa9585411a" executionId="16d30b3d-ddcf-4f3b-8aa9-dea337bc82c6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.4.5+1caef2f33e (64-bit .NET 8.0.19)
+[xUnit.net 00:00:01.05]   Discovering: BuckScience.Tests
+[xUnit.net 00:00:01.16]   Discovered:  BuckScience.Tests
+[xUnit.net 00:00:01.17]   Starting:    BuckScience.Tests
+[xUnit.net 00:00:02.36]   Finished:    BuckScience.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
