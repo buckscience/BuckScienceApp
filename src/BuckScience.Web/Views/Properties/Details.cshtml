@@ -295,6 +295,28 @@
             </div>
         </div>
 
+        <!-- Season Month Override Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="seasonOverridesHeading">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#seasonOverridesCollapse" aria-expanded="false" aria-controls="seasonOverridesCollapse">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Custom Season Calendars
+                </button>
+            </h2>
+            <div id="seasonOverridesCollapse" class="accordion-collapse collapse" aria-labelledby="seasonOverridesHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    <div id="season-overrides-content">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Loading season overrides...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -519,6 +541,80 @@
         .alert-sm {
             padding: 0.375rem 0.75rem;
         }
+
+        /* Season overrides styling */
+        .month-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .month-checkbox {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem 0.25rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
+            min-height: 36px;
+            position: relative;
+        }
+
+        .month-checkbox input[type="checkbox"] {
+            display: none;
+        }
+
+        .month-checkbox .month-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6c757d;
+            transition: color 0.2s ease;
+        }
+
+        .month-checkbox:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+
+        .month-checkbox.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        .month-checkbox.active .month-label {
+            color: #ffffff;
+        }
+
+        .month-checkbox.default-month {
+            border-color: #28a745;
+            border-width: 2px;
+        }
+
+        .month-checkbox.default-month.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .season-override-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            background-color: #fafafa;
+        }
+
+        .season-summary {
+            border-top: 1px solid #dee2e6;
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .fs-8 {
+            font-size: 0.7rem !important;
+        }
     </style>
 }
 
@@ -630,6 +726,9 @@
 
             // Initialize feature weights loading
             initializeFeatureWeights();
+
+            // Initialize season overrides loading
+            initializeSeasonOverrides();
         });
 
         // Function to initialize camera placement history toggle functionality
@@ -712,8 +811,9 @@
                 });
             });
 
-            // Handle collapse button icon rotation
-            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+            // Handle collapse button icon rotation for feature category toggles only
+            // (Main accordion buttons are handled automatically by Bootstrap)
+            document.querySelectorAll('.feature-category-group [data-bs-toggle="collapse"]').forEach(button => {
                 button.addEventListener('click', function() {
                     const icon = this.querySelector('i');
                     if (icon) {
@@ -1050,7 +1150,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
                     },
                     body: JSON.stringify({ featureWeights })
                 });
@@ -1282,6 +1382,350 @@
             summary += '</div>';
 
             return { summary, weightData, seasonalData };
+        }
+
+        // Season overrides functionality
+        function initializeSeasonOverrides() {
+            const accordion = document.getElementById('seasonOverridesCollapse');
+            if (!accordion) return;
+
+            let seasonOverridesLoaded = false;
+
+            // Load season overrides when accordion is shown
+            accordion.addEventListener('shown.bs.collapse', function() {
+                if (!seasonOverridesLoaded) {
+                    loadSeasonOverrides();
+                    seasonOverridesLoaded = true;
+                }
+            });
+        }
+
+        async function loadSeasonOverrides() {
+            const contentDiv = document.getElementById('season-overrides-content');
+            if (!contentDiv) return;
+
+            const propertyId = @Model.Id;
+
+            try {
+                // Load both seasons metadata and property overrides
+                const [seasonsResponse, overridesResponse] = await Promise.all([
+                    fetch('/seasons', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }),
+                    fetch(`/properties/${propertyId}/season-overrides`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                ]);
+
+                if (!seasonsResponse.ok || !overridesResponse.ok) {
+                    throw new Error('Failed to load season data');
+                }
+
+                const seasons = await seasonsResponse.json();
+                const overrides = await overridesResponse.json();
+                
+                renderSeasonOverrides(seasons, overrides);
+            } catch (error) {
+                console.error('Error loading season overrides:', error);
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load season overrides. Please try again.
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadSeasonOverrides()">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSeasonOverrides(seasons, overrides) {
+            const contentDiv = document.getElementById('season-overrides-content');
+            if (!contentDiv) return;
+
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            let html = `
+                <div class="season-overrides-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Customize Season Calendars</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-warning" onclick="resetSeasonOverrides()">
+                                <i class="fas fa-undo me-1"></i> Reset All
+                            </button>
+                            <button type="button" class="btn btn-custom-primary" onclick="saveSeasonOverrides()">
+                                <i class="fas fa-save me-1"></i> Save
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted small mb-4">
+                        Customize when each hunting season occurs on your property. This affects how seasonal feature weights are applied.
+                        Click on months to include them in each season. Multiple seasons can overlap.
+                    </p>
+
+                    <div class="season-overrides-list">
+            `;
+
+            // Build lookup of current overrides
+            const overrideLookup = {};
+            if (overrides.seasonOverrides) {
+                overrides.seasonOverrides.forEach(override => {
+                    overrideLookup[override.season] = override;
+                });
+            }
+
+            seasons.forEach(season => {
+                const override = overrideLookup[season.season];
+                const activeMonths = override ? override.customMonths : season.defaultMonths;
+                const hasOverride = override ? override.hasOverride : false;
+
+                html += `
+                    <div class="season-override-item mb-4" data-season="${season.season}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 d-flex align-items-center">
+                                <span class="season-name">${season.seasonName}</span>
+                                ${hasOverride ? '<span class="badge badge-custom-warning ms-2 fs-8">Custom</span>' : '<span class="badge badge-custom-secondary ms-2 fs-8">Default</span>'}
+                            </h6>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="resetSeasonToDefault('${season.season}')">
+                                <i class="fas fa-undo me-1"></i> Reset
+                            </button>
+                        </div>
+                        
+                        <div class="month-selector-grid mb-2">
+                `;
+
+                // Add month checkboxes
+                for (let month = 1; month <= 12; month++) {
+                    const isActive = activeMonths.includes(month);
+                    const isDefault = season.defaultMonths.includes(month);
+                    
+                    html += `
+                        <label class="month-checkbox ${isActive ? 'active' : ''} ${isDefault ? 'default-month' : ''}" 
+                               title="${monthNames[month-1]} ${isDefault ? '(default)' : ''}">
+                            <input type="checkbox" 
+                                   data-season="${season.season}" 
+                                   data-month="${month}" 
+                                   ${isActive ? 'checked' : ''}
+                                   onchange="updateSeasonMonth(this)">
+                            <span class="month-label">${monthNames[month-1]}</span>
+                        </label>
+                    `;
+                }
+
+                html += `
+                        </div>
+                        <div class="season-summary">
+                            <small class="text-muted">
+                                <strong>Default:</strong> ${season.defaultMonths.map(m => monthNames[m-1]).join(', ')}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+
+            // Store original data for reset functionality
+            window.originalSeasonOverrides = { seasons, overrides };
+        }
+
+        function updateSeasonMonth(checkbox) {
+            const seasonItem = checkbox.closest('.season-override-item');
+            const season = checkbox.dataset.season;
+            const month = parseInt(checkbox.dataset.month);
+            
+            // Update the visual state
+            const label = checkbox.closest('.month-checkbox');
+            if (checkbox.checked) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+
+            // Update the custom badge
+            updateSeasonBadge(seasonItem, season);
+        }
+
+        function updateSeasonBadge(seasonItem, season) {
+            if (!window.originalSeasonOverrides) return;
+
+            const seasonData = window.originalSeasonOverrides.seasons.find(s => s.season == season);
+            if (!seasonData) return;
+
+            const checkboxes = seasonItem.querySelectorAll('input[type="checkbox"]');
+            const selectedMonths = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.dataset.month));
+
+            const defaultMonths = seasonData.defaultMonths;
+            const isCustom = !arraysEqual(selectedMonths.sort(), defaultMonths.sort());
+
+            const badge = seasonItem.querySelector('.badge');
+            if (isCustom) {
+                badge.className = 'badge badge-custom-warning ms-2 fs-8';
+                badge.textContent = 'Custom';
+            } else {
+                badge.className = 'badge badge-custom-secondary ms-2 fs-8';
+                badge.textContent = 'Default';
+            }
+        }
+
+        function resetSeasonToDefault(season) {
+            if (!window.originalSeasonOverrides) return;
+
+            const seasonData = window.originalSeasonOverrides.seasons.find(s => s.season == season);
+            if (!seasonData) return;
+
+            const seasonItem = document.querySelector(`[data-season="${season}"]`);
+            if (!seasonItem) return;
+
+            // Reset all checkboxes to default state
+            const checkboxes = seasonItem.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const month = parseInt(checkbox.dataset.month);
+                const shouldBeChecked = seasonData.defaultMonths.includes(month);
+                
+                checkbox.checked = shouldBeChecked;
+                const label = checkbox.closest('.month-checkbox');
+                if (shouldBeChecked) {
+                    label.classList.add('active');
+                } else {
+                    label.classList.remove('active');
+                }
+            });
+
+            // Update badge
+            updateSeasonBadge(seasonItem, season);
+        }
+
+        function resetSeasonOverrides() {
+            if (!window.originalSeasonOverrides) return;
+
+            window.originalSeasonOverrides.seasons.forEach(season => {
+                resetSeasonToDefault(season.season);
+            });
+        }
+
+        async function saveSeasonOverrides() {
+            const saveButton = document.querySelector('button[onclick="saveSeasonOverrides()"]');
+            const originalText = saveButton.innerHTML;
+            
+            try {
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                saveButton.disabled = true;
+
+                const seasonOverrides = [];
+
+                // Collect all season override data - we need to process ALL seasons
+                document.querySelectorAll('.season-override-item').forEach(item => {
+                    const season = parseInt(item.dataset.season); // Convert to integer for enum
+                    const checkboxes = item.querySelectorAll('input[type="checkbox"]');
+                    const selectedMonths = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => parseInt(cb.dataset.month));
+
+                    // Get the original season data to compare with defaults
+                    const originalSeasonData = window.originalSeasonOverrides?.seasons.find(s => s.season == season);
+                    const defaultMonths = originalSeasonData ? originalSeasonData.defaultMonths : [];
+                    
+                    // Check if this is different from default
+                    const isCustom = !arraysEqual(selectedMonths.sort(), defaultMonths.sort());
+                    
+                    if (isCustom && selectedMonths.length > 0) {
+                        // Send custom months
+                        seasonOverrides.push({
+                            season: season,
+                            customMonths: selectedMonths,
+                            removeOverride: false
+                        });
+                    } else if (!isCustom) {
+                        // Reset to default (remove override)
+                        seasonOverrides.push({
+                            season: season,
+                            customMonths: null,
+                            removeOverride: true
+                        });
+                    }
+                });
+
+                const propertyId = @Model.Id;
+                const response = await fetch(`/properties/${propertyId}/season-overrides`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({ seasonOverrides })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Show success message
+                showSeasonOverridesFeedback('success', 'Season calendars saved successfully!');
+                
+                // Reload to get the latest data
+                setTimeout(() => {
+                    loadSeasonOverrides();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error saving season overrides:', error);
+                showSeasonOverridesFeedback('error', 'Failed to save season calendars. Please try again.');
+            } finally {
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }
+        }
+
+        function showSeasonOverridesFeedback(type, message) {
+            const existingAlert = document.querySelector('.season-overrides-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show season-overrides-alert`;
+            alertDiv.innerHTML = `
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const contentDiv = document.getElementById('season-overrides-content');
+            contentDiv.insertBefore(alertDiv, contentDiv.firstChild);
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function arraysEqual(a, b) {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
         }
     </script>
 }

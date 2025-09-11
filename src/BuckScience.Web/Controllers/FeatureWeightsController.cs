@@ -53,6 +53,11 @@ public class FeatureWeightsController : ControllerBase
         
         if (!hasAccess) return Forbid();
 
+        if (request == null || request.FeatureWeights == null)
+        {
+            return BadRequest(new { message = "Invalid request data." });
+        }
+
         try
         {
             var featureWeights = request.FeatureWeights.ToDictionary(
@@ -88,6 +93,11 @@ public class FeatureWeightsController : ControllerBase
         
         if (!hasAccess) return Forbid();
 
+        if (request == null || request.DefaultWeights == null)
+        {
+            return BadRequest(new { message = "Invalid request data." });
+        }
+
         try
         {
             var defaultWeights = request.DefaultWeights.ToDictionary(
@@ -122,5 +132,30 @@ public class FeatureWeightsController : ControllerBase
         public float? UserWeight { get; set; }
         public Dictionary<Season, float>? SeasonalWeights { get; set; }
         public bool? ResetToDefault { get; set; }
+    }
+
+    // GET /seasons
+    [HttpGet]
+    [Route("/seasons")]
+    public IActionResult GetSeasons()
+    {
+        var seasons = Enum.GetValues<Season>()
+            .Select(s => new SeasonInfoResponse
+            {
+                Season = s,
+                SeasonName = s.ToString(),
+                DefaultMonths = s.GetDefaultMonths()
+            })
+            .OrderBy(s => (int)s.Season)
+            .ToList();
+
+        return Ok(seasons);
+    }
+
+    public class SeasonInfoResponse
+    {
+        public Season Season { get; set; }
+        public string SeasonName { get; set; } = string.Empty;
+        public int[] DefaultMonths { get; set; } = Array.Empty<int>();
     }
 }
