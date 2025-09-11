@@ -118,14 +118,15 @@ public class SubscriptionService : ISubscriptionService
     public async Task<string> UpdateSubscriptionAsync(int userId, SubscriptionTier newTier, string successUrl, string cancelUrl)
     {
         var subscription = await GetUserSubscriptionAsync(userId);
-        if (subscription?.StripeSubscriptionId == null)
+        if (subscription == null)
         {
-            throw new InvalidOperationException("No active subscription found for user");
+            throw new InvalidOperationException("No subscription found for user");
         }
 
-        if (subscription.StripeCustomerId == null)
+        // If this is a trial user (no Stripe IDs), treat it as a new subscription creation
+        if (subscription.StripeSubscriptionId == null || subscription.StripeCustomerId == null)
         {
-            throw new InvalidOperationException("No Stripe customer ID found for user");
+            return await CreateSubscriptionAsync(userId, newTier, successUrl, cancelUrl);
         }
 
         // For subscription updates, we'll create a new checkout session

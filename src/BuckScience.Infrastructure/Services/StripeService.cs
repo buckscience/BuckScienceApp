@@ -20,9 +20,9 @@ public class StripeService : IStripeService
     public async Task<string> CreateCheckoutSessionAsync(string customerId, SubscriptionTier tier, string successUrl, string cancelUrl)
     {
         var priceId = GetPriceIdForTier(tier);
-        if (string.IsNullOrEmpty(priceId))
+        if (string.IsNullOrEmpty(priceId) || priceId.Contains("placeholder"))
         {
-            throw new InvalidOperationException($"No price ID configured for tier: {tier}");
+            throw new InvalidOperationException($"No valid price ID configured for tier: {tier}");
         }
 
         var options = new SessionCreateOptions
