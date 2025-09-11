@@ -210,7 +210,7 @@ BuckEye.Charts = {
                 </div>
                 <div class="col-md-4">
                     <div class="text-end">
-                        <div class="badge bg-primary fs-6 mb-2">${data.totalSightings} Sightings</div><br>
+                        <div class="badge bg-secondary fs-6 mb-2">${data.totalSightings} Sightings</div><br>
                         <small class="text-muted">From ${data.totalTaggedPhotos} tagged photos</small>
                         <div class="mt-2">
                             <small class="text-muted">
