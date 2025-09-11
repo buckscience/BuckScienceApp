@@ -12,13 +12,16 @@ public class SubscriptionController : Controller
 {
     private readonly ISubscriptionService _subscriptionService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IStripeService _stripeService;
 
     public SubscriptionController(
         ISubscriptionService subscriptionService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IStripeService stripeService)
     {
         _subscriptionService = subscriptionService;
         _currentUserService = currentUserService;
+        _stripeService = stripeService;
     }
 
     [HttpGet]
@@ -34,6 +37,19 @@ public class SubscriptionController : Controller
         var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUserService.Id.Value);
         var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(_currentUserService.Id.Value);
 
+        // Fetch dynamic pricing information from Stripe
+        var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
+        try
+        {
+            pricingInfo = await _stripeService.GetPricingInfoAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log error but continue with fallback pricing
+            // In production, you'd want proper logging here
+            TempData["Warning"] = $"Unable to load current pricing from Stripe: {ex.Message}. Showing estimated prices.";
+        }
+
         var viewModel = new SubscriptionViewModel
         {
             Subscription = subscription,
@@ -42,7 +58,8 @@ public class SubscriptionController : Controller
             IsTrialExpired = isTrialExpired,
             MaxProperties = _subscriptionService.GetMaxProperties(tier),
             MaxCameras = _subscriptionService.GetMaxCameras(tier),
-            MaxPhotos = _subscriptionService.GetMaxPhotos(tier)
+            MaxPhotos = _subscriptionService.GetMaxPhotos(tier),
+            PricingInfo = pricingInfo
         };
 
         return View(viewModel);

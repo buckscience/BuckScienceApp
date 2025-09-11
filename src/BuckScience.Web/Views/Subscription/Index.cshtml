@@ -31,6 +31,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         }
+        
+        @if (TempData["Warning"] != null)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                @TempData["Warning"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
 
         <div class="subscription-content flex-grow-1">
             <!-- Current Subscription Status -->
@@ -71,7 +79,7 @@
                         <div class="col-md-4 text-end">
                             @if (Model.CurrentTier != BuckScience.Domain.Enums.SubscriptionTier.Trial)
                             {
-                                <h4 class="text-success">$@Model.GetTierPrice().ToString("F2")/month</h4>
+                                <h4 class="text-success">$@Model.GetTierPrice().ToString("F2")/@Model.GetTierInterval()</h4>
                             }
                             else
                             {
@@ -170,45 +178,32 @@
                                                 })
                                             </h6>
                                             <h4 class="text-primary">
-                                                $@(tier switch
-                                                {
-                                                    BuckScience.Domain.Enums.SubscriptionTier.Fawn => 9.99m,
-                                                    BuckScience.Domain.Enums.SubscriptionTier.Doe => 19.99m,
-                                                    BuckScience.Domain.Enums.SubscriptionTier.Buck => 39.99m,
-                                                    BuckScience.Domain.Enums.SubscriptionTier.Trophy => 79.99m,
-                                                    _ => 0m
-                                                }).ToString("F2")/month
+                                                $@Model.GetTierPrice(tier).ToString("F2")/@Model.GetTierInterval(tier)
                                             </h4>
                                             <ul class="list-unstyled small text-muted">
-                                                @{
-                                                    var fawnLimits = new { Properties = 3, Cameras = 6, Photos = 500 };
-                                                    var doeLimits = new { Properties = 5, Cameras = 15, Photos = 2000 };
-                                                    var buckLimits = new { Properties = 10, Cameras = 30, Photos = 10000 };
-                                                    var trophyLimits = new { Properties = "Unlimited", Cameras = "Unlimited", Photos = "Unlimited" };
-                                                }
                                                 @if (tier == BuckScience.Domain.Enums.SubscriptionTier.Fawn)
                                                 {
-                                                    <li>@fawnLimits.Properties Properties</li>
-                                                    <li>@fawnLimits.Cameras Cameras</li>
-                                                    <li>@fawnLimits.Photos.ToString("N0") Photos</li>
+                                                    <li>3 Properties</li>
+                                                    <li>6 Cameras</li>
+                                                    <li>500 Photos</li>
                                                 }
                                                 else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Doe)
                                                 {
-                                                    <li>@doeLimits.Properties Properties</li>
-                                                    <li>@doeLimits.Cameras Cameras</li>
-                                                    <li>@doeLimits.Photos.ToString("N0") Photos</li>
+                                                    <li>5 Properties</li>
+                                                    <li>15 Cameras</li>
+                                                    <li>2,000 Photos</li>
                                                 }
                                                 else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Buck)
                                                 {
-                                                    <li>@buckLimits.Properties Properties</li>
-                                                    <li>@buckLimits.Cameras Cameras</li>
-                                                    <li>@buckLimits.Photos.ToString("N0") Photos</li>
+                                                    <li>10 Properties</li>
+                                                    <li>30 Cameras</li>
+                                                    <li>10,000 Photos</li>
                                                 }
                                                 else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Trophy)
                                                 {
-                                                    <li>@trophyLimits.Properties Properties</li>
-                                                    <li>@trophyLimits.Cameras Cameras</li>
-                                                    <li>@trophyLimits.Photos Photos</li>
+                                                    <li>Unlimited Properties</li>
+                                                    <li>Unlimited Cameras</li>
+                                                    <li>Unlimited Photos</li>
                                                 }
                                             </ul>
                                             <form asp-action="Subscribe" method="post" class="mt-auto">
@@ -220,6 +215,7 @@
                                 </div>
                             }
                         </div>
+
                     </div>
                 </div>
             }

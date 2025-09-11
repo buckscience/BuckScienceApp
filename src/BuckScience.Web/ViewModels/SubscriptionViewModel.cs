@@ -1,3 +1,4 @@
+using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 
@@ -12,6 +13,7 @@ public class SubscriptionViewModel
     public int MaxProperties { get; set; }
     public int MaxCameras { get; set; }
     public int MaxPhotos { get; set; }
+    public Dictionary<SubscriptionTier, StripePriceInfo> PricingInfo { get; set; } = new();
 
     public string GetTierDisplayName()
     {
@@ -41,18 +43,45 @@ public class SubscriptionViewModel
         };
     }
 
-    public decimal GetTierPrice()
+    public decimal GetTierPrice(SubscriptionTier? tier = null)
     {
-        return CurrentTier switch
+        var targetTier = tier ?? CurrentTier;
+        
+        if (targetTier == SubscriptionTier.Trial || targetTier == SubscriptionTier.Expired)
+            return 0m;
+        
+        if (PricingInfo.TryGetValue(targetTier, out var priceInfo))
+            return priceInfo.Amount;
+        
+        // Fallback to hardcoded prices if dynamic pricing fails
+        return targetTier switch
         {
-            SubscriptionTier.Trial => 0m,
             SubscriptionTier.Fawn => 9.99m,
             SubscriptionTier.Doe => 19.99m,
             SubscriptionTier.Buck => 39.99m,
             SubscriptionTier.Trophy => 79.99m,
-            SubscriptionTier.Expired => 0m,
             _ => 0m
         };
+    }
+
+    public string GetTierPriceCurrency(SubscriptionTier? tier = null)
+    {
+        var targetTier = tier ?? CurrentTier;
+        
+        if (PricingInfo.TryGetValue(targetTier, out var priceInfo))
+            return priceInfo.Currency.ToUpper();
+        
+        return "USD";
+    }
+
+    public string GetTierInterval(SubscriptionTier? tier = null)
+    {
+        var targetTier = tier ?? CurrentTier;
+        
+        if (PricingInfo.TryGetValue(targetTier, out var priceInfo))
+            return priceInfo.RecurringInterval;
+        
+        return "month";
     }
 
     public bool IsActive()

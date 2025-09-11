@@ -89,6 +89,79 @@ public class StripeService : IStripeService
         await service.CancelAsync(subscriptionId);
     }
 
+    public async Task<Dictionary<SubscriptionTier, StripePriceInfo>> GetPricingInfoAsync()
+    {
+        var priceIds = _stripeSettings.GetPriceIds();
+        var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
+        var priceService = new PriceService();
+        var productService = new ProductService();
+
+        foreach (var (tierName, priceId) in priceIds)
+        {
+            if (string.IsNullOrEmpty(priceId) || priceId.Contains("placeholder"))
+                continue;
+
+            try
+            {
+                var price = await priceService.GetAsync(priceId);
+                var product = await productService.GetAsync(price.ProductId);
+
+                if (Enum.TryParse<SubscriptionTier>(tierName, ignoreCase: true, out var tier))
+                {
+                    pricingInfo[tier] = new StripePriceInfo
+                    {
+                        PriceId = price.Id,
+                        Amount = price.UnitAmount.HasValue ? price.UnitAmount.Value / 100m : 0m, // Convert from cents
+                        Currency = price.Currency,
+                        RecurringInterval = price.Recurring?.Interval ?? "month",
+                        ProductName = product.Name,
+                        ProductDescription = product.Description,
+                        IsActive = price.Active && product.Active
+                    };
+                }
+            }
+            catch (StripeException ex)
+            {
+                // Log error but continue processing other prices
+                // In a real application, you'd want to log this properly
+                Console.WriteLine($"Error fetching price {priceId} for tier {tierName}: {ex.Message}");
+            }
+        }
+
+        return pricingInfo;
+    }
+
+    public async Task<StripePriceInfo?> GetPriceInfoAsync(SubscriptionTier tier)
+    {
+        var priceId = GetPriceIdForTier(tier);
+        if (string.IsNullOrEmpty(priceId) || priceId.Contains("placeholder"))
+            return null;
+
+        try
+        {
+            var priceService = new PriceService();
+            var productService = new ProductService();
+            
+            var price = await priceService.GetAsync(priceId);
+            var product = await productService.GetAsync(price.ProductId);
+
+            return new StripePriceInfo
+            {
+                PriceId = price.Id,
+                Amount = price.UnitAmount.HasValue ? price.UnitAmount.Value / 100m : 0m, // Convert from cents
+                Currency = price.Currency,
+                RecurringInterval = price.Recurring?.Interval ?? "month",
+                ProductName = product.Name,
+                ProductDescription = product.Description,
+                IsActive = price.Active && product.Active
+            };
+        }
+        catch (StripeException)
+        {
+            return null;
+        }
+    }
+
     private string? GetPriceIdForTier(SubscriptionTier tier)
     {
         var priceIds = _stripeSettings.GetPriceIds();
