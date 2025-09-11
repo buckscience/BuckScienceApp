@@ -120,7 +120,12 @@ public class SubscriptionService : ISubscriptionService
         var subscription = await GetUserSubscriptionAsync(userId);
         if (subscription == null)
         {
-            throw new InvalidOperationException("No subscription found for user");
+            // Enhanced error message with debugging information
+            var allSubscriptions = await _context.Subscriptions.ToListAsync();
+            var subscriptionCount = allSubscriptions.Count;
+            var userIds = string.Join(", ", allSubscriptions.Select(s => s.UserId));
+            
+            throw new InvalidOperationException($"No subscription found for user ID {userId}. Total subscriptions in database: {subscriptionCount}. User IDs found: [{userIds}]");
         }
 
         // If this is a trial user (no Stripe IDs), treat it as a new subscription creation

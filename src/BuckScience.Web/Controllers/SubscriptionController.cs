@@ -100,6 +100,12 @@ public class SubscriptionController : Controller
     {
         if (_currentUserService.Id == null)
         {
+            // Enhanced error for troubleshooting authentication issues
+            var isAuthenticated = _currentUserService.IsAuthenticated;
+            var email = _currentUserService.Email;
+            var azureId = _currentUserService.AzureEntraB2CId;
+            
+            TempData["Error"] = $"User authentication failed. Please try logging out and back in. (Auth: {isAuthenticated}, Email: {email})";
             return Unauthorized();
         }
 
