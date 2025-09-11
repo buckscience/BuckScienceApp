@@ -1,0 +1,382 @@
+using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Auth;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+
+namespace BuckScience.Application.Analytics;
+
+public class BuckEyeAnalyticsService
+{
+    private readonly IAppDbContext _db;
+
+    public BuckEyeAnalyticsService(IAppDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<ProfileAnalyticsData> GetProfileAnalyticsAsync(int profileId, int userId, CancellationToken cancellationToken = default)
+    {
+        // Get profile to verify ownership
+        var profile = await _db.Profiles
+            .Where(p => p.Id == profileId)
+            .Join(_db.Properties, p => p.PropertyId, prop => prop.Id, (p, prop) => new { p, prop })
+            .Where(pp => pp.prop.ApplicationUserId == userId)
+            .Select(pp => new { pp.p.TagId, pp.p.PropertyId, pp.prop.Name })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (profile == null)
+        {
+            throw new UnauthorizedAccessException("Profile not found or access denied");
+        }
+
+        // Get all tagged photos with associated camera and weather data
+        var sightings = await _db.Photos
+            .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == profile.TagId))
+            .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
+            .Where(pc => pc.c.PropertyId == profile.PropertyId)
+            .Select(pc => new SightingData
+            {
+                PhotoId = pc.p.Id,
+                DateTaken = pc.p.DateTaken,
+                CameraId = pc.c.Id,
+                CameraName = pc.c.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
+                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
+                    .Select(ph => ph.LocationName)
+                    .FirstOrDefault() ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
+                Latitude = pc.c.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
+                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
+                    .Select(ph => ph.Latitude)
+                    .FirstOrDefault(),
+                Longitude = pc.c.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
+                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
+                    .Select(ph => ph.Longitude)
+                    .FirstOrDefault(),
+                WeatherId = pc.p.WeatherId,
+                Temperature = pc.p.Weather != null ? pc.p.Weather.Temperature : (double?)null,
+                WindSpeed = pc.p.Weather != null ? pc.p.Weather.WindSpeed : (double?)null,
+                WindDirection = pc.p.Weather != null ? pc.p.Weather.WindDirection : (double?)null,
+                WindDirectionText = pc.p.Weather != null ? pc.p.Weather.WindDirectionText : null,
+                MoonPhase = pc.p.Weather != null ? pc.p.Weather.MoonPhase : (double?)null,
+                MoonPhaseText = pc.p.Weather != null ? pc.p.Weather.MoonPhaseText : null,
+                Conditions = pc.p.Weather != null ? pc.p.Weather.Conditions : null,
+                Humidity = pc.p.Weather != null ? pc.p.Weather.Humidity : (double?)null,
+                Pressure = pc.p.Weather != null ? pc.p.Weather.Pressure : (double?)null,
+                CloudCover = pc.p.Weather != null ? pc.p.Weather.CloudCover : (double?)null,
+                Visibility = pc.p.Weather != null ? pc.p.Weather.Visibility : (double?)null
+            })
+            .OrderByDescending(s => s.DateTaken)
+            .ToListAsync(cancellationToken);
+
+        return new ProfileAnalyticsData
+        {
+            ProfileId = profileId,
+            PropertyName = profile.Name,
+            Sightings = sightings,
+            TotalSightings = sightings.Count,
+            TotalTaggedPhotos = sightings.Count, // Same for now
+            DateRange = sightings.Any() ? 
+                new DateRange(sightings.Min(s => s.DateTaken), sightings.Max(s => s.DateTaken)) : 
+                new DateRange(DateTime.UtcNow, DateTime.UtcNow)
+        };
+    }
+
+    public ChartData GetSightingsByCameraChart(ProfileAnalyticsData data)
+    {
+        var cameraGroups = data.Sightings
+            .GroupBy(s => new { s.CameraId, s.CameraName })
+            .Select(g => new ChartDataPoint
+            {
+                Label = g.Key.CameraName ?? $"Camera {g.Key.CameraId}",
+                Value = g.Count(),
+                Metadata = new Dictionary<string, object> { ["cameraId"] = g.Key.CameraId }
+            })
+            .OrderByDescending(c => c.Value)
+            .ToList();
+
+        return new ChartData
+        {
+            Type = "bar",
+            Title = "Sightings by Camera",
+            DataPoints = cameraGroups
+        };
+    }
+
+    public ChartData GetSightingsByTimeOfDayChart(ProfileAnalyticsData data)
+    {
+        var timeGroups = data.Sightings
+            .GroupBy(s => GetTimeOfDaySegment(s.DateTaken))
+            .Select(g => new ChartDataPoint
+            {
+                Label = g.Key,
+                Value = g.Count(),
+                Metadata = new Dictionary<string, object> { ["segment"] = g.Key }
+            })
+            .OrderBy(c => GetTimeOfDayOrder(c.Label))
+            .ToList();
+
+        return new ChartData
+        {
+            Type = "pie",
+            Title = "Sightings by Time of Day",
+            DataPoints = timeGroups
+        };
+    }
+
+    public ChartData GetSightingsByMoonPhaseChart(ProfileAnalyticsData data)
+    {
+        var moonPhaseGroups = data.Sightings
+            .Where(s => !string.IsNullOrEmpty(s.MoonPhaseText))
+            .GroupBy(s => s.MoonPhaseText!)
+            .Select(g => new ChartDataPoint
+            {
+                Label = g.Key,
+                Value = g.Count(),
+                Metadata = new Dictionary<string, object> 
+                { 
+                    ["moonPhase"] = g.Key,
+                    ["avgMoonPhaseValue"] = g.Average(s => s.MoonPhase ?? 0)
+                }
+            })
+            .OrderByDescending(c => c.Value)
+            .ToList();
+
+        return new ChartData
+        {
+            Type = "bar",
+            Title = "Sightings by Moon Phase",
+            DataPoints = moonPhaseGroups
+        };
+    }
+
+    public ChartData GetSightingsByWindDirectionChart(ProfileAnalyticsData data)
+    {
+        var windGroups = data.Sightings
+            .Where(s => !string.IsNullOrEmpty(s.WindDirectionText))
+            .GroupBy(s => s.WindDirectionText!)
+            .Select(g => new ChartDataPoint
+            {
+                Label = g.Key,
+                Value = g.Count(),
+                Metadata = new Dictionary<string, object> 
+                { 
+                    ["windDirection"] = g.Key,
+                    ["avgWindSpeed"] = g.Average(s => s.WindSpeed ?? 0)
+                }
+            })
+            .OrderByDescending(c => c.Value)
+            .ToList();
+
+        return new ChartData
+        {
+            Type = "radar",
+            Title = "Sightings by Wind Direction",
+            DataPoints = windGroups
+        };
+    }
+
+    public ChartData GetSightingsByTemperatureChart(ProfileAnalyticsData data)
+    {
+        var tempGroups = data.Sightings
+            .Where(s => s.Temperature.HasValue)
+            .GroupBy(s => GetTemperatureBin(s.Temperature!.Value))
+            .Select(g => new ChartDataPoint
+            {
+                Label = g.Key,
+                Value = g.Count(),
+                Metadata = new Dictionary<string, object> 
+                { 
+                    ["temperatureBin"] = g.Key,
+                    ["avgTemperature"] = g.Average(s => s.Temperature!.Value)
+                }
+            })
+            .OrderBy(c => double.Parse(c.Label.Split('-')[0]))
+            .ToList();
+
+        return new ChartData
+        {
+            Type = "bar",
+            Title = "Sightings by Temperature",
+            DataPoints = tempGroups
+        };
+    }
+
+    public BestOddsAnalysis GetBestOddsAnalysis(ProfileAnalyticsData data)
+    {
+        if (!data.Sightings.Any())
+        {
+            return new BestOddsAnalysis
+            {
+                Summary = "No sightings data available for analysis.",
+                BestTimeOfDay = null,
+                BestCamera = null,
+                BestMoonPhase = null,
+                BestWindDirection = null,
+                BestTemperatureRange = null
+            };
+        }
+
+        var bestTimeOfDay = data.Sightings
+            .GroupBy(s => GetTimeOfDaySegment(s.DateTaken))
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault()?.Key;
+
+        var bestCamera = data.Sightings
+            .GroupBy(s => s.CameraName)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault()?.Key;
+
+        var bestMoonPhase = data.Sightings
+            .Where(s => !string.IsNullOrEmpty(s.MoonPhaseText))
+            .GroupBy(s => s.MoonPhaseText!)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault()?.Key;
+
+        var bestWindDirection = data.Sightings
+            .Where(s => !string.IsNullOrEmpty(s.WindDirectionText))
+            .GroupBy(s => s.WindDirectionText!)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault()?.Key;
+
+        var bestTempRange = data.Sightings
+            .Where(s => s.Temperature.HasValue)
+            .GroupBy(s => GetTemperatureBin(s.Temperature!.Value))
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault()?.Key;
+
+        var summary = GenerateBestOddsSummary(data.TotalSightings, data.TotalTaggedPhotos, 
+            bestTimeOfDay, bestCamera, bestMoonPhase, bestWindDirection, bestTempRange);
+
+        return new BestOddsAnalysis
+        {
+            Summary = summary,
+            BestTimeOfDay = bestTimeOfDay,
+            BestCamera = bestCamera,
+            BestMoonPhase = bestMoonPhase,
+            BestWindDirection = bestWindDirection,
+            BestTemperatureRange = bestTempRange
+        };
+    }
+
+    private string GetTimeOfDaySegment(DateTime dateTime)
+    {
+        var hour = dateTime.Hour;
+        return hour switch
+        {
+            >= 5 and < 10 => "Morning",
+            >= 10 and < 15 => "Midday",
+            >= 15 and < 20 => "Evening",
+            _ => "Night"
+        };
+    }
+
+    private int GetTimeOfDayOrder(string segment)
+    {
+        return segment switch
+        {
+            "Morning" => 1,
+            "Midday" => 2,
+            "Evening" => 3,
+            "Night" => 4,
+            _ => 5
+        };
+    }
+
+    private string GetTemperatureBin(double temperature)
+    {
+        var tempF = temperature * 9 / 5 + 32; // Convert to Fahrenheit
+        var binStart = Math.Floor(tempF / 5) * 5;
+        return $"{binStart:F0}-{binStart + 5:F0}°F";
+    }
+
+    private string GenerateBestOddsSummary(int totalSightings, int totalPhotos, 
+        string? bestTimeOfDay, string? bestCamera, string? bestMoonPhase, 
+        string? bestWindDirection, string? bestTempRange)
+    {
+        var summary = $"You currently have {totalSightings} sightings from {totalPhotos} tagged photos.";
+        
+        if (totalSightings > 0)
+        {
+            var conditions = new List<string>();
+            
+            if (!string.IsNullOrEmpty(bestTimeOfDay))
+                conditions.Add($"during {bestTimeOfDay.ToLower()}");
+            
+            if (!string.IsNullOrEmpty(bestCamera))
+                conditions.Add($"at the {bestCamera} camera");
+            
+            if (!string.IsNullOrEmpty(bestWindDirection))
+                conditions.Add($"when the wind is from the {bestWindDirection}");
+            
+            if (!string.IsNullOrEmpty(bestMoonPhase))
+                conditions.Add($"during a {bestMoonPhase}");
+
+            if (conditions.Any())
+            {
+                summary += $" Based on your data, the best odds for a sighting are {string.Join(", ", conditions)}.";
+            }
+        }
+
+        return summary;
+    }
+}
+
+public class ProfileAnalyticsData
+{
+    public int ProfileId { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public List<SightingData> Sightings { get; set; } = new();
+    public int TotalSightings { get; set; }
+    public int TotalTaggedPhotos { get; set; }
+    public DateRange DateRange { get; set; } = new(DateTime.UtcNow, DateTime.UtcNow);
+}
+
+public class SightingData
+{
+    public int PhotoId { get; set; }
+    public DateTime DateTaken { get; set; }
+    public int CameraId { get; set; }
+    public string? CameraName { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public int? WeatherId { get; set; }
+    public double? Temperature { get; set; }
+    public double? WindSpeed { get; set; }
+    public double? WindDirection { get; set; }
+    public string? WindDirectionText { get; set; }
+    public double? MoonPhase { get; set; }
+    public string? MoonPhaseText { get; set; }
+    public string? Conditions { get; set; }
+    public double? Humidity { get; set; }
+    public double? Pressure { get; set; }
+    public double? CloudCover { get; set; }
+    public double? Visibility { get; set; }
+}
+
+public class ChartData
+{
+    public string Type { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public List<ChartDataPoint> DataPoints { get; set; } = new();
+}
+
+public class ChartDataPoint
+{
+    public string Label { get; set; } = string.Empty;
+    public double Value { get; set; }
+    public Dictionary<string, object> Metadata { get; set; } = new();
+}
+
+public class BestOddsAnalysis
+{
+    public string Summary { get; set; } = string.Empty;
+    public string? BestTimeOfDay { get; set; }
+    public string? BestCamera { get; set; }
+    public string? BestMoonPhase { get; set; }
+    public string? BestWindDirection { get; set; }
+    public string? BestTemperatureRange { get; set; }
+}
+
+public record DateRange(DateTime Start, DateTime End);
