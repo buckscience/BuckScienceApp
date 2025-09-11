@@ -7,10 +7,10 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        // For migrations scaffolding - use Azure SQL Database
+        // Only for migrations scaffolding
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseSqlServer(
-                "Server=tcp:buckscience.database.windows.net,1433;Initial Catalog=BuckScienceDb-Dev;Persist Security Info=False;User ID=bsadmin;Password=tX0HDsWGutUnp;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+                "Server=(localdb)\\MSSQLLocalDB;Database=BuckScienceDb;Trusted_Connection=True;MultipleActiveResultSets=true",
                 sql => sql.UseNetTopologySuite())
             .Options;
 
