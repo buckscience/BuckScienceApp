@@ -81,6 +81,88 @@
             </div>
         </div>
 
+        <!-- BuckEye Analytics Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="buckeyeAnalyticsHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#buckeyeAnalyticsCollapse" aria-expanded="false" aria-controls="buckeyeAnalyticsCollapse">
+                    <i class="fas fa-chart-line me-2"></i>
+                    BuckEye Analytics
+                </button>
+            </h2>
+            <div id="buckeyeAnalyticsCollapse" class="accordion-collapse collapse" aria-labelledby="buckeyeAnalyticsHeading" data-bs-parent="#profileDetailsAccordion">
+                <div class="accordion-body" id="buckeyeAnalytics" data-profile-id="@Model.Id">
+                    
+                    <!-- Summary Section -->
+                    <div id="buckeyeSummary" class="mb-4 p-3 bg-light rounded">
+                        <!-- Summary will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Charts Container -->
+                    <div id="buckeyeCharts">
+                        <div class="row g-4">
+                            <!-- Sightings by Camera -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                    <div class="card-body">
+                                        <div class="buckeye-chart-container">
+                                            <canvas id="cameraChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sightings by Time of Day -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                    <div class="card-body">
+                                        <div class="buckeye-chart-container">
+                                            <canvas id="timeOfDayChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sightings by Moon Phase -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                    <div class="card-body">
+                                        <div class="buckeye-chart-container">
+                                            <canvas id="moonPhaseChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sightings by Wind Direction -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                    <div class="card-body">
+                                        <div class="buckeye-chart-container">
+                                            <canvas id="windDirectionChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sightings by Temperature -->
+                            <div class="col-md-6">
+                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                    <div class="card-body">
+                                        <div class="buckeye-chart-container">
+                                            <canvas id="temperatureChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tagged Photos Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="taggedPhotosHeading">
@@ -96,12 +178,12 @@
                         <div class="row g-3">
                             @foreach (var photo in Model.TaggedPhotos)
                             {
-                                <div class="col-6">
-                                    <div class="card shadow-sm h-100">
+                                <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                                    <div class="card shadow-sm h-100 gallery-item">
                                         <img src="@photo.EncodedPhotoUrl"
-                                             class="card-img-top w-100"
+                                             class="card-img-top w-100 gallery-image"
                                              alt="Tagged photo"
-                                             style="height: 150px; object-fit: cover; border-radius: 10px; cursor:pointer;"
+                                             loading="lazy"
                                              onclick="showCoverPhotoModal(@photo.Id, '@photo.EncodedPhotoUrl')" />
                                     </div>
                                 </div>
@@ -165,6 +247,7 @@
 }
 
 @section Scripts {
+    <script src="~/js/buckeye-charts.js"></script>
     <script>
         let selectedPhotoId = null;
         function showCoverPhotoModal(photoId, photoUrl) {

@@ -1,5 +1,6 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Analytics;
 using BuckScience.Application.Profiles;
 using BuckScience.Application.Tags;
 using BuckScience.Domain.Enums;
@@ -16,11 +17,13 @@ public class ProfilesController : Controller
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly BuckEyeAnalyticsService _analyticsService;
 
-    public ProfilesController(IAppDbContext db, ICurrentUserService currentUser)
+    public ProfilesController(IAppDbContext db, ICurrentUserService currentUser, BuckEyeAnalyticsService analyticsService)
     {
         _db = db;
         _currentUser = currentUser;
+        _analyticsService = analyticsService;
     }
 
     // DETAILS: GET /Profiles/{id}
@@ -68,6 +71,7 @@ public class ProfilesController : Controller
                 .ToListAsync(ct)
         };
 
+        ViewBag.SidebarWide = true;
         return View(vm);
     }
 
@@ -324,5 +328,175 @@ public class ProfilesController : Controller
                 Value = ((int)s).ToString(), 
                 Text = s.ToString() 
             }).ToList();
+    }
+
+    // BuckEye Analytics API Endpoints
+
+    // API: GET /profiles/{id}/analytics/summary
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/summary")]
+    public async Task<IActionResult> GetAnalyticsSummary(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var bestOdds = _analyticsService.GetBestOddsAnalysis(data);
+            
+            return Json(new
+            {
+                profileId = data.ProfileId,
+                propertyName = data.PropertyName,
+                totalSightings = data.TotalSightings,
+                totalTaggedPhotos = data.TotalTaggedPhotos,
+                dateRange = new
+                {
+                    start = data.DateRange.Start.ToString("yyyy-MM-dd"),
+                    end = data.DateRange.End.ToString("yyyy-MM-dd")
+                },
+                bestOdds = new
+                {
+                    summary = bestOdds.Summary,
+                    bestTimeOfDay = bestOdds.BestTimeOfDay,
+                    bestCamera = bestOdds.BestCamera,
+                    bestMoonPhase = bestOdds.BestMoonPhase,
+                    bestWindDirection = bestOdds.BestWindDirection,
+                    bestTemperatureRange = bestOdds.BestTemperatureRange
+                }
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/charts/cameras
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/charts/cameras")]
+    public async Task<IActionResult> GetCameraChart(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var chartData = _analyticsService.GetSightingsByCameraChart(data);
+            return Json(chartData);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/charts/timeofday
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/charts/timeofday")]
+    public async Task<IActionResult> GetTimeOfDayChart(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var chartData = _analyticsService.GetSightingsByTimeOfDayChart(data);
+            return Json(chartData);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/charts/moonphase
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/charts/moonphase")]
+    public async Task<IActionResult> GetMoonPhaseChart(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var chartData = _analyticsService.GetSightingsByMoonPhaseChart(data);
+            return Json(chartData);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/charts/winddirection
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/charts/winddirection")]
+    public async Task<IActionResult> GetWindDirectionChart(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var chartData = _analyticsService.GetSightingsByWindDirectionChart(data);
+            return Json(chartData);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/charts/temperature
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/charts/temperature")]
+    public async Task<IActionResult> GetTemperatureChart(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var chartData = _analyticsService.GetSightingsByTemperatureChart(data);
+            return Json(chartData);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    // API: GET /profiles/{id}/analytics/sightings/locations
+    [HttpGet]
+    [Route("/profiles/{id}/analytics/sightings/locations")]
+    public async Task<IActionResult> GetSightingLocations(int id, CancellationToken ct = default)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        try
+        {
+            var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            var locations = data.Sightings
+                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                .Select(s => new
+                {
+                    photoId = s.PhotoId,
+                    dateTaken = s.DateTaken.ToString("yyyy-MM-dd HH:mm"),
+                    cameraName = s.CameraName,
+                    latitude = s.Latitude!.Value,
+                    longitude = s.Longitude!.Value,
+                    temperature = s.Temperature,
+                    windDirection = s.WindDirectionText,
+                    moonPhase = s.MoonPhaseText
+                })
+                .ToList();
+
+            return Json(locations);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 }

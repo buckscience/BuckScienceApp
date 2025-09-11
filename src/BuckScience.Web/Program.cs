@@ -1,4 +1,5 @@
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Analytics;
 using BuckScience.Application.Photos;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
@@ -19,6 +20,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Register CurrentUserService for dependency injection
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+// Register BuckEye Analytics Service
+builder.Services.AddScoped<BuckEyeAnalyticsService>();
 
 // Register Azure Blob Storage service
 var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");
