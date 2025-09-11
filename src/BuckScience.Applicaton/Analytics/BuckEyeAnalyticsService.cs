@@ -102,7 +102,7 @@ public class BuckEyeAnalyticsService
 
         return new ChartData
         {
-            Type = "bar",
+            Type = "pie",
             Title = "Sightings by Camera",
             DataPoints = cameraGroups
         };

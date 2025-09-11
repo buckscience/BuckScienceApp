@@ -255,7 +255,7 @@ BuckEye.Charts = {
         if (!response.ok) throw new Error('Failed to load camera chart');
         
         const chartData = await response.json();
-        this.createBarChart('cameraChart', chartData);
+        this.createPieChart('cameraChart', chartData);
     },
 
     // Load time of day chart
