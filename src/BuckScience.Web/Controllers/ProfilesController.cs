@@ -71,6 +71,7 @@ public class ProfilesController : Controller
                 .ToListAsync(ct)
         };
 
+        ViewBag.SidebarWide = true;
         return View(vm);
     }
 

@@ -207,17 +207,6 @@ BuckEye.Charts = {
                 <div class="col-md-8">
                     <h6 class="fw-semibold mb-2"><i class="fas fa-chart-line me-2"></i>Sightings Summary</h6>
                     <p class="mb-2">${data.bestOdds.summary}</p>
-                    ${data.bestOdds.bestTimeOfDay ? `
-                        <div class="mb-2">
-                            <small class="text-muted">Best patterns identified:</small>
-                            <ul class="small mb-0 mt-1">
-                                ${data.bestOdds.bestTimeOfDay ? `<li><strong><i class="fas fa-clock me-1"></i>Time:</strong> ${data.bestOdds.bestTimeOfDay}</li>` : ''}
-                                ${data.bestOdds.bestCamera ? `<li><strong><i class="fas fa-camera me-1"></i>Camera:</strong> ${data.bestOdds.bestCamera}</li>` : ''}
-                                ${data.bestOdds.bestWindDirection ? `<li><strong><i class="fas fa-wind me-1"></i>Wind:</strong> ${data.bestOdds.bestWindDirection}</li>` : ''}
-                                ${data.bestOdds.bestMoonPhase ? `<li><strong><span class="moon-phase-icon">${this.moonPhaseIcons[data.bestOdds.bestMoonPhase] || '<i class="wi wi-moon-alt"></i>'}</span> Moon:</strong> ${data.bestOdds.bestMoonPhase}</li>` : ''}
-                            </ul>
-                        </div>
-                    ` : ''}
                 </div>
                 <div class="col-md-4">
                     <div class="text-end">
