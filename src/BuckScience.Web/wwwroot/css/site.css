@@ -917,3 +917,53 @@ html, body {
         padding: 0.375rem 0.75rem;
     }
 }
+
+/* ========== Profile Gallery Styles ========== */
+.gallery-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.gallery-image {
+    height: 200px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    border-radius: 12px;
+}
+
+.gallery-image:hover {
+    opacity: 0.9;
+}
+
+/* Responsive gallery image heights */
+@media (max-width: 575.98px) {
+    .gallery-image {
+        height: 180px;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .gallery-image {
+        height: 160px;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .gallery-image {
+        height: 140px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .gallery-image {
+        height: 120px;
+    }
+}

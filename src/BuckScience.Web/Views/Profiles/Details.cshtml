@@ -178,12 +178,12 @@
                         <div class="row g-3">
                             @foreach (var photo in Model.TaggedPhotos)
                             {
-                                <div class="col-6">
-                                    <div class="card shadow-sm h-100">
+                                <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                                    <div class="card shadow-sm h-100 gallery-item">
                                         <img src="@photo.EncodedPhotoUrl"
-                                             class="card-img-top w-100"
+                                             class="card-img-top w-100 gallery-image"
                                              alt="Tagged photo"
-                                             style="height: 150px; object-fit: cover; border-radius: 10px; cursor:pointer;"
+                                             loading="lazy"
                                              onclick="showCoverPhotoModal(@photo.Id, '@photo.EncodedPhotoUrl')" />
                                     </div>
                                 </div>
