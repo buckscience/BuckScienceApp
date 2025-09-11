@@ -330,7 +330,9 @@ BuckEye.Charts = {
                     x: {
                         ticks: {
                             maxRotation: 45,
-                            minRotation: 0
+                            minRotation: 0,
+                            // Hide x-axis labels for moon phase chart since icons below will serve as labels
+                            display: !isMoonPhaseChart
                         }
                     }
                 },
@@ -343,48 +345,6 @@ BuckEye.Charts = {
                 }
             }
         };
-
-        // Add moon phase icons plugin if this is the moon phase chart
-        if (isMoonPhaseChart) {
-            chartConfig.plugins = [{
-                id: 'moonPhaseIcons',
-                afterDraw: (chart) => {
-                    const ctx = chart.ctx;
-                    const chartArea = chart.chartArea;
-                    const meta = chart.getDatasetMeta(0);
-                    
-                    meta.data.forEach((bar, index) => {
-                        const label = chartData.dataPoints[index].label;
-                        
-                        // Calculate position below the bar
-                        const x = bar.x;
-                        const y = chartArea.bottom + 30;
-                        
-                        // Use Weather Icons font symbols for moon phases (monochrome)
-                        ctx.save();
-                        ctx.fillStyle = this.colors.primary;
-                        ctx.font = '24px "Weather Icons"';
-                        ctx.textAlign = 'center';
-                        
-                        // Map moon phases to Weather Icons Unicode symbols
-                        const moonIconSymbols = {
-                            'New Moon': '\uf095',
-                            'Waxing Crescent': '\uf09c',
-                            'First Quarter': '\uf09a',
-                            'Waxing Gibbous': '\uf09d',
-                            'Full Moon': '\uf097',
-                            'Waning Gibbous': '\uf09e',
-                            'Last Quarter': '\uf09b',
-                            'Waning Crescent': '\uf09f'
-                        };
-                        
-                        const symbol = moonIconSymbols[label] || '\uf095';
-                        ctx.fillText(symbol, x, y);
-                        ctx.restore();
-                    });
-                }
-            }];
-        }
 
         try {
             this.chartInstances[canvasId] = new Chart(ctx, chartConfig);
@@ -399,7 +359,7 @@ BuckEye.Charts = {
         }
     },
 
-    // Add moon phase icons below the canvas
+    // Add unified moon phase icons with labels below the canvas
     addMoonPhaseIconsBelow(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
@@ -416,10 +376,10 @@ BuckEye.Charts = {
             existingIcons.remove();
         }
         
-        // Create icon container
+        // Create unified icon container
         const iconContainer = document.createElement('div');
-        iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-2 pt-2 border-top';
-        iconContainer.style.fontSize = '20px';
+        iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-3 pt-2';
+        iconContainer.style.fontSize = '28px'; // Larger icons for better visibility
         
         // Add icons for each data point
         chartData.dataPoints.forEach(point => {
@@ -429,8 +389,8 @@ BuckEye.Charts = {
             
             const iconHtml = this.moonPhaseIcons[point.label] || '<i class="wi wi-moon-alt"></i>';
             iconDiv.innerHTML = `
-                <div>${iconHtml}</div>
-                <small class="text-muted d-block" style="font-size: 9px;">${point.label}</small>
+                <div style="margin-bottom: 4px;">${iconHtml}</div>
+                <div class="text-muted" style="font-size: 8px; line-height: 1; font-weight: 500;">${point.label}</div>
             `;
             
             iconContainer.appendChild(iconDiv);
