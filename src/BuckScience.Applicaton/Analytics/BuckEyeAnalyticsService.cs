@@ -158,7 +158,7 @@ public class BuckEyeAnalyticsService
     public ChartData GetSightingsByWindDirectionChart(ProfileAnalyticsData data)
     {
         var windGroups = data.Sightings
-            .Where(s => !string.IsNullOrEmpty(s.WindDirectionText))
+            .Where(s => !string.IsNullOrEmpty(s.WindDirectionText) && s.WindSpeed.HasValue)
             .GroupBy(s => s.WindDirectionText!)
             .Select(g => new ChartDataPoint
             {
@@ -167,7 +167,9 @@ public class BuckEyeAnalyticsService
                 Metadata = new Dictionary<string, object> 
                 { 
                     ["windDirection"] = g.Key,
-                    ["avgWindSpeed"] = g.Average(s => s.WindSpeed ?? 0)
+                    ["avgWindSpeed"] = Math.Round(g.Average(s => s.WindSpeed ?? 0), 1),
+                    ["maxWindSpeed"] = g.Max(s => s.WindSpeed ?? 0),
+                    ["speedRanges"] = GetWindSpeedRanges(g.ToList())
                 }
             })
             .OrderByDescending(c => c.Value)
@@ -176,9 +178,44 @@ public class BuckEyeAnalyticsService
         return new ChartData
         {
             Type = "radar",
-            Title = "Sightings by Wind Direction",
+            Title = "Movement by Wind Direction & Speed",
             DataPoints = windGroups
         };
+    }
+
+    private Dictionary<string, int> GetWindSpeedRanges(List<SightingData> sightings)
+    {
+        var ranges = new Dictionary<string, int>
+        {
+            ["< 1 mph"] = 0,
+            ["1-4 mph"] = 0,
+            ["4-8 mph"] = 0,
+            ["8-12 mph"] = 0,
+            ["12-16 mph"] = 0,
+            ["16-20 mph"] = 0,
+            ["> 20 mph"] = 0
+        };
+
+        foreach (var sighting in sightings)
+        {
+            if (!sighting.WindSpeed.HasValue) continue;
+            
+            var speed = sighting.WindSpeed.Value;
+            var range = speed switch
+            {
+                < 1 => "< 1 mph",
+                >= 1 and < 4 => "1-4 mph",
+                >= 4 and < 8 => "4-8 mph",
+                >= 8 and < 12 => "8-12 mph",
+                >= 12 and < 16 => "12-16 mph",
+                >= 16 and < 20 => "16-20 mph",
+                _ => "> 20 mph"
+            };
+            
+            ranges[range]++;
+        }
+
+        return ranges;
     }
 
     public ChartData GetSightingsByTemperatureChart(ProfileAnalyticsData data)

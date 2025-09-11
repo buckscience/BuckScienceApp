@@ -40,18 +40,19 @@ BuckEye.Charts = {
         'W': '←', 'WNW': '↖', 'NW': '↖', 'NNW': '↖'
     },
 
-    // Chart color schemes
+    // Chart color schemes - all green shades for consistent theming
     colorSchemes: {
-        default: ['#527A52', '#8CAF8C', '#4a5a5f', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1', '#e83e8c'],
+        default: ['#527A52', '#8CAF8C', '#6B8E6B', '#9CC29C', '#4E734E', '#B8D6B8', '#3E5A3E', '#7A9A7A'],
+        greenShades: ['#2E4A2E', '#3E5A3E', '#4E734E', '#527A52', '#6B8E6B', '#7A9A7A', '#8CAF8C', '#9CC29C', '#B8D6B8', '#D4E6D4'],
         timeOfDay: {
-            'Morning': '#f39c12',
-            'Midday': '#e74c3c',
-            'Evening': '#9b59b6',
-            'Night': '#2c3e50'
+            'Morning': '#6B8E6B',
+            'Midday': '#4E734E',
+            'Evening': '#7A9A7A',
+            'Night': '#3E5A3E'
         },
         windDirection: {
-            'N': '#3498db', 'NE': '#5dade2', 'E': '#85c1e9', 'SE': '#aed6f1',
-            'S': '#f39c12', 'SW': '#f5b041', 'W': '#f7dc6f', 'NW': '#f8c471'
+            'N': '#527A52', 'NE': '#6B8E6B', 'E': '#8CAF8C', 'SE': '#9CC29C',
+            'S': '#4E734E', 'SW': '#7A9A7A', 'W': '#B8D6B8', 'NW': '#3E5A3E'
         }
     },
 
@@ -186,18 +187,6 @@ BuckEye.Charts = {
                     </div>
                 </div>
             </div>
-
-            <!-- Export Options -->
-            <div class="mt-4 text-center">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('csv')">
-                        <i class="fas fa-download"></i> Export CSV
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('json')">
-                        <i class="fas fa-download"></i> Export JSON
-                    </button>
-                </div>
-            </div>
         `;
     },
 
@@ -303,7 +292,7 @@ BuckEye.Charts = {
         this.updateHeatmap(locations);
     },
 
-    // Create bar chart
+    // Create bar chart with optional moon phase icons
     createBarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
@@ -324,53 +313,159 @@ BuckEye.Charts = {
             return;
         }
 
-        try {
-            this.chartInstances[canvasId] = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartData.dataPoints.map(p => p.label),
-                    datasets: [{
-                        label: 'Sightings',
-                        data: chartData.dataPoints.map(p => p.value),
-                        backgroundColor: this.colors.primary,
-                        borderColor: this.colors.secondary,
-                        borderWidth: 1
-                    }]
+        // Check if this is a moon phase chart to add icons
+        const isMoonPhaseChart = chartData.title.includes('Moon Phase');
+        
+        const chartConfig = {
+            type: 'bar',
+            data: {
+                labels: chartData.dataPoints.map(p => p.label),
+                datasets: [{
+                    label: 'Sightings',
+                    data: chartData.dataPoints.map(p => p.value),
+                    backgroundColor: chartData.dataPoints.map((p, index) => 
+                        this.colorSchemes.greenShades[index % this.colorSchemes.greenShades.length]
+                    ),
+                    borderColor: this.colors.primary,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: chartData.title,
+                        color: this.colors.dark
+                    },
+                    legend: {
+                        display: false
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: chartData.title,
-                            color: this.colors.dark
-                        },
-                        legend: {
-                            display: false
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            const dataPoint = chartData.dataPoints[index];
-                            this.handleChartClick(chartData.type, dataPoint);
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
                         }
                     }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const dataPoint = chartData.dataPoints[index];
+                        this.handleChartClick(chartData.type, dataPoint);
+                    }
                 }
-            });
+            }
+        };
+
+        // Add moon phase icons plugin if this is the moon phase chart
+        if (isMoonPhaseChart) {
+            chartConfig.plugins = [{
+                id: 'moonPhaseIcons',
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const meta = chart.getDatasetMeta(0);
+                    
+                    meta.data.forEach((bar, index) => {
+                        const label = chartData.dataPoints[index].label;
+                        const iconHtml = this.moonPhaseIcons[label];
+                        
+                        if (iconHtml) {
+                            // Create a temporary div to render the icon
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = iconHtml;
+                            tempDiv.style.fontSize = '24px';
+                            tempDiv.style.color = this.colors.primary;
+                            
+                            // Calculate position below the bar
+                            const x = bar.x;
+                            const y = chartArea.bottom + 10;
+                            
+                            // Draw the moon phase text below (since we can't easily render HTML icons on canvas)
+                            ctx.save();
+                            ctx.fillStyle = this.colors.primary;
+                            ctx.font = '20px "Weather Icons"';
+                            ctx.textAlign = 'center';
+                            
+                            // Use Unicode symbols for moon phases as fallback
+                            const moonSymbols = {
+                                'New Moon': '🌑',
+                                'Waxing Crescent': '🌒',
+                                'First Quarter': '🌓',
+                                'Waxing Gibbous': '🌔',
+                                'Full Moon': '🌕',
+                                'Waning Gibbous': '🌖',
+                                'Last Quarter': '🌗',
+                                'Waning Crescent': '🌘'
+                            };
+                            
+                            const symbol = moonSymbols[label] || '🌙';
+                            ctx.fillText(symbol, x, y);
+                            ctx.restore();
+                        }
+                    });
+                }
+            }];
+        }
+
+        try {
+            this.chartInstances[canvasId] = new Chart(ctx, chartConfig);
+            
+            // For moon phase chart, also add icons below the canvas using DOM manipulation
+            if (isMoonPhaseChart) {
+                setTimeout(() => this.addMoonPhaseIconsBelow(canvasId, chartData), 100);
+            }
         } catch (error) {
             console.error(`Error creating bar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
+    },
+
+    // Add moon phase icons below the canvas
+    addMoonPhaseIconsBelow(canvasId, chartData) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        const container = canvas.closest('.buckeye-chart-container');
+        if (!container) return;
+        
+        // Remove existing icon container
+        const existingIcons = container.querySelector('.moon-phase-icons');
+        if (existingIcons) {
+            existingIcons.remove();
+        }
+        
+        // Create icon container
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-2 pt-2 border-top';
+        iconContainer.style.fontSize = '24px';
+        
+        // Add icons for each data point
+        chartData.dataPoints.forEach(point => {
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'text-center';
+            iconDiv.style.color = this.colors.primary;
+            
+            const iconHtml = this.moonPhaseIcons[point.label] || '<i class="wi wi-moon-alt"></i>';
+            iconDiv.innerHTML = `
+                <div>${iconHtml}</div>
+                <small class="text-muted d-block" style="font-size: 10px;">${point.label}</small>
+            `;
+            
+            iconContainer.appendChild(iconDiv);
+        });
+        
+        container.appendChild(iconContainer);
     },
 
     // Create pie chart
@@ -394,8 +489,8 @@ BuckEye.Charts = {
             return;
         }
 
-        const colors = chartData.dataPoints.map(p => 
-            this.colorSchemes.timeOfDay[p.label] || this.colorSchemes.default[chartData.dataPoints.indexOf(p) % this.colorSchemes.default.length]
+        const colors = chartData.dataPoints.map((p, index) => 
+            this.colorSchemes.greenShades[index % this.colorSchemes.greenShades.length]
         );
 
         try {
@@ -438,7 +533,7 @@ BuckEye.Charts = {
         }
     },
 
-    // Create radar chart
+    // Create radar chart with wind speed data
     createRadarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
@@ -487,6 +582,18 @@ BuckEye.Charts = {
                         },
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const dataPoint = chartData.dataPoints[context.dataIndex];
+                                    const avgSpeed = dataPoint.metadata?.avgWindSpeed;
+                                    if (avgSpeed !== undefined) {
+                                        return `Avg Speed: ${avgSpeed} mph`;
+                                    }
+                                    return '';
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -506,10 +613,57 @@ BuckEye.Charts = {
                     }
                 }
             });
+
+            // Add wind speed legend below the chart
+            setTimeout(() => this.addWindSpeedLegend(canvasId, chartData), 100);
         } catch (error) {
             console.error(`Error creating radar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
+    },
+
+    // Add wind speed legend below the wind direction chart
+    addWindSpeedLegend(canvasId, chartData) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        const container = canvas.closest('.buckeye-chart-container');
+        if (!container) return;
+        
+        // Remove existing legend
+        const existingLegend = container.querySelector('.wind-speed-legend');
+        if (existingLegend) {
+            existingLegend.remove();
+        }
+        
+        // Create legend showing wind speed ranges
+        const legendContainer = document.createElement('div');
+        legendContainer.className = 'wind-speed-legend mt-2 pt-2 border-top';
+        
+        // Create speed range indicators
+        const speedRanges = [
+            { label: '< 1 mph', color: '#D4E6D4' },
+            { label: '1-4 mph', color: '#B8D6B8' },
+            { label: '4-8 mph', color: '#9CC29C' },
+            { label: '8-12 mph', color: '#8CAF8C' },
+            { label: '12-16 mph', color: '#6B8E6B' },
+            { label: '16-20 mph', color: '#527A52' },
+            { label: '> 20 mph', color: '#3E5A3E' }
+        ];
+        
+        let legendHtml = '<div class="d-flex flex-wrap justify-content-center gap-2">';
+        speedRanges.forEach(range => {
+            legendHtml += `
+                <div class="d-flex align-items-center">
+                    <div class="me-1" style="width: 12px; height: 12px; background-color: ${range.color}; border-radius: 2px;"></div>
+                    <small class="text-muted">${range.label}</small>
+                </div>
+            `;
+        });
+        legendHtml += '</div>';
+        
+        legendContainer.innerHTML = legendHtml;
+        container.appendChild(legendContainer);
     },
 
     // Update heatmap with sighting locations
