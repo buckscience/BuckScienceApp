@@ -11,6 +11,7 @@ public class SubscriptionService : ISubscriptionService
     private readonly IAppDbContext _context;
     private readonly IStripeService _stripeService;
     private readonly SubscriptionSettings _settings;
+    private readonly Dictionary<SubscriptionTier, SubscriptionLimits> _limits;
 
     public SubscriptionService(
         IAppDbContext context,
@@ -20,6 +21,7 @@ public class SubscriptionService : ISubscriptionService
         _context = context;
         _stripeService = stripeService;
         _settings = settings.Value;
+        _limits = _settings.GetLimitsByTier();
     }
 
     public async Task<bool> CanAddPropertyAsync(int userId)
@@ -185,16 +187,16 @@ public class SubscriptionService : ISubscriptionService
 
     public int GetMaxProperties(SubscriptionTier tier)
     {
-        return _settings.Limits.TryGetValue(tier, out var limits) ? limits.MaxProperties : 0;
+        return _limits.TryGetValue(tier, out var limits) ? limits.MaxProperties : 0;
     }
 
     public int GetMaxCameras(SubscriptionTier tier)
     {
-        return _settings.Limits.TryGetValue(tier, out var limits) ? limits.MaxCameras : 0;
+        return _limits.TryGetValue(tier, out var limits) ? limits.MaxCameras : 0;
     }
 
     public int GetMaxPhotos(SubscriptionTier tier)
     {
-        return _settings.Limits.TryGetValue(tier, out var limits) ? limits.MaxPhotos : 0;
+        return _limits.TryGetValue(tier, out var limits) ? limits.MaxPhotos : 0;
     }
 }

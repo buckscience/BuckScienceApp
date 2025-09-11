@@ -91,7 +91,8 @@ public class StripeService : IStripeService
 
     private string? GetPriceIdForTier(SubscriptionTier tier)
     {
+        var priceIds = _stripeSettings.GetPriceIds();
         var tierName = tier.ToString().ToLower();
-        return _stripeSettings.PriceIds.TryGetValue(tierName, out var priceId) ? priceId : null;
+        return priceIds.TryGetValue(tierName, out var priceId) ? priceId : null;
     }
 }
