@@ -2,6 +2,7 @@ using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BuckScience.Infrastructure.Services;
@@ -11,16 +12,19 @@ public class SubscriptionService : ISubscriptionService
     private readonly IAppDbContext _context;
     private readonly IStripeService _stripeService;
     private readonly SubscriptionSettings _settings;
+    private readonly ILogger<SubscriptionService> _logger;
     private readonly Dictionary<SubscriptionTier, SubscriptionLimits> _limits;
 
     public SubscriptionService(
         IAppDbContext context,
         IStripeService stripeService,
-        IOptions<SubscriptionSettings> settings)
+        IOptions<SubscriptionSettings> settings,
+        ILogger<SubscriptionService> logger)
     {
         _context = context;
         _stripeService = stripeService;
         _settings = settings.Value;
+        _logger = logger;
         _limits = _settings.GetLimitsByTier();
     }
 
@@ -74,9 +78,12 @@ public class SubscriptionService : ISubscriptionService
 
     public async Task<string> CreateSubscriptionAsync(int userId, SubscriptionTier tier, string successUrl, string cancelUrl)
     {
+        _logger.LogInformation("Creating subscription for user {UserId} with tier {Tier}", userId, tier);
+        
         var user = await _context.ApplicationUsers.FindAsync(userId);
         if (user == null)
         {
+            _logger.LogError("User {UserId} not found when creating subscription", userId);
             throw new ArgumentException("User not found", nameof(userId));
         }
 
@@ -86,9 +93,11 @@ public class SubscriptionService : ISubscriptionService
         if (subscription?.StripeCustomerId != null)
         {
             customerId = subscription.StripeCustomerId;
+            _logger.LogInformation("Using existing Stripe customer {CustomerId} for user {UserId}", customerId, userId);
         }
         else
         {
+            _logger.LogInformation("Creating new Stripe customer for user {UserId} with email {Email}", userId, user.Email);
             customerId = await _stripeService.CreateCustomerAsync(user.Email, user.DisplayName);
             
             if (subscription == null)
@@ -102,21 +111,26 @@ public class SubscriptionService : ISubscriptionService
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.Subscriptions.Add(subscription);
+                _logger.LogInformation("Created new subscription record for user {UserId}", userId);
             }
             else
             {
                 subscription.StripeCustomerId = customerId;
                 subscription.Tier = tier;
+                _logger.LogInformation("Updated existing subscription record for user {UserId} with Stripe customer {CustomerId}", userId, customerId);
             }
 
             await _context.SaveChangesAsync();
         }
 
+        _logger.LogInformation("Creating Stripe checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
         return await _stripeService.CreateCheckoutSessionAsync(customerId, tier, successUrl, cancelUrl);
     }
 
     public async Task<string> UpdateSubscriptionAsync(int userId, SubscriptionTier newTier, string successUrl, string cancelUrl)
     {
+        _logger.LogInformation("Updating subscription for user {UserId} to tier {NewTier}", userId, newTier);
+        
         var subscription = await GetUserSubscriptionAsync(userId);
         if (subscription == null)
         {
@@ -125,17 +139,24 @@ public class SubscriptionService : ISubscriptionService
             var subscriptionCount = allSubscriptions.Count;
             var userIds = string.Join(", ", allSubscriptions.Select(s => s.UserId));
             
+            _logger.LogError("No subscription found for user {UserId}. Total subscriptions: {Count}. User IDs: [{UserIds}]", 
+                userId, subscriptionCount, userIds);
+            
             throw new InvalidOperationException($"No subscription found for user ID {userId}. Total subscriptions in database: {subscriptionCount}. User IDs found: [{userIds}]");
         }
 
         // If this is a trial user (no Stripe IDs), treat it as a new subscription creation
         if (subscription.StripeSubscriptionId == null || subscription.StripeCustomerId == null)
         {
+            _logger.LogInformation("Trial user {UserId} upgrading - redirecting to create subscription flow", userId);
             return await CreateSubscriptionAsync(userId, newTier, successUrl, cancelUrl);
         }
 
         // For subscription updates, we'll create a new checkout session
         // In a real implementation, you might want to handle proration differently
+        _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
+            userId, subscription.Tier, newTier);
+        
         return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
     }
 

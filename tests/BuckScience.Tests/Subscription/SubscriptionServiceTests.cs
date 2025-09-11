@@ -4,6 +4,7 @@ using BuckScience.Domain.Enums;
 using BuckScience.Infrastructure.Persistence;
 using BuckScience.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -13,12 +14,14 @@ public class SubscriptionServiceTests
 {
     private readonly Mock<IStripeService> _mockStripeService;
     private readonly Mock<IOptions<SubscriptionSettings>> _mockSettings;
+    private readonly Mock<ILogger<SubscriptionService>> _mockLogger;
     private readonly SubscriptionSettings _settings;
 
     public SubscriptionServiceTests()
     {
         _mockStripeService = new Mock<IStripeService>();
         _mockSettings = new Mock<IOptions<SubscriptionSettings>>();
+        _mockLogger = new Mock<ILogger<SubscriptionService>>();
         
         _settings = new SubscriptionSettings
         {
@@ -39,7 +42,7 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var context = CreateInMemoryContext();
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act & Assert
         Assert.Equal(1, service.GetMaxProperties(SubscriptionTier.Trial));
@@ -52,7 +55,7 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var context = CreateInMemoryContext();
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act & Assert
         Assert.Equal(2, service.GetMaxCameras(SubscriptionTier.Trial));
@@ -65,7 +68,7 @@ public class SubscriptionServiceTests
     {
         // Arrange
         var context = CreateInMemoryContext();
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act & Assert
         Assert.Equal(100, service.GetMaxPhotos(SubscriptionTier.Trial));
@@ -91,7 +94,7 @@ public class SubscriptionServiceTests
         context.ApplicationUsers.Add(user);
         await context.SaveChangesAsync();
 
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act
         var tier = await service.GetUserSubscriptionTierAsync(1);
@@ -118,7 +121,7 @@ public class SubscriptionServiceTests
         context.ApplicationUsers.Add(user);
         await context.SaveChangesAsync();
 
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act
         var tier = await service.GetUserSubscriptionTierAsync(1);
@@ -145,7 +148,7 @@ public class SubscriptionServiceTests
         context.ApplicationUsers.Add(user);
         await context.SaveChangesAsync();
 
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act
         var daysRemaining = await service.GetTrialDaysRemainingAsync(1);
@@ -172,7 +175,7 @@ public class SubscriptionServiceTests
         context.ApplicationUsers.Add(user);
         await context.SaveChangesAsync();
 
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act
         var isExpired = await service.IsTrialExpiredAsync(1);
@@ -199,7 +202,7 @@ public class SubscriptionServiceTests
         context.ApplicationUsers.Add(user);
         await context.SaveChangesAsync();
 
-        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object);
+        var service = new SubscriptionService(context, _mockStripeService.Object, _mockSettings.Object, _mockLogger.Object);
 
         // Act
         var isExpired = await service.IsTrialExpiredAsync(1);

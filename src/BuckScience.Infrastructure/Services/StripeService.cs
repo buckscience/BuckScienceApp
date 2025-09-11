@@ -1,6 +1,7 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Domain.Enums;
 using BuckScience.Shared.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
 using Stripe.Checkout;
@@ -10,41 +11,56 @@ namespace BuckScience.Infrastructure.Services;
 public class StripeService : IStripeService
 {
     private readonly StripeSettings _stripeSettings;
+    private readonly ILogger<StripeService> _logger;
 
-    public StripeService(IOptions<StripeSettings> stripeSettings)
+    public StripeService(IOptions<StripeSettings> stripeSettings, ILogger<StripeService> logger)
     {
         _stripeSettings = stripeSettings.Value;
+        _logger = logger;
         StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
     }
 
     public async Task<string> CreateCheckoutSessionAsync(string customerId, SubscriptionTier tier, string successUrl, string cancelUrl)
     {
+        _logger.LogInformation("Creating checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
+        
         var priceId = GetPriceIdForTier(tier);
         if (string.IsNullOrEmpty(priceId) || priceId.Contains("placeholder"))
         {
+            _logger.LogError("No valid price ID configured for tier {Tier}. Price ID: {PriceId}", tier, priceId);
             throw new InvalidOperationException($"No valid price ID configured for tier: {tier}");
         }
 
-        var options = new SessionCreateOptions
+        try
         {
-            Customer = customerId,
-            PaymentMethodTypes = new List<string> { "card" },
-            LineItems = new List<SessionLineItemOptions>
+            var options = new SessionCreateOptions
             {
-                new SessionLineItemOptions
+                Customer = customerId,
+                PaymentMethodTypes = new List<string> { "card" },
+                LineItems = new List<SessionLineItemOptions>
                 {
-                    Price = priceId,
-                    Quantity = 1,
-                }
-            },
-            Mode = "subscription",
-            SuccessUrl = successUrl,
-            CancelUrl = cancelUrl,
-        };
+                    new SessionLineItemOptions
+                    {
+                        Price = priceId,
+                        Quantity = 1,
+                    }
+                },
+                Mode = "subscription",
+                SuccessUrl = successUrl,
+                CancelUrl = cancelUrl,
+            };
 
-        var service = new SessionService();
-        var session = await service.CreateAsync(options);
-        return session.Url;
+            var service = new SessionService();
+            var session = await service.CreateAsync(options);
+            
+            _logger.LogInformation("Created checkout session {SessionId} for customer {CustomerId}", session.Id, customerId);
+            return session.Url;
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Stripe error creating checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
+            throw new InvalidOperationException($"Failed to create checkout session: {ex.Message}", ex);
+        }
     }
 
     public async Task<string> UpdateSubscriptionAsync(string subscriptionId, SubscriptionTier newTier)

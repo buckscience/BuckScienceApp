@@ -15,9 +15,10 @@ public class SubscriptionViewModel
     public int MaxPhotos { get; set; }
     public Dictionary<SubscriptionTier, StripePriceInfo> PricingInfo { get; set; } = new();
 
-    public string GetTierDisplayName()
+    public string GetTierDisplayName(SubscriptionTier? tier = null)
     {
-        return CurrentTier switch
+        var targetTier = tier ?? CurrentTier;
+        return targetTier switch
         {
             SubscriptionTier.Trial => "Free Trial",
             SubscriptionTier.Fawn => "Fawn Plan",
@@ -143,5 +144,17 @@ public class SubscriptionViewModel
         }
         
         return downgrades;
+    }
+
+    public (string Properties, string Cameras, string Photos) GetTierLimits(SubscriptionTier tier)
+    {
+        return tier switch
+        {
+            SubscriptionTier.Fawn => ("3", "6", "500"),
+            SubscriptionTier.Doe => ("5", "15", "2,000"),
+            SubscriptionTier.Buck => ("10", "30", "10,000"),
+            SubscriptionTier.Trophy => ("Unlimited", "Unlimited", "Unlimited"),
+            _ => ("0", "0", "0")
+        };
     }
 }

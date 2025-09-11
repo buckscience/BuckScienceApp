@@ -4,6 +4,10 @@ using BuckScience.Domain.Enums;
 using BuckScience.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Stripe;
+using Stripe.Checkout;
+using DomainSubscription = BuckScience.Domain.Entities.Subscription;
 
 namespace BuckScience.Web.Controllers;
 
@@ -13,15 +17,18 @@ public class SubscriptionController : Controller
     private readonly ISubscriptionService _subscriptionService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IStripeService _stripeService;
+    private readonly IAppDbContext _context;
 
     public SubscriptionController(
         ISubscriptionService subscriptionService,
         ICurrentUserService currentUserService,
-        IStripeService stripeService)
+        IStripeService stripeService,
+        IAppDbContext context)
     {
         _subscriptionService = subscriptionService;
         _currentUserService = currentUserService;
         _stripeService = stripeService;
+        _context = context;
     }
 
     [HttpGet]
@@ -70,37 +77,19 @@ public class SubscriptionController : Controller
     [HttpPost]
     public async Task<IActionResult> Subscribe(SubscriptionTier tier)
     {
-        if (_currentUserService.Id == null)
-        {
-            return Unauthorized();
-        }
-
-        try
-        {
-            var successUrl = Url.Action("Success", "Subscription", null, Request.Scheme);
-            var cancelUrl = Url.Action("Index", "Subscription", null, Request.Scheme);
-
-            var checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
-                _currentUserService.Id.Value, 
-                tier, 
-                successUrl!, 
-                cancelUrl!);
-
-            return Redirect(checkoutUrl);
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = $"Error creating subscription: {ex.Message}";
-            return RedirectToAction("Index");
-        }
+        return await ProcessSubscriptionChange(tier, "Subscribe");
     }
 
     [HttpPost]
     public async Task<IActionResult> Update(SubscriptionTier newTier)
     {
+        return await ProcessSubscriptionChange(newTier, "Update");
+    }
+
+    private async Task<IActionResult> ProcessSubscriptionChange(SubscriptionTier tier, string action)
+    {
         if (_currentUserService.Id == null)
         {
-            // Enhanced error for troubleshooting authentication issues
             var isAuthenticated = _currentUserService.IsAuthenticated;
             var email = _currentUserService.Email;
             var azureId = _currentUserService.AzureEntraB2CId;
@@ -111,22 +100,76 @@ public class SubscriptionController : Controller
 
         try
         {
+            // Pre-validate subscription change before creating Stripe session
+            var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
+            var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
+            
+            // Validate tier change is allowed
+            if (!IsValidTierChange(currentTier, tier))
+            {
+                TempData["Error"] = $"Invalid subscription change: Cannot change from {currentTier} to {tier}";
+                return RedirectToAction("Index");
+            }
+
+            // Check if pricing is available for this tier
+            var priceInfo = await _stripeService.GetPriceInfoAsync(tier);
+            if (priceInfo == null || !priceInfo.IsActive)
+            {
+                TempData["Error"] = $"The {tier} plan is currently unavailable. Please contact support or try a different plan.";
+                return RedirectToAction("Index");
+            }
+
             var successUrl = Url.Action("Success", "Subscription", null, Request.Scheme);
             var cancelUrl = Url.Action("Index", "Subscription", null, Request.Scheme);
 
-            var checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
-                _currentUserService.Id.Value, 
-                newTier, 
-                successUrl!, 
-                cancelUrl!);
+            string checkoutUrl;
+            
+            // Determine whether to create new subscription or update existing
+            if (currentTier == SubscriptionTier.Trial || currentSubscription?.StripeSubscriptionId == null)
+            {
+                checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
+                    _currentUserService.Id.Value, 
+                    tier, 
+                    successUrl!, 
+                    cancelUrl!);
+            }
+            else
+            {
+                checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
+                    _currentUserService.Id.Value, 
+                    tier, 
+                    successUrl!, 
+                    cancelUrl!);
+            }
 
             return Redirect(checkoutUrl);
         }
         catch (Exception ex)
         {
-            TempData["Error"] = $"Error updating subscription: {ex.Message}";
+            var errorMessage = action == "Subscribe" 
+                ? $"Error creating subscription: {ex.Message}"
+                : $"Error updating subscription: {ex.Message}";
+            
+            TempData["Error"] = errorMessage;
             return RedirectToAction("Index");
         }
+    }
+
+    private static bool IsValidTierChange(SubscriptionTier currentTier, SubscriptionTier newTier)
+    {
+        // Allow any change from Trial or Expired
+        if (currentTier is SubscriptionTier.Trial or SubscriptionTier.Expired)
+            return true;
+
+        // Don't allow changing to Trial or Expired
+        if (newTier is SubscriptionTier.Trial or SubscriptionTier.Expired)
+            return false;
+
+        // Don't allow changing to same tier
+        if (currentTier == newTier)
+            return false;
+
+        return true;
     }
 
     [HttpGet]
@@ -147,9 +190,32 @@ public class SubscriptionController : Controller
     [AllowAnonymous]
     public async Task<IActionResult> Webhook()
     {
-        // TODO: Implement Stripe webhook handling
-        // This would handle subscription updates, cancellations, etc.
-        // For now, return OK to acknowledge receipt
-        return Ok();
+        var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+        
+        try
+        {
+            // For now, we'll implement basic webhook handling
+            // In production, you should verify the webhook signature
+            Console.WriteLine($"Received Stripe webhook: {json}");
+            
+            // Basic JSON parsing to get event type
+            if (json.Contains("checkout.session.completed"))
+            {
+                Console.WriteLine("Checkout session completed - subscription should be active");
+                // TODO: Update subscription status in database
+            }
+            else if (json.Contains("customer.subscription"))
+            {
+                Console.WriteLine("Subscription event received");
+                // TODO: Handle subscription changes
+            }
+
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Webhook processing error: {e.Message}");
+            return StatusCode(500);
+        }
     }
 }
