@@ -209,28 +209,154 @@ public class SubscriptionController : Controller
         
         try
         {
-            // For now, we'll implement basic webhook handling
-            // In production, you should verify the webhook signature
-            Console.WriteLine($"Received Stripe webhook: {json}");
+            _logger.LogInformation("Received Stripe webhook");
             
-            // Basic JSON parsing to get event type
-            if (json.Contains("checkout.session.completed"))
+            // Parse the Stripe event
+            var stripeEvent = EventUtility.ParseEvent(json);
+            _logger.LogInformation("Processing Stripe event: {EventType} with ID: {EventId}", stripeEvent.Type, stripeEvent.Id);
+
+            switch (stripeEvent.Type)
             {
-                Console.WriteLine("Checkout session completed - subscription should be active");
-                // TODO: Update subscription status in database
-            }
-            else if (json.Contains("customer.subscription"))
-            {
-                Console.WriteLine("Subscription event received");
-                // TODO: Handle subscription changes
+                case "checkout.session.completed":
+                    await HandleCheckoutSessionCompletedAsync(stripeEvent);
+                    break;
+                    
+                case "customer.subscription.created":
+                case "customer.subscription.updated":
+                    await HandleSubscriptionUpdatedAsync(stripeEvent);
+                    break;
+                    
+                case "customer.subscription.deleted":
+                    await HandleSubscriptionDeletedAsync(stripeEvent);
+                    break;
+                    
+                default:
+                    _logger.LogInformation("Unhandled Stripe event type: {EventType}", stripeEvent.Type);
+                    break;
             }
 
             return Ok();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Console.WriteLine($"Webhook processing error: {e.Message}");
+            _logger.LogError(ex, "Error processing Stripe webhook: {ErrorMessage}", ex.Message);
             return StatusCode(500);
+        }
+    }
+
+    private async Task HandleCheckoutSessionCompletedAsync(Event stripeEvent)
+    {
+        var session = stripeEvent.Data.Object as Session;
+        if (session?.CustomerId == null)
+        {
+            _logger.LogError("Failed to parse checkout session from webhook event");
+            return;
+        }
+
+        _logger.LogInformation("Processing checkout session completed for customer: {CustomerId}", session.CustomerId);
+
+        try
+        {
+            // Find the user by Stripe customer ID
+            var subscription = await _context.Subscriptions
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StripeCustomerId == session.CustomerId);
+
+            if (subscription == null)
+            {
+                _logger.LogError("No subscription found for Stripe customer ID: {CustomerId}", session.CustomerId);
+                return;
+            }
+
+            // Update subscription with Stripe subscription ID if it's a subscription mode session
+            if (session.Mode == "subscription" && !string.IsNullOrEmpty(session.SubscriptionId))
+            {
+                subscription.StripeSubscriptionId = session.SubscriptionId;
+                subscription.Status = "active";
+                subscription.CurrentPeriodStart = DateTime.UtcNow;
+                subscription.CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Updated subscription {SubscriptionId} for user {UserId} to active status", 
+                    subscription.Id, subscription.UserId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling checkout session completed for customer {CustomerId}", session.CustomerId);
+        }
+    }
+
+    private async Task HandleSubscriptionUpdatedAsync(Event stripeEvent)
+    {
+        var stripeSubscription = stripeEvent.Data.Object as Stripe.Subscription;
+        if (stripeSubscription?.Id == null)
+        {
+            _logger.LogError("Failed to parse subscription from webhook event");
+            return;
+        }
+
+        _logger.LogInformation("Processing subscription update for Stripe subscription: {SubscriptionId}", stripeSubscription.Id);
+
+        try
+        {
+            var subscription = await _context.Subscriptions
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == stripeSubscription.Id);
+
+            if (subscription == null)
+            {
+                _logger.LogError("No local subscription found for Stripe subscription ID: {SubscriptionId}", stripeSubscription.Id);
+                return;
+            }
+
+            // Update basic subscription details
+            subscription.Status = stripeSubscription.Status ?? "active";
+
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Successfully updated subscription {SubscriptionId} for user {UserId}", 
+                subscription.Id, subscription.UserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling subscription update for Stripe subscription {SubscriptionId}", stripeSubscription.Id);
+        }
+    }
+
+    private async Task HandleSubscriptionDeletedAsync(Event stripeEvent)
+    {
+        var stripeSubscription = stripeEvent.Data.Object as Stripe.Subscription;
+        if (stripeSubscription?.Id == null)
+        {
+            _logger.LogError("Failed to parse subscription from webhook event");
+            return;
+        }
+
+        _logger.LogInformation("Processing subscription deletion for Stripe subscription: {SubscriptionId}", stripeSubscription.Id);
+
+        try
+        {
+            var subscription = await _context.Subscriptions
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == stripeSubscription.Id);
+
+            if (subscription == null)
+            {
+                _logger.LogError("No local subscription found for Stripe subscription ID: {SubscriptionId}", stripeSubscription.Id);
+                return;
+            }
+
+            subscription.Status = "canceled";
+            subscription.CanceledAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Successfully canceled subscription {SubscriptionId} for user {UserId}", 
+                subscription.Id, subscription.UserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling subscription deletion for Stripe subscription {SubscriptionId}", stripeSubscription.Id);
         }
     }
 }
