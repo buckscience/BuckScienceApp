@@ -81,30 +81,30 @@
             </div>
         </div>
 
-        <!-- BuckEye Analytics Section -->
+        <!-- BuckLens Analytics Section -->
         <div class="accordion-item">
-            <h2 class="accordion-header" id="buckeyeAnalyticsHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#buckeyeAnalyticsCollapse" aria-expanded="false" aria-controls="buckeyeAnalyticsCollapse">
+            <h2 class="accordion-header" id="bucklensAnalyticsHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bucklensAnalyticsCollapse" aria-expanded="false" aria-controls="bucklensAnalyticsCollapse">
                     <i class="fas fa-chart-line me-2"></i>
-                    BuckEye Analytics
+                    BuckLens Analytics
                 </button>
             </h2>
-            <div id="buckeyeAnalyticsCollapse" class="accordion-collapse collapse" aria-labelledby="buckeyeAnalyticsHeading" data-bs-parent="#profileDetailsAccordion">
-                <div class="accordion-body" id="buckeyeAnalytics" data-profile-id="@Model.Id">
+            <div id="bucklensAnalyticsCollapse" class="accordion-collapse collapse" aria-labelledby="bucklensAnalyticsHeading" data-bs-parent="#profileDetailsAccordion">
+                <div class="accordion-body" id="bucklensAnalytics" data-profile-id="@Model.Id">
                     
                     <!-- Summary Section -->
-                    <div id="buckeyeSummary" class="mb-4 p-3 bg-light rounded">
+                    <div id="bucklensSummary" class="mb-4 p-3 bg-light rounded">
                         <!-- Summary will be populated by JavaScript -->
                     </div>
 
                     <!-- Charts Container -->
-                    <div id="buckeyeCharts">
+                    <div id="bucklensCharts">
                         <div class="row g-4">
                             <!-- Sightings by Camera -->
                             <div class="col-md-6">
-                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
                                     <div class="card-body">
-                                        <div class="buckeye-chart-container">
+                                        <div class="bucklens-chart-container">
                                             <canvas id="cameraChart"></canvas>
                                         </div>
                                     </div>
@@ -113,9 +113,9 @@
 
                             <!-- Sightings by Time of Day -->
                             <div class="col-md-6">
-                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
                                     <div class="card-body">
-                                        <div class="buckeye-chart-container">
+                                        <div class="bucklens-chart-container">
                                             <canvas id="timeOfDayChart"></canvas>
                                         </div>
                                     </div>
@@ -124,9 +124,9 @@
 
                             <!-- Sightings by Moon Phase -->
                             <div class="col-md-6">
-                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
                                     <div class="card-body">
-                                        <div class="buckeye-chart-container">
+                                        <div class="bucklens-chart-container">
                                             <canvas id="moonPhaseChart"></canvas>
                                         </div>
                                     </div>
@@ -135,9 +135,9 @@
 
                             <!-- Sightings by Wind Direction -->
                             <div class="col-md-6">
-                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
                                     <div class="card-body">
-                                        <div class="buckeye-chart-container">
+                                        <div class="bucklens-chart-container">
                                             <canvas id="windDirectionChart"></canvas>
                                         </div>
                                     </div>
@@ -146,9 +146,9 @@
 
                             <!-- Sightings by Temperature -->
                             <div class="col-md-6">
-                                <div class="card border-0 shadow-sm buckeye-chart-card">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
                                     <div class="card-body">
-                                        <div class="buckeye-chart-container">
+                                        <div class="bucklens-chart-container">
                                             <canvas id="temperatureChart"></canvas>
                                         </div>
                                     </div>
@@ -247,7 +247,7 @@
 }
 
 @section Scripts {
-    <script src="~/js/buckeye-charts.js"></script>
+    <script src="~/js/bucklens-charts.js"></script>
     <script>
         let selectedPhotoId = null;
         function showCoverPhotoModal(photoId, photoUrl) {
