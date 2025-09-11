@@ -20,16 +20,16 @@ BuckEye.Charts = {
         dark: '#343a40'
     },
 
-    // Moon phase icons mapping
+    // Moon phase icons mapping using Weather Icons
     moonPhaseIcons: {
-        'New Moon': '🌑',
-        'Waxing Crescent': '🌒',
-        'First Quarter': '🌓',
-        'Waxing Gibbous': '🌔',
-        'Full Moon': '🌕',
-        'Waning Gibbous': '🌖',
-        'Last Quarter': '🌗',
-        'Waning Crescent': '🌘'
+        'New Moon': '<i class="wi wi-moon-new"></i>',
+        'Waxing Crescent': '<i class="wi wi-moon-waxing-crescent-1"></i>',
+        'First Quarter': '<i class="wi wi-moon-first-quarter"></i>',
+        'Waxing Gibbous': '<i class="wi wi-moon-waxing-gibbous-1"></i>',
+        'Full Moon': '<i class="wi wi-moon-full"></i>',
+        'Waning Gibbous': '<i class="wi wi-moon-waning-gibbous-1"></i>',
+        'Last Quarter': '<i class="wi wi-moon-third-quarter"></i>',
+        'Waning Crescent': '<i class="wi wi-moon-waning-crescent-1"></i>'
     },
 
     // Wind direction icons
@@ -58,7 +58,10 @@ BuckEye.Charts = {
     // Initialize all charts for a profile
     async init(profileId) {
         try {
-            // Show loading state
+            // Ensure canvas elements exist before starting
+            this.ensureCanvasElements();
+            
+            // Show loading state in summary only
             this.showLoading();
 
             // Wait a small amount for the accordion to fully expand
@@ -85,6 +88,117 @@ BuckEye.Charts = {
             console.error('Error initializing BuckEye charts:', error);
             this.showError('Failed to load analytics data. Please try again.');
         }
+    },
+
+    // Ensure all required canvas elements exist in the DOM
+    ensureCanvasElements() {
+        const chartsContainer = document.getElementById('buckeyeCharts');
+        if (!chartsContainer) {
+            console.error('Charts container not found');
+            return;
+        }
+
+        // Check if canvas elements already exist
+        const requiredCanvases = ['cameraChart', 'timeOfDayChart', 'moonPhaseChart', 'windDirectionChart', 'temperatureChart'];
+        const missingCanvases = requiredCanvases.filter(id => !document.getElementById(id));
+        
+        if (missingCanvases.length === 0) {
+            return; // All canvas elements exist
+        }
+
+        // If canvas elements are missing, create the full chart structure
+        this.createChartsHTML();
+    },
+
+    // Create the complete charts HTML structure
+    createChartsHTML() {
+        const container = document.getElementById('buckeyeCharts');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="row g-4">
+                <!-- Sightings by Camera -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-body">
+                            <div class="buckeye-chart-container">
+                                <canvas id="cameraChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sightings by Time of Day -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-body">
+                            <div class="buckeye-chart-container">
+                                <canvas id="timeOfDayChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sightings by Moon Phase -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-body">
+                            <div class="buckeye-chart-container">
+                                <canvas id="moonPhaseChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sightings by Wind Direction -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-body">
+                            <div class="buckeye-chart-container">
+                                <canvas id="windDirectionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sightings by Temperature -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-body">
+                            <div class="buckeye-chart-container">
+                                <canvas id="temperatureChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sighting Heatmap/Locations -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                        <div class="card-header bg-white border-0">
+                            <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Sighting Locations</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="sightingHeatmap" style="min-height: 250px;">
+                                <!-- Heatmap/location data will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="mt-4 text-center">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('csv')">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('json')">
+                        <i class="fas fa-download"></i> Export JSON
+                    </button>
+                </div>
+            </div>
+        `;
     },
 
     // Load and display summary data
@@ -114,7 +228,7 @@ BuckEye.Charts = {
                                 ${data.bestOdds.bestTimeOfDay ? `<li><strong><i class="fas fa-clock me-1"></i>Time:</strong> ${data.bestOdds.bestTimeOfDay}</li>` : ''}
                                 ${data.bestOdds.bestCamera ? `<li><strong><i class="fas fa-camera me-1"></i>Camera:</strong> ${data.bestOdds.bestCamera}</li>` : ''}
                                 ${data.bestOdds.bestWindDirection ? `<li><strong><i class="fas fa-wind me-1"></i>Wind:</strong> ${data.bestOdds.bestWindDirection}</li>` : ''}
-                                ${data.bestOdds.bestMoonPhase ? `<li><strong><span class="moon-phase-icon">${this.moonPhaseIcons[data.bestOdds.bestMoonPhase] || '🌙'}</span>Moon:</strong> ${data.bestOdds.bestMoonPhase}</li>` : ''}
+                                ${data.bestOdds.bestMoonPhase ? `<li><strong><span class="moon-phase-icon">${this.moonPhaseIcons[data.bestOdds.bestMoonPhase] || '<i class="wi wi-moon-alt"></i>'}</span> Moon:</strong> ${data.bestOdds.bestMoonPhase}</li>` : ''}
                             </ul>
                         </div>
                     ` : ''}
@@ -193,7 +307,8 @@ BuckEye.Charts = {
     createBarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
-            console.warn(`Canvas element '${canvasId}' not found`);
+            console.error(`Canvas element '${canvasId}' not found`);
+            this.showChartError(canvasId, `Chart container not found`);
             return;
         }
 
@@ -205,107 +320,132 @@ BuckEye.Charts = {
         const ctx = canvas.getContext('2d');
         if (!ctx) {
             console.error(`Failed to get 2D context for canvas '${canvasId}'`);
+            this.showChartError(canvasId, `Failed to initialize chart`);
             return;
         }
 
-        this.chartInstances[canvasId] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartData.dataPoints.map(p => p.label),
-                datasets: [{
-                    label: 'Sightings',
-                    data: chartData.dataPoints.map(p => p.value),
-                    backgroundColor: this.colors.primary,
-                    borderColor: this.colors.secondary,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: chartData.title,
-                        color: this.colors.dark
-                    },
-                    legend: {
-                        display: false
-                    }
+        try {
+            this.chartInstances[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.dataPoints.map(p => p.label),
+                    datasets: [{
+                        label: 'Sightings',
+                        data: chartData.dataPoints.map(p => p.value),
+                        backgroundColor: this.colors.primary,
+                        borderColor: this.colors.secondary,
+                        borderWidth: 1
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartData.title,
+                            color: this.colors.dark
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const dataPoint = chartData.dataPoints[index];
+                            this.handleChartClick(chartData.type, dataPoint);
                         }
                     }
-                },
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const dataPoint = chartData.dataPoints[index];
-                        this.handleChartClick(chartData.type, dataPoint);
-                    }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error(`Error creating bar chart '${canvasId}':`, error);
+            this.showChartError(canvasId, `Failed to render chart`);
+        }
     },
 
     // Create pie chart
     createPieChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
+        if (!canvas) {
+            console.error(`Canvas element '${canvasId}' not found`);
+            this.showChartError(canvasId, `Chart container not found`);
+            return;
+        }
 
         // Destroy existing chart if it exists
         if (this.chartInstances[canvasId]) {
             this.chartInstances[canvasId].destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error(`Failed to get 2D context for canvas '${canvasId}'`);
+            this.showChartError(canvasId, `Failed to initialize chart`);
+            return;
         }
 
         const colors = chartData.dataPoints.map(p => 
             this.colorSchemes.timeOfDay[p.label] || this.colorSchemes.default[chartData.dataPoints.indexOf(p) % this.colorSchemes.default.length]
         );
 
-        const ctx = canvas.getContext('2d');
-        this.chartInstances[canvasId] = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: chartData.dataPoints.map(p => p.label),
-                datasets: [{
-                    data: chartData.dataPoints.map(p => p.value),
-                    backgroundColor: colors,
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: chartData.title,
-                        color: this.colors.dark
-                    },
-                    legend: {
-                        position: 'bottom'
-                    }
+        try {
+            this.chartInstances[canvasId] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: chartData.dataPoints.map(p => p.label),
+                    datasets: [{
+                        data: chartData.dataPoints.map(p => p.value),
+                        backgroundColor: colors,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
                 },
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const dataPoint = chartData.dataPoints[index];
-                        this.handleChartClick(chartData.type, dataPoint);
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartData.title,
+                            color: this.colors.dark
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const dataPoint = chartData.dataPoints[index];
+                            this.handleChartClick(chartData.type, dataPoint);
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error(`Error creating pie chart '${canvasId}':`, error);
+            this.showChartError(canvasId, `Failed to render chart`);
+        }
     },
 
     // Create radar chart
     createRadarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
+        if (!canvas) {
+            console.error(`Canvas element '${canvasId}' not found`);
+            this.showChartError(canvasId, `Chart container not found`);
+            return;
+        }
 
         // Destroy existing chart if it exists
         if (this.chartInstances[canvasId]) {
@@ -313,52 +453,63 @@ BuckEye.Charts = {
         }
 
         const ctx = canvas.getContext('2d');
-        this.chartInstances[canvasId] = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: chartData.dataPoints.map(p => p.label),
-                datasets: [{
-                    label: 'Sightings',
-                    data: chartData.dataPoints.map(p => p.value),
-                    fill: true,
-                    backgroundColor: this.colors.primary + '33',
-                    borderColor: this.colors.primary,
-                    pointBackgroundColor: this.colors.primary,
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: this.colors.primary
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: chartData.title,
-                        color: this.colors.dark
-                    },
-                    legend: {
-                        display: false
-                    }
+        if (!ctx) {
+            console.error(`Failed to get 2D context for canvas '${canvasId}'`);
+            this.showChartError(canvasId, `Failed to initialize chart`);
+            return;
+        }
+
+        try {
+            this.chartInstances[canvasId] = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: chartData.dataPoints.map(p => p.label),
+                    datasets: [{
+                        label: 'Sightings',
+                        data: chartData.dataPoints.map(p => p.value),
+                        fill: true,
+                        backgroundColor: this.colors.primary + '33',
+                        borderColor: this.colors.primary,
+                        pointBackgroundColor: this.colors.primary,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: this.colors.primary
+                    }]
                 },
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartData.title,
+                            color: this.colors.dark
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const dataPoint = chartData.dataPoints[index];
+                            this.handleChartClick(chartData.type, dataPoint);
                         }
                     }
-                },
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const dataPoint = chartData.dataPoints[index];
-                        this.handleChartClick(chartData.type, dataPoint);
-                    }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error(`Error creating radar chart '${canvasId}':`, error);
+            this.showChartError(canvasId, `Failed to render chart`);
+        }
     },
 
     // Update heatmap with sighting locations
@@ -418,7 +569,7 @@ BuckEye.Charts = {
                                 ${latestLocation.moonPhase ? `
                                     <div class="mt-1">
                                         <small class="text-muted">
-                                            <span class="moon-phase-icon">${this.moonPhaseIcons[latestLocation.moonPhase] || '🌙'}</span>
+                                            <span class="moon-phase-icon">${this.moonPhaseIcons[latestLocation.moonPhase] || '<i class="wi wi-moon-alt"></i>'}</span>
                                             ${latestLocation.moonPhase}
                                         </small>
                                     </div>
@@ -527,111 +678,51 @@ BuckEye.Charts = {
 
     // Show loading state
     showLoading() {
-        const container = document.getElementById('buckeyeCharts');
-        if (container) {
-            container.innerHTML = `
-                <div class="buckeye-chart-loading">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        // Show loading in the summary section only
+        const summaryContainer = document.getElementById('buckeyeSummary');
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `
+                <div class="buckeye-chart-loading text-center">
+                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-3 text-muted">
+                    <p class="mt-2 mb-0 text-muted">
                         <i class="fas fa-chart-line me-2"></i>Loading analytics data...
                     </p>
                     <small class="text-muted">Analyzing sightings and weather patterns</small>
                 </div>
             `;
         }
+
+        // Add loading overlay to chart containers
+        const chartCards = document.querySelectorAll('.buckeye-chart-card .card-body');
+        chartCards.forEach(cardBody => {
+            const existingOverlay = cardBody.querySelector('.chart-loading-overlay');
+            if (!existingOverlay) {
+                const overlay = document.createElement('div');
+                overlay.className = 'chart-loading-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75';
+                overlay.innerHTML = `
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                `;
+                cardBody.style.position = 'relative';
+                cardBody.appendChild(overlay);
+            }
+        });
     },
 
     // Hide loading state and restore charts container
     hideLoading() {
-        const container = document.getElementById('buckeyeCharts');
-        if (container) {
-            container.innerHTML = `
-                <div class="row g-4">
-                    <!-- Sightings by Camera -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-body">
-                                <div class="buckeye-chart-container">
-                                    <canvas id="cameraChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        // Remove loading overlays from chart containers
+        const overlays = document.querySelectorAll('.chart-loading-overlay');
+        overlays.forEach(overlay => overlay.remove());
 
-                    <!-- Sightings by Time of Day -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-body">
-                                <div class="buckeye-chart-container">
-                                    <canvas id="timeOfDayChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sightings by Moon Phase -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-body">
-                                <div class="buckeye-chart-container">
-                                    <canvas id="moonPhaseChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sightings by Wind Direction -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-body">
-                                <div class="buckeye-chart-container">
-                                    <canvas id="windDirectionChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sightings by Temperature -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-body">
-                                <div class="buckeye-chart-container">
-                                    <canvas id="temperatureChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sighting Heatmap/Locations -->
-                    <div class="col-md-6">
-                        <div class="card border-0 shadow-sm buckeye-chart-card">
-                            <div class="card-header bg-white border-0">
-                                <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Sighting Locations</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="sightingHeatmap" style="min-height: 250px;">
-                                    <!-- Heatmap/location data will be populated by JavaScript -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Export Options -->
-                <div class="mt-4 text-center">
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('csv')">
-                            <i class="fas fa-download"></i> Export CSV
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('json')">
-                            <i class="fas fa-download"></i> Export JSON
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
+        // Reset any inline styles that were added
+        const chartCards = document.querySelectorAll('.buckeye-chart-card .card-body');
+        chartCards.forEach(cardBody => {
+            cardBody.style.position = '';
+        });
     },
 
     // Show error message
@@ -643,6 +734,25 @@ BuckEye.Charts = {
                     <i class="fas fa-exclamation-triangle"></i> ${message}
                 </div>
             `;
+        }
+    },
+
+    // Show error for individual chart
+    showChartError(canvasId, message) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas) {
+            const container = canvas.closest('.buckeye-chart-container') || canvas.closest('.card-body');
+            if (container) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 200px;">
+                        <div>
+                            <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">${message}</p>
+                            <small class="text-muted">Chart ID: ${canvasId}</small>
+                        </div>
+                    </div>
+                `;
+            }
         }
     },
 
