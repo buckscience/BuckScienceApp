@@ -212,7 +212,17 @@ public class SubscriptionController : Controller
             _logger.LogInformation("Received Stripe webhook");
             
             // Parse the Stripe event
-            var stripeEvent = EventUtility.ParseEvent(json);
+            Event stripeEvent;
+            try
+            {
+                stripeEvent = EventUtility.ParseEvent(json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse Stripe event from JSON: {Json}", json);
+                return BadRequest("Invalid event format");
+            }
+            
             _logger.LogInformation("Processing Stripe event: {EventType} with ID: {EventId}", stripeEvent.Type, stripeEvent.Id);
 
             switch (stripeEvent.Type)
