@@ -43,7 +43,7 @@ public class BuckEyeAnalyticsService
                     .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
                     .Select(ph => ph.LocationName)
-                    .FirstOrDefault() ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
+                    .FirstOrDefault(ln => !string.IsNullOrWhiteSpace(ln)) ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
                 Latitude = pc.c.PlacementHistories
                     .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
@@ -131,21 +131,30 @@ public class BuckEyeAnalyticsService
 
     public ChartData GetSightingsByMoonPhaseChart(ProfileAnalyticsData data)
     {
-        var moonPhaseGroups = data.Sightings
+        // Define all 8 moon phases in order
+        var allMoonPhases = new[]
+        {
+            "New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
+            "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"
+        };
+
+        // Get sightings grouped by moon phase
+        var sightingsByPhase = data.Sightings
             .Where(s => !string.IsNullOrEmpty(s.MoonPhaseText))
             .GroupBy(s => s.MoonPhaseText!)
-            .Select(g => new ChartDataPoint
-            {
-                Label = g.Key,
-                Value = g.Count(),
-                Metadata = new Dictionary<string, object> 
-                { 
-                    ["moonPhase"] = g.Key,
-                    ["avgMoonPhaseValue"] = g.Average(s => s.MoonPhase ?? 0)
-                }
-            })
-            .OrderByDescending(c => c.Value)
-            .ToList();
+            .ToDictionary(g => g.Key, g => new { Count = g.Count(), AvgValue = g.Average(s => s.MoonPhase ?? 0) });
+
+        // Create data points for all moon phases, including those with 0 sightings
+        var moonPhaseGroups = allMoonPhases.Select(phase => new ChartDataPoint
+        {
+            Label = phase,
+            Value = sightingsByPhase.ContainsKey(phase) ? sightingsByPhase[phase].Count : 0,
+            Metadata = new Dictionary<string, object> 
+            { 
+                ["moonPhase"] = phase,
+                ["avgMoonPhaseValue"] = sightingsByPhase.ContainsKey(phase) ? sightingsByPhase[phase].AvgValue : 0
+            }
+        }).ToList();
 
         return new ChartData
         {

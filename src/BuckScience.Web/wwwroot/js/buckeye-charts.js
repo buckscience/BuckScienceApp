@@ -43,7 +43,7 @@ BuckEye.Charts = {
     // Chart color schemes - all green shades for consistent theming
     colorSchemes: {
         default: ['#527A52', '#8CAF8C', '#6B8E6B', '#9CC29C', '#4E734E', '#B8D6B8', '#3E5A3E', '#7A9A7A'],
-        greenShades: ['#2E4A2E', '#3E5A3E', '#4E734E', '#527A52', '#6B8E6B', '#7A9A7A', '#8CAF8C', '#9CC29C', '#B8D6B8', '#D4E6D4'],
+        greenShades: ['#2E4A2E', '#3E5A3E', '#4E734E', '#527A52', '#5E855E', '#6B8E6B', '#7A9A7A', '#8CAF8C', '#9CC29C', '#AECFAE', '#B8D6B8', '#C4E0C4', '#D4E6D4', '#E4F0E4'],
         timeOfDay: {
             'Morning': '#6B8E6B',
             'Midday': '#4E734E',
@@ -378,41 +378,32 @@ BuckEye.Charts = {
                     
                     meta.data.forEach((bar, index) => {
                         const label = chartData.dataPoints[index].label;
-                        const iconHtml = this.moonPhaseIcons[label];
                         
-                        if (iconHtml) {
-                            // Create a temporary div to render the icon
-                            const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = iconHtml;
-                            tempDiv.style.fontSize = '24px';
-                            tempDiv.style.color = this.colors.primary;
-                            
-                            // Calculate position below the bar
-                            const x = bar.x;
-                            const y = chartArea.bottom + 10;
-                            
-                            // Draw the moon phase text below (since we can't easily render HTML icons on canvas)
-                            ctx.save();
-                            ctx.fillStyle = this.colors.primary;
-                            ctx.font = '20px "Weather Icons"';
-                            ctx.textAlign = 'center';
-                            
-                            // Use Unicode symbols for moon phases as fallback
-                            const moonSymbols = {
-                                'New Moon': '🌑',
-                                'Waxing Crescent': '🌒',
-                                'First Quarter': '🌓',
-                                'Waxing Gibbous': '🌔',
-                                'Full Moon': '🌕',
-                                'Waning Gibbous': '🌖',
-                                'Last Quarter': '🌗',
-                                'Waning Crescent': '🌘'
-                            };
-                            
-                            const symbol = moonSymbols[label] || '🌙';
-                            ctx.fillText(symbol, x, y);
-                            ctx.restore();
-                        }
+                        // Calculate position below the bar
+                        const x = bar.x;
+                        const y = chartArea.bottom + 30;
+                        
+                        // Use Weather Icons font symbols for moon phases (monochrome)
+                        ctx.save();
+                        ctx.fillStyle = this.colors.primary;
+                        ctx.font = '24px "Weather Icons"';
+                        ctx.textAlign = 'center';
+                        
+                        // Map moon phases to Weather Icons Unicode symbols
+                        const moonIconSymbols = {
+                            'New Moon': '\uf095',
+                            'Waxing Crescent': '\uf09c',
+                            'First Quarter': '\uf09a',
+                            'Waxing Gibbous': '\uf09d',
+                            'Full Moon': '\uf097',
+                            'Waning Gibbous': '\uf09e',
+                            'Last Quarter': '\uf09b',
+                            'Waning Crescent': '\uf09f'
+                        };
+                        
+                        const symbol = moonIconSymbols[label] || '\uf095';
+                        ctx.fillText(symbol, x, y);
+                        ctx.restore();
                     });
                 }
             }];
