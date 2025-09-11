@@ -29,8 +29,8 @@ public class BuckEyeAnalyticsService
             throw new UnauthorizedAccessException("Profile not found or access denied");
         }
 
-        // Get all tagged photos with associated camera and weather data
-        var sightings = await _db.Photos
+        // Get all tagged photos with associated camera and weather data, ordered by camera and time
+        var allTaggedPhotos = await _db.Photos
             .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == profile.TagId))
             .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
             .Where(pc => pc.c.PropertyId == profile.PropertyId)
@@ -67,8 +67,12 @@ public class BuckEyeAnalyticsService
                 CloudCover = pc.p.Weather != null ? pc.p.Weather.CloudCover : (double?)null,
                 Visibility = pc.p.Weather != null ? pc.p.Weather.Visibility : (double?)null
             })
-            .OrderByDescending(s => s.DateTaken)
+            .OrderBy(s => s.CameraId)
+            .ThenBy(s => s.DateTaken)
             .ToListAsync(cancellationToken);
+
+        // Group photos into sightings: photos within 15 minutes at the same camera = one sighting
+        var sightings = GroupPhotosIntoSightings(allTaggedPhotos);
 
         return new ProfileAnalyticsData
         {
@@ -76,7 +80,7 @@ public class BuckEyeAnalyticsService
             PropertyName = profile.Name,
             Sightings = sightings,
             TotalSightings = sightings.Count,
-            TotalTaggedPhotos = sightings.Count, // Same for now
+            TotalTaggedPhotos = allTaggedPhotos.Count, // Total photos, not sightings
             DateRange = sightings.Any() ? 
                 new DateRange(sightings.Min(s => s.DateTaken), sightings.Max(s => s.DateTaken)) : 
                 new DateRange(DateTime.UtcNow, DateTime.UtcNow)
@@ -320,6 +324,55 @@ public class BuckEyeAnalyticsService
         }
 
         return summary;
+    }
+
+    /// <summary>
+    /// Groups photos into sightings based on camera location and time proximity.
+    /// Photos taken at the same camera within 15 minutes of each other are considered one sighting.
+    /// </summary>
+    private List<SightingData> GroupPhotosIntoSightings(List<SightingData> allPhotos)
+    {
+        var sightings = new List<SightingData>();
+        
+        // Group by camera first
+        var photosByCamera = allPhotos.GroupBy(p => p.CameraId);
+        
+        foreach (var cameraGroup in photosByCamera)
+        {
+            // Sort photos by time for this camera
+            var sortedPhotos = cameraGroup.OrderBy(p => p.DateTaken).ToList();
+            
+            if (!sortedPhotos.Any()) continue;
+            
+            // Start first sighting with first photo
+            var currentSighting = sortedPhotos[0];
+            var currentSightingStartTime = currentSighting.DateTaken;
+            
+            for (int i = 1; i < sortedPhotos.Count; i++)
+            {
+                var photo = sortedPhotos[i];
+                var timeDiff = photo.DateTaken - currentSightingStartTime;
+                
+                // If more than 15 minutes have passed, this is a new sighting
+                if (timeDiff.TotalMinutes > 15)
+                {
+                    // Add the current sighting to results
+                    sightings.Add(currentSighting);
+                    
+                    // Start new sighting with this photo
+                    currentSighting = photo;
+                    currentSightingStartTime = photo.DateTaken;
+                }
+                // else: this photo is part of the current sighting, no action needed
+                // (we keep the first photo of the sighting as the representative)
+            }
+            
+            // Don't forget to add the last sighting for this camera
+            sightings.Add(currentSighting);
+        }
+        
+        // Sort all sightings by date (most recent first) for consistent display
+        return sightings.OrderByDescending(s => s.DateTaken).ToList();
     }
 }
 

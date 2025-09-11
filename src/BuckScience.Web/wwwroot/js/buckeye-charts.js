@@ -4,6 +4,9 @@ window.BuckEye = window.BuckEye || {};
 BuckEye.Charts = {
     // Store chart instances for cleanup
     chartInstances: {},
+    
+    // Flag to prevent multiple initializations
+    initialized: false,
 
     // Color palette for consistent theming
     colors: {
@@ -57,6 +60,9 @@ BuckEye.Charts = {
         try {
             // Show loading state
             this.showLoading();
+
+            // Wait a small amount for the accordion to fully expand
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Load summary data first
             await this.loadSummary(profileId);
@@ -186,7 +192,10 @@ BuckEye.Charts = {
     // Create bar chart
     createBarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
+        if (!canvas) {
+            console.warn(`Canvas element '${canvasId}' not found`);
+            return;
+        }
 
         // Destroy existing chart if it exists
         if (this.chartInstances[canvasId]) {
@@ -194,6 +203,11 @@ BuckEye.Charts = {
         }
 
         const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error(`Failed to get 2D context for canvas '${canvasId}'`);
+            return;
+        }
+
         this.chartInstances[canvasId] = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -529,9 +543,95 @@ BuckEye.Charts = {
         }
     },
 
-    // Hide loading state
+    // Hide loading state and restore charts container
     hideLoading() {
-        // Loading will be replaced by chart content
+        const container = document.getElementById('buckeyeCharts');
+        if (container) {
+            container.innerHTML = `
+                <div class="row g-4">
+                    <!-- Sightings by Camera -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-body">
+                                <div class="buckeye-chart-container">
+                                    <canvas id="cameraChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sightings by Time of Day -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-body">
+                                <div class="buckeye-chart-container">
+                                    <canvas id="timeOfDayChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sightings by Moon Phase -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-body">
+                                <div class="buckeye-chart-container">
+                                    <canvas id="moonPhaseChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sightings by Wind Direction -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-body">
+                                <div class="buckeye-chart-container">
+                                    <canvas id="windDirectionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sightings by Temperature -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-body">
+                                <div class="buckeye-chart-container">
+                                    <canvas id="temperatureChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sighting Heatmap/Locations -->
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm buckeye-chart-card">
+                            <div class="card-header bg-white border-0">
+                                <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Sighting Locations</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="sightingHeatmap" style="min-height: 250px;">
+                                    <!-- Heatmap/location data will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="mt-4 text-center">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('csv')">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="BuckEye.Charts.exportData('json')">
+                            <i class="fas fa-download"></i> Export JSON
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
     },
 
     // Show error message
@@ -555,11 +655,17 @@ BuckEye.Charts = {
     }
 };
 
-// Auto-initialize if profile ID is available
+// Auto-initialize when analytics accordion is shown
 document.addEventListener('DOMContentLoaded', function() {
-    const profileId = document.querySelector('[data-profile-id]')?.getAttribute('data-profile-id');
-    if (profileId && document.getElementById('buckeyeAnalytics')) {
-        BuckEye.Charts.init(profileId);
+    const buckeyeCollapse = document.getElementById('buckeyeAnalyticsCollapse');
+    if (buckeyeCollapse) {
+        buckeyeCollapse.addEventListener('shown.bs.collapse', function() {
+            const profileId = document.querySelector('[data-profile-id]')?.getAttribute('data-profile-id');
+            if (profileId && !BuckEye.Charts.initialized) {
+                BuckEye.Charts.initialized = true;
+                BuckEye.Charts.init(profileId);
+            }
+        });
     }
 });
 
