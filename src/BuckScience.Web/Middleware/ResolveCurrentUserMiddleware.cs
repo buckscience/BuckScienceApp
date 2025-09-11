@@ -32,6 +32,7 @@ public sealed class ResolveCurrentUserMiddleware
 
             // Enhanced debugging
             Console.WriteLine($"[ResolveCurrentUserMiddleware] Authenticated user found. ExternalId: {externalId}");
+            _logger.LogInformation("ResolveCurrentUserMiddleware: Processing authenticated user with ExternalId: {ExternalId}", externalId);
             
             if (!string.IsNullOrWhiteSpace(externalId))
             {
@@ -42,11 +43,13 @@ public sealed class ResolveCurrentUserMiddleware
                     .FirstOrDefaultAsync(context.RequestAborted);
 
                 Console.WriteLine($"[ResolveCurrentUserMiddleware] AppUserId lookup result: {appUserId}");
+                _logger.LogInformation("ResolveCurrentUserMiddleware: Database lookup result for ExternalId {ExternalId}: UserId = {AppUserId}", externalId, appUserId);
 
                 if (appUserId.HasValue)
                 {
                     context.Items[CurrentUserConstants.AppUserIdItemKey] = appUserId.Value;
                     Console.WriteLine($"[ResolveCurrentUserMiddleware] Set context user ID: {appUserId.Value}");
+                    _logger.LogInformation("ResolveCurrentUserMiddleware: Successfully set context user ID: {UserId}", appUserId.Value);
                 }
                 else
                 {
@@ -79,7 +82,7 @@ public sealed class ResolveCurrentUserMiddleware
                         }
                         else
                         {
-                            _logger.LogDebug("ResolveCurrentUser: No ApplicationUser found for external id {ExternalId} or email {Email}", externalId, email);
+                            _logger.LogWarning("ResolveCurrentUser: No ApplicationUser found for external id {ExternalId} or email {Email}", externalId, email);
                             Console.WriteLine($"[ResolveCurrentUserMiddleware] WARNING: No ApplicationUser found for external id {externalId} or email {email}");
                         }
                     }
@@ -87,7 +90,7 @@ public sealed class ResolveCurrentUserMiddleware
             }
             else
             {
-                _logger.LogDebug("ResolveCurrentUser: No external subject claim found on authenticated principal.");
+                _logger.LogWarning("ResolveCurrentUser: No external subject claim found on authenticated principal.");
                 Console.WriteLine("[ResolveCurrentUserMiddleware] WARNING: No external subject claim found on authenticated principal");
             }
         }

@@ -5,6 +5,7 @@ using BuckScience.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Stripe;
 using Stripe.Checkout;
 using DomainSubscription = BuckScience.Domain.Entities.Subscription;
@@ -18,17 +19,20 @@ public class SubscriptionController : Controller
     private readonly ICurrentUserService _currentUserService;
     private readonly IStripeService _stripeService;
     private readonly IAppDbContext _context;
+    private readonly ILogger<SubscriptionController> _logger;
 
     public SubscriptionController(
         ISubscriptionService subscriptionService,
         ICurrentUserService currentUserService,
         IStripeService stripeService,
-        IAppDbContext context)
+        IAppDbContext context,
+        ILogger<SubscriptionController> logger)
     {
         _subscriptionService = subscriptionService;
         _currentUserService = currentUserService;
         _stripeService = stripeService;
         _context = context;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -36,7 +40,15 @@ public class SubscriptionController : Controller
     {
         if (_currentUserService.Id == null)
         {
-            return Unauthorized();
+            var isAuthenticated = _currentUserService.IsAuthenticated;
+            var email = _currentUserService.Email;
+            var azureId = _currentUserService.AzureEntraB2CId;
+            
+            _logger.LogError("User ID resolution failed in subscription index. Auth: {IsAuthenticated}, Email: {Email}, AzureId: {AzureId}", 
+                isAuthenticated, email, azureId);
+            
+            TempData["Error"] = $"Unable to load subscription information due to user identification issues. Please try logging out and back in, or contact support. (Auth: {isAuthenticated}, Email: {email})";
+            return RedirectToAction("Index", "Home");
         }
 
         var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
@@ -94,8 +106,11 @@ public class SubscriptionController : Controller
             var email = _currentUserService.Email;
             var azureId = _currentUserService.AzureEntraB2CId;
             
-            TempData["Error"] = $"User authentication failed. Please try logging out and back in. (Auth: {isAuthenticated}, Email: {email})";
-            return Unauthorized();
+            _logger.LogError("User ID resolution failed during subscription upgrade. Auth: {IsAuthenticated}, Email: {Email}, AzureId: {AzureId}", 
+                isAuthenticated, email, azureId);
+            
+            TempData["Error"] = $"Unable to process subscription change due to user identification issues. Please try logging out and back in, or contact support. (Auth: {isAuthenticated}, Email: {email})";
+            return RedirectToAction("Index");
         }
 
         try
