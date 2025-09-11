@@ -21,8 +21,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// Register BuckEye Analytics Service
-builder.Services.AddScoped<BuckEyeAnalyticsService>();
+// Register BuckLens Analytics Service
+builder.Services.AddScoped<BuckLensAnalyticsService>();
 
 // Register Azure Blob Storage service
 var storageConnectionString = builder.Configuration.GetConnectionString("StorageConnectionString");

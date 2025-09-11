@@ -5,11 +5,11 @@ using System.Globalization;
 
 namespace BuckScience.Application.Analytics;
 
-public class BuckEyeAnalyticsService
+public class BuckLensAnalyticsService
 {
     private readonly IAppDbContext _db;
 
-    public BuckEyeAnalyticsService(IAppDbContext db)
+    public BuckLensAnalyticsService(IAppDbContext db)
     {
         _db = db;
     }

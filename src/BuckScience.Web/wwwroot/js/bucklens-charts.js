@@ -1,7 +1,7 @@
-// BuckEye Analytics Chart Components
-window.BuckEye = window.BuckEye || {};
+// BuckLens Analytics Chart Components
+window.BuckLens = window.BuckLens || {};
 
-BuckEye.Charts = {
+BuckLens.Charts = {
     // Store chart instances for cleanup
     chartInstances: {},
     
@@ -83,14 +83,14 @@ BuckEye.Charts = {
             // Hide loading state
             this.hideLoading();
         } catch (error) {
-            console.error('Error initializing BuckEye charts:', error);
+            console.error('Error initializing BuckLens charts:', error);
             this.showError('Failed to load analytics data. Please try again.');
         }
     },
 
     // Ensure all required canvas elements exist in the DOM
     ensureCanvasElements() {
-        const chartsContainer = document.getElementById('buckeyeCharts');
+        const chartsContainer = document.getElementById('bucklensCharts');
         if (!chartsContainer) {
             console.error('Charts container not found');
             return;
@@ -110,16 +110,16 @@ BuckEye.Charts = {
 
     // Create the complete charts HTML structure
     createChartsHTML() {
-        const container = document.getElementById('buckeyeCharts');
+        const container = document.getElementById('bucklensCharts');
         if (!container) return;
 
         container.innerHTML = `
             <div class="row g-4">
                 <!-- Sightings by Camera -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-body">
-                            <div class="buckeye-chart-container">
+                            <div class="bucklens-chart-container">
                                 <canvas id="cameraChart"></canvas>
                             </div>
                         </div>
@@ -128,9 +128,9 @@ BuckEye.Charts = {
 
                 <!-- Sightings by Time of Day -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-body">
-                            <div class="buckeye-chart-container">
+                            <div class="bucklens-chart-container">
                                 <canvas id="timeOfDayChart"></canvas>
                             </div>
                         </div>
@@ -139,9 +139,9 @@ BuckEye.Charts = {
 
                 <!-- Sightings by Moon Phase -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-body">
-                            <div class="buckeye-chart-container">
+                            <div class="bucklens-chart-container">
                                 <canvas id="moonPhaseChart"></canvas>
                             </div>
                         </div>
@@ -150,9 +150,9 @@ BuckEye.Charts = {
 
                 <!-- Sightings by Wind Direction -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-body">
-                            <div class="buckeye-chart-container">
+                            <div class="bucklens-chart-container">
                                 <canvas id="windDirectionChart"></canvas>
                             </div>
                         </div>
@@ -161,9 +161,9 @@ BuckEye.Charts = {
 
                 <!-- Sightings by Temperature -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-body">
-                            <div class="buckeye-chart-container">
+                            <div class="bucklens-chart-container">
                                 <canvas id="temperatureChart"></canvas>
                             </div>
                         </div>
@@ -172,7 +172,7 @@ BuckEye.Charts = {
 
                 <!-- Sighting Heatmap/Locations -->
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm buckeye-chart-card">
+                    <div class="card border-0 shadow-sm bucklens-chart-card">
                         <div class="card-header bg-white border-0">
                             <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Sighting Locations</h6>
                         </div>
@@ -198,10 +198,10 @@ BuckEye.Charts = {
 
     // Update summary section
     updateSummary(data) {
-        const summaryContainer = document.getElementById('buckeyeSummary');
+        const summaryContainer = document.getElementById('bucklensSummary');
         if (!summaryContainer) return;
 
-        summaryContainer.className = 'mb-4 p-3 buckeye-summary rounded';
+        summaryContainer.className = 'mb-4 p-3 bucklens-summary rounded';
         summaryContainer.innerHTML = `
             <div class="row">
                 <div class="col-md-8">
@@ -364,7 +364,7 @@ BuckEye.Charts = {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
         
-        const container = canvas.closest('.buckeye-chart-container');
+        const container = canvas.closest('.bucklens-chart-container');
         if (!container) return;
         
         // Add moon-phase-chart class for special styling
@@ -558,7 +558,7 @@ BuckEye.Charts = {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
         
-        const container = canvas.closest('.buckeye-chart-container');
+        const container = canvas.closest('.bucklens-chart-container');
         if (!container) return;
         
         // Remove existing legend
@@ -651,7 +651,7 @@ BuckEye.Charts = {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `buckeye-analytics-${data.profileId}.csv`;
+        a.download = `bucklens-analytics-${data.profileId}.csv`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -665,7 +665,7 @@ BuckEye.Charts = {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `buckeye-analytics-${data.profileId}.json`;
+        a.download = `bucklens-analytics-${data.profileId}.json`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -675,10 +675,10 @@ BuckEye.Charts = {
     // Show loading state
     showLoading() {
         // Show loading in the summary section only
-        const summaryContainer = document.getElementById('buckeyeSummary');
+        const summaryContainer = document.getElementById('bucklensSummary');
         if (summaryContainer) {
             summaryContainer.innerHTML = `
-                <div class="buckeye-chart-loading text-center">
+                <div class="bucklens-chart-loading text-center">
                     <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
                         <span class="visually-hidden">Loading...</span>
                     </div>
@@ -691,7 +691,7 @@ BuckEye.Charts = {
         }
 
         // Add loading overlay to chart containers
-        const chartCards = document.querySelectorAll('.buckeye-chart-card .card-body');
+        const chartCards = document.querySelectorAll('.bucklens-chart-card .card-body');
         chartCards.forEach(cardBody => {
             const existingOverlay = cardBody.querySelector('.chart-loading-overlay');
             if (!existingOverlay) {
@@ -715,7 +715,7 @@ BuckEye.Charts = {
         overlays.forEach(overlay => overlay.remove());
 
         // Reset any inline styles that were added
-        const chartCards = document.querySelectorAll('.buckeye-chart-card .card-body');
+        const chartCards = document.querySelectorAll('.bucklens-chart-card .card-body');
         chartCards.forEach(cardBody => {
             cardBody.style.position = '';
         });
@@ -723,7 +723,7 @@ BuckEye.Charts = {
 
     // Show error message
     showError(message) {
-        const container = document.getElementById('buckeyeCharts');
+        const container = document.getElementById('bucklensCharts');
         if (container) {
             container.innerHTML = `
                 <div class="alert alert-danger" role="alert">
@@ -737,7 +737,7 @@ BuckEye.Charts = {
     showChartError(canvasId, message) {
         const canvas = document.getElementById(canvasId);
         if (canvas) {
-            const container = canvas.closest('.buckeye-chart-container') || canvas.closest('.card-body');
+            const container = canvas.closest('.bucklens-chart-container') || canvas.closest('.card-body');
             if (container) {
                 container.innerHTML = `
                     <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 200px;">
@@ -763,13 +763,13 @@ BuckEye.Charts = {
 
 // Auto-initialize when analytics accordion is shown
 document.addEventListener('DOMContentLoaded', function() {
-    const buckeyeCollapse = document.getElementById('buckeyeAnalyticsCollapse');
-    if (buckeyeCollapse) {
-        buckeyeCollapse.addEventListener('shown.bs.collapse', function() {
+    const bucklensCollapse = document.getElementById('bucklensAnalyticsCollapse');
+    if (bucklensCollapse) {
+        bucklensCollapse.addEventListener('shown.bs.collapse', function() {
             const profileId = document.querySelector('[data-profile-id]')?.getAttribute('data-profile-id');
-            if (profileId && !BuckEye.Charts.initialized) {
-                BuckEye.Charts.initialized = true;
-                BuckEye.Charts.init(profileId);
+            if (profileId && !BuckLens.Charts.initialized) {
+                BuckLens.Charts.initialized = true;
+                BuckLens.Charts.init(profileId);
             }
         });
     }
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-    if (window.BuckEye?.Charts) {
-        BuckEye.Charts.destroy();
+    if (window.BuckLens?.Charts) {
+        BuckLens.Charts.destroy();
     }
 });

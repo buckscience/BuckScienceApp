@@ -1,8 +1,8 @@
-# BuckEye Analytics Module
+# BuckLens Analytics Module
 
 ## Overview
 
-The BuckEye Analytics module provides comprehensive data visualization and analysis for animal profile sightings combined with weather data. This module extends the Profile Details view with interactive charts, summary statistics, and data export capabilities.
+The BuckLens Analytics module provides comprehensive data visualization and analysis for animal profile sightings combined with weather data. This module extends the Profile Details view with interactive charts, summary statistics, and data export capabilities.
 
 ## Features
 
@@ -48,8 +48,8 @@ All endpoints require authentication and verify profile ownership.
 
 ### Backend Components
 
-#### BuckEyeAnalyticsService
-Location: `src/BuckScience.Application/Analytics/BuckEyeAnalyticsService.cs`
+#### BuckLensAnalyticsService
+Location: `src/BuckScience.Application/Analytics/BuckLensAnalyticsService.cs`
 
 Core service responsible for:
 - Querying sighting data with associated weather information
@@ -64,8 +64,8 @@ Added API endpoints for serving chart data and analytics summaries.
 
 ### Frontend Components
 
-#### BuckEye Charts JavaScript Module
-Location: `src/BuckScience.Web/wwwroot/js/buckeye-charts.js`
+#### BuckLens Charts JavaScript Module
+Location: `src/BuckScience.Web/wwwroot/js/bucklens-charts.js`
 
 Features:
 - Chart.js integration for all visualization types
@@ -109,13 +109,13 @@ Analysis results including:
 ### Viewing Analytics
 
 1. Navigate to any Profile Details page
-2. Expand the "BuckEye Analytics" accordion section
+2. Expand the "BuckLens Analytics" accordion section
 3. Charts load automatically with the profile's sighting data
 4. Interact with charts for detailed information
 
 ### Data Export
 
-1. Scroll to the bottom of the BuckEye Analytics section
+1. Scroll to the bottom of the BuckLens Analytics section
 2. Click "Export CSV" or "Export JSON"
 3. File downloads automatically with profile-specific filename
 

@@ -17,9 +17,9 @@ public class ProfilesController : Controller
 {
     private readonly IAppDbContext _db;
     private readonly ICurrentUserService _currentUser;
-    private readonly BuckEyeAnalyticsService _analyticsService;
+    private readonly BuckLensAnalyticsService _analyticsService;
 
-    public ProfilesController(IAppDbContext db, ICurrentUserService currentUser, BuckEyeAnalyticsService analyticsService)
+    public ProfilesController(IAppDbContext db, ICurrentUserService currentUser, BuckLensAnalyticsService analyticsService)
     {
         _db = db;
         _currentUser = currentUser;
@@ -330,7 +330,7 @@ public class ProfilesController : Controller
             }).ToList();
     }
 
-    // BuckEye Analytics API Endpoints
+    // BuckLens Analytics API Endpoints
 
     // API: GET /profiles/{id}/analytics/summary
     [HttpGet]
