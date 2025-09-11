@@ -62,6 +62,8 @@ public class SubscriptionController : Controller
             PricingInfo = pricingInfo
         };
 
+        ViewBag.SidebarWide = true;
+
         return View(viewModel);
     }
 
