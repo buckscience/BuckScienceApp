@@ -41,5 +41,20 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
         builder.HasIndex(s => s.UserId);
         builder.HasIndex(s => s.StripeCustomerId);
         builder.HasIndex(s => s.StripeSubscriptionId);
+
+        // Seed trial subscription for darrin@buckscience.com (UserId = 1)
+        builder.HasData(new Subscription
+        {
+            Id = 1,
+            UserId = 1, // Links to the seeded darrin@buckscience.com user
+            StripeCustomerId = null, // No Stripe customer yet for trial
+            StripeSubscriptionId = null, // No Stripe subscription yet for trial
+            Tier = SubscriptionTier.Trial,
+            Status = "active",
+            CurrentPeriodStart = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc), // Same as user creation date
+            CurrentPeriodEnd = new DateTime(2025, 2, 3, 0, 0, 0, DateTimeKind.Utc), // 14 days trial period
+            CreatedAt = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc),
+            CanceledAt = null
+        });
     }
 }
