@@ -343,23 +343,23 @@ public class BuckEyeAnalyticsService
         string? bestTimeOfDay, string? bestCamera, string? bestMoonPhase, 
         string? bestWindDirection, string? bestTempRange)
     {
-        var summary = $"You currently have {totalSightings} sightings from {totalPhotos} tagged photos.";
+        var summary = $"You currently have <b>{totalSightings}</b> sightings from <b>{totalPhotos}</b> tagged photos.";
         
         if (totalSightings > 0)
         {
             var conditions = new List<string>();
             
             if (!string.IsNullOrEmpty(bestTimeOfDay))
-                conditions.Add($"during {bestTimeOfDay.ToLower()}");
+                conditions.Add($"during <b>{bestTimeOfDay.ToLower()}</b>");
             
             if (!string.IsNullOrEmpty(bestCamera))
-                conditions.Add($"at the {bestCamera} camera");
+                conditions.Add($"at the <b>{bestCamera}</b> camera");
             
             if (!string.IsNullOrEmpty(bestWindDirection))
-                conditions.Add($"when the wind is from the {bestWindDirection}");
+                conditions.Add($"when the wind is from the <b>{bestWindDirection}</b>");
             
             if (!string.IsNullOrEmpty(bestMoonPhase))
-                conditions.Add($"during a {bestMoonPhase}");
+                conditions.Add($"during a <b>{bestMoonPhase}</b>");
 
             if (conditions.Any())
             {
