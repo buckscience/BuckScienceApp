@@ -40,8 +40,6 @@ public class BuckEyeAnalyticsService
                 DateTaken = pc.p.DateTaken,
                 CameraId = pc.c.Id,
                 CameraName = pc.c.PlacementHistories
-                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
-                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
                     .Select(ph => ph.LocationName)
                     .FirstOrDefault(ln => !string.IsNullOrWhiteSpace(ln)) ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
                 Latitude = pc.c.PlacementHistories
