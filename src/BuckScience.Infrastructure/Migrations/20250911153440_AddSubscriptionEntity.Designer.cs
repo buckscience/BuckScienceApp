@@ -4,6 +4,7 @@ using BuckScience.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,9 +13,11 @@ using NetTopologySuite.Geometries;
 namespace BuckScience.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250911153440_AddSubscriptionEntity")]
+    partial class AddSubscriptionEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -504,18 +507,6 @@ namespace BuckScience.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Subscriptions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2025, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CurrentPeriodEnd = new DateTime(2025, 2, 3, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CurrentPeriodStart = new DateTime(2025, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Status = "active",
-                            Tier = 0,
-                            UserId = 1
-                        });
                 });
 
             modelBuilder.Entity("BuckScience.Domain.Entities.Tag", b =>
