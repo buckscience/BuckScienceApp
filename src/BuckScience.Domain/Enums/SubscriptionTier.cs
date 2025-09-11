@@ -6,6 +6,7 @@ namespace BuckScience.Domain.Enums
         Fawn = 1,
         Doe = 2,
         Buck = 3,
-        Expired = 4
+        Trophy = 4,
+        Expired = 5
     }
 }

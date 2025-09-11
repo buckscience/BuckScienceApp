@@ -29,12 +29,18 @@ public static class DependencyInjection
         // Configuration options
         services.Configure<WeatherApiSettings>(config.GetSection(WeatherApiSettings.SectionName));
         services.Configure<WeatherSettings>(config.GetSection(WeatherSettings.SectionName));
+        services.Configure<StripeSettings>(config.GetSection(StripeSettings.SectionName));
+        services.Configure<SubscriptionSettings>(config.GetSection(SubscriptionSettings.SectionName));
 
         // HTTP client for weather API
         services.AddHttpClient<WeatherService>();
 
         // Weather service
         services.AddScoped<IWeatherService, WeatherService>();
+
+        // Subscription services
+        services.AddScoped<IStripeService, StripeService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
 
         // If you have IUserProvisioningService in Infrastructure:
         services.AddScoped<IUserProvisioningService, UserProvisioningService>();

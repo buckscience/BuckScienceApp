@@ -21,6 +21,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<PhotoTag> PhotoTags => Set<PhotoTag>();
     public DbSet<PropertyTag> PropertyTags => Set<PropertyTag>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<Weather> Weathers => Set<Weather>();
