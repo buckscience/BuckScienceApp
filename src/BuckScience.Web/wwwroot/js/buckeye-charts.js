@@ -80,9 +80,6 @@ BuckEye.Charts = {
                 this.loadTemperatureChart(profileId)
             ]);
 
-            // Load sighting locations for heatmap
-            await this.loadSightingLocations(profileId);
-
             // Hide loading state
             this.hideLoading();
         } catch (error) {
@@ -283,15 +280,6 @@ BuckEye.Charts = {
         this.createBarChart('temperatureChart', chartData);
     },
 
-    // Load sighting locations for heatmap
-    async loadSightingLocations(profileId) {
-        const response = await fetch(`/profiles/${profileId}/analytics/sightings/locations`);
-        if (!response.ok) throw new Error('Failed to load sighting locations');
-        
-        const locations = await response.json();
-        this.updateHeatmap(locations);
-    },
-
     // Create bar chart with optional moon phase icons
     createBarChart(canvasId, chartData) {
         const canvas = document.getElementById(canvasId);
@@ -430,6 +418,9 @@ BuckEye.Charts = {
         const container = canvas.closest('.buckeye-chart-container');
         if (!container) return;
         
+        // Add moon-phase-chart class for special styling
+        container.classList.add('moon-phase-chart');
+        
         // Remove existing icon container
         const existingIcons = container.querySelector('.moon-phase-icons');
         if (existingIcons) {
@@ -439,7 +430,7 @@ BuckEye.Charts = {
         // Create icon container
         const iconContainer = document.createElement('div');
         iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-2 pt-2 border-top';
-        iconContainer.style.fontSize = '24px';
+        iconContainer.style.fontSize = '20px';
         
         // Add icons for each data point
         chartData.dataPoints.forEach(point => {
@@ -450,7 +441,7 @@ BuckEye.Charts = {
             const iconHtml = this.moonPhaseIcons[point.label] || '<i class="wi wi-moon-alt"></i>';
             iconDiv.innerHTML = `
                 <div>${iconHtml}</div>
-                <small class="text-muted d-block" style="font-size: 10px;">${point.label}</small>
+                <small class="text-muted d-block" style="font-size: 9px;">${point.label}</small>
             `;
             
             iconContainer.appendChild(iconDiv);
@@ -657,100 +648,11 @@ BuckEye.Charts = {
         container.appendChild(legendContainer);
     },
 
-    // Update heatmap with sighting locations
-    updateHeatmap(locations) {
-        // This would integrate with the existing map system
-        // For now, we'll create a simple location list
-        const heatmapContainer = document.getElementById('sightingHeatmap');
-        if (!heatmapContainer) return;
-
-        if (locations.length === 0) {
-            heatmapContainer.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No location data available for sightings.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const locationGroups = locations.reduce((groups, location) => {
-            const key = `${location.cameraName || 'Unknown Camera'}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(location);
-            return groups;
-        }, {});
-
-        let html = '<div class="row g-2">';
-        Object.entries(locationGroups).forEach(([camera, locs]) => {
-            const latestLocation = locs[0]; // Most recent sighting
-            html += `
-                <div class="col-md-6">
-                    <div class="buckeye-location-card p-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">
-                                    <i class="fas fa-camera me-2"></i>${camera}
-                                </h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-crosshairs me-1"></i>${locs.length} sighting${locs.length > 1 ? 's' : ''}
-                                </small>
-                                ${latestLocation.temperature ? `
-                                    <div class="mt-1">
-                                        <small class="temperature-bin">
-                                            <i class="fas fa-thermometer-half me-1"></i>
-                                            ${Math.round(latestLocation.temperature * 9/5 + 32)}°F
-                                        </small>
-                                    </div>
-                                ` : ''}
-                                ${latestLocation.windDirection ? `
-                                    <div class="mt-1">
-                                        <small class="text-muted">
-                                            <span class="wind-direction-icon">${this.windDirectionIcons[latestLocation.windDirection] || '🧭'}</span>
-                                            ${latestLocation.windDirection}
-                                        </small>
-                                    </div>
-                                ` : ''}
-                                ${latestLocation.moonPhase ? `
-                                    <div class="mt-1">
-                                        <small class="text-muted">
-                                            <span class="moon-phase-icon">${this.moonPhaseIcons[latestLocation.moonPhase] || '<i class="wi wi-moon-alt"></i>'}</span>
-                                            ${latestLocation.moonPhase}
-                                        </small>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <div class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" onclick="BuckEye.Charts.showLocationDetails('${camera}')">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-muted">
-                                <i class="fas fa-clock me-1"></i>Latest: ${new Date(latestLocation.dateTaken).toLocaleDateString()}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-
-        heatmapContainer.innerHTML = html;
-    },
-
     // Handle chart click events for drilldown
     handleChartClick(chartType, dataPoint) {
         console.log('Chart clicked:', chartType, dataPoint);
         // TODO: Implement drilldown functionality
         // This could show a modal with detailed sighting information
-    },
-
-    // Show location details on map
-    showLocationDetails(cameraName) {
-        console.log('Show location details for:', cameraName);
-        // TODO: Integrate with existing map functionality to highlight camera location
     },
 
     // Export chart data

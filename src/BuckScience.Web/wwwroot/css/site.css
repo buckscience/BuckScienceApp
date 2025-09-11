@@ -832,6 +832,11 @@ html, body {
     max-height: 300px;
 }
 
+.buckeye-chart-container.moon-phase-chart {
+    height: 350px;
+    max-height: 350px;
+}
+
 .buckeye-chart-loading {
     display: flex;
     align-items: center;
@@ -900,6 +905,11 @@ html, body {
     .buckeye-chart-container {
         height: 250px;
         max-height: 250px;
+    }
+    
+    .buckeye-chart-container.moon-phase-chart {
+        height: 300px;
+        max-height: 300px;
     }
     
     .buckeye-summary .badge {
