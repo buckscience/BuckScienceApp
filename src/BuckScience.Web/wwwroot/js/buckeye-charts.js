@@ -17,6 +17,26 @@ BuckEye.Charts = {
         dark: '#343a40'
     },
 
+    // Moon phase icons mapping
+    moonPhaseIcons: {
+        'New Moon': '🌑',
+        'Waxing Crescent': '🌒',
+        'First Quarter': '🌓',
+        'Waxing Gibbous': '🌔',
+        'Full Moon': '🌕',
+        'Waning Gibbous': '🌖',
+        'Last Quarter': '🌗',
+        'Waning Crescent': '🌘'
+    },
+
+    // Wind direction icons
+    windDirectionIcons: {
+        'N': '↑', 'NNE': '↗', 'NE': '↗', 'ENE': '↗',
+        'E': '→', 'ESE': '↘', 'SE': '↘', 'SSE': '↘',
+        'S': '↓', 'SSW': '↙', 'SW': '↙', 'WSW': '↙',
+        'W': '←', 'WNW': '↖', 'NW': '↖', 'NNW': '↖'
+    },
+
     // Chart color schemes
     colorSchemes: {
         default: ['#527A52', '#8CAF8C', '#4a5a5f', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1', '#e83e8c'],
@@ -75,19 +95,20 @@ BuckEye.Charts = {
         const summaryContainer = document.getElementById('buckeyeSummary');
         if (!summaryContainer) return;
 
+        summaryContainer.className = 'mb-4 p-3 buckeye-summary rounded';
         summaryContainer.innerHTML = `
             <div class="row">
                 <div class="col-md-8">
-                    <h6 class="fw-semibold mb-2">Sightings Summary</h6>
+                    <h6 class="fw-semibold mb-2"><i class="fas fa-chart-line me-2"></i>Sightings Summary</h6>
                     <p class="mb-2">${data.bestOdds.summary}</p>
                     ${data.bestOdds.bestTimeOfDay ? `
                         <div class="mb-2">
                             <small class="text-muted">Best patterns identified:</small>
                             <ul class="small mb-0 mt-1">
-                                ${data.bestOdds.bestTimeOfDay ? `<li><strong>Time:</strong> ${data.bestOdds.bestTimeOfDay}</li>` : ''}
-                                ${data.bestOdds.bestCamera ? `<li><strong>Camera:</strong> ${data.bestOdds.bestCamera}</li>` : ''}
-                                ${data.bestOdds.bestWindDirection ? `<li><strong>Wind:</strong> ${data.bestOdds.bestWindDirection}</li>` : ''}
-                                ${data.bestOdds.bestMoonPhase ? `<li><strong>Moon:</strong> ${data.bestOdds.bestMoonPhase}</li>` : ''}
+                                ${data.bestOdds.bestTimeOfDay ? `<li><strong><i class="fas fa-clock me-1"></i>Time:</strong> ${data.bestOdds.bestTimeOfDay}</li>` : ''}
+                                ${data.bestOdds.bestCamera ? `<li><strong><i class="fas fa-camera me-1"></i>Camera:</strong> ${data.bestOdds.bestCamera}</li>` : ''}
+                                ${data.bestOdds.bestWindDirection ? `<li><strong><i class="fas fa-wind me-1"></i>Wind:</strong> ${data.bestOdds.bestWindDirection}</li>` : ''}
+                                ${data.bestOdds.bestMoonPhase ? `<li><strong><span class="moon-phase-icon">${this.moonPhaseIcons[data.bestOdds.bestMoonPhase] || '🌙'}</span>Moon:</strong> ${data.bestOdds.bestMoonPhase}</li>` : ''}
                             </ul>
                         </div>
                     ` : ''}
@@ -96,6 +117,12 @@ BuckEye.Charts = {
                     <div class="text-end">
                         <div class="badge bg-primary fs-6 mb-2">${data.totalSightings} Sightings</div><br>
                         <small class="text-muted">From ${data.totalTaggedPhotos} tagged photos</small>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                ${new Date(data.dateRange.start).toLocaleDateString()} - ${new Date(data.dateRange.end).toLocaleDateString()}
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -328,7 +355,12 @@ BuckEye.Charts = {
         if (!heatmapContainer) return;
 
         if (locations.length === 0) {
-            heatmapContainer.innerHTML = '<p class="text-muted">No location data available for sightings.</p>';
+            heatmapContainer.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No location data available for sightings.</p>
+                </div>
+            `;
             return;
         }
 
@@ -341,17 +373,53 @@ BuckEye.Charts = {
 
         let html = '<div class="row g-2">';
         Object.entries(locationGroups).forEach(([camera, locs]) => {
+            const latestLocation = locs[0]; // Most recent sighting
             html += `
                 <div class="col-md-6">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body p-2">
-                            <h6 class="card-title mb-1">${camera}</h6>
-                            <small class="text-muted">${locs.length} sightings</small>
-                            <div class="mt-1">
+                    <div class="buckeye-location-card p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="fas fa-camera me-2"></i>${camera}
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-crosshairs me-1"></i>${locs.length} sighting${locs.length > 1 ? 's' : ''}
+                                </small>
+                                ${latestLocation.temperature ? `
+                                    <div class="mt-1">
+                                        <small class="temperature-bin">
+                                            <i class="fas fa-thermometer-half me-1"></i>
+                                            ${Math.round(latestLocation.temperature * 9/5 + 32)}°F
+                                        </small>
+                                    </div>
+                                ` : ''}
+                                ${latestLocation.windDirection ? `
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            <span class="wind-direction-icon">${this.windDirectionIcons[latestLocation.windDirection] || '🧭'}</span>
+                                            ${latestLocation.windDirection}
+                                        </small>
+                                    </div>
+                                ` : ''}
+                                ${latestLocation.moonPhase ? `
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            <span class="moon-phase-icon">${this.moonPhaseIcons[latestLocation.moonPhase] || '🌙'}</span>
+                                            ${latestLocation.moonPhase}
+                                        </small>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-end">
                                 <button class="btn btn-sm btn-outline-primary" onclick="BuckEye.Charts.showLocationDetails('${camera}')">
-                                    <i class="fas fa-map-marker-alt"></i> View on Map
+                                    <i class="fas fa-map-marker-alt"></i>
                                 </button>
                             </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>Latest: ${new Date(latestLocation.dateTaken).toLocaleDateString()}
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -448,11 +516,14 @@ BuckEye.Charts = {
         const container = document.getElementById('buckeyeCharts');
         if (container) {
             container.innerHTML = `
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
+                <div class="buckeye-chart-loading">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-2 text-muted">Loading analytics data...</p>
+                    <p class="mt-3 text-muted">
+                        <i class="fas fa-chart-line me-2"></i>Loading analytics data...
+                    </p>
+                    <small class="text-muted">Analyzing sightings and weather patterns</small>
                 </div>
             `;
         }
