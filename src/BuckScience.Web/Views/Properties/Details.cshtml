@@ -811,8 +811,9 @@
                 });
             });
 
-            // Handle collapse button icon rotation
-            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+            // Handle collapse button icon rotation for feature category toggles only
+            // (Main accordion buttons are handled automatically by Bootstrap)
+            document.querySelectorAll('.feature-category-group [data-bs-toggle="collapse"]').forEach(button => {
                 button.addEventListener('click', function() {
                     const icon = this.querySelector('i');
                     if (icon) {
