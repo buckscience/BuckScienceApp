@@ -31,6 +31,9 @@ public class StripeService : IStripeService
             throw new InvalidOperationException($"No valid price ID configured for tier: {tier}");
         }
 
+        // Validate the price exists and is active in Stripe before creating session
+        await ValidatePriceInStripeAsync(priceId, tier);
+
         try
         {
             var options = new SessionCreateOptions
@@ -48,18 +51,24 @@ public class StripeService : IStripeService
                 Mode = "subscription",
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
+                // Add locale and additional configuration to prevent checkout issues
+                Locale = "auto",
+                AllowPromotionCodes = false,
+                BillingAddressCollection = "required"
             };
 
             var service = new SessionService();
             var session = await service.CreateAsync(options);
             
-            _logger.LogInformation("Created checkout session {SessionId} for customer {CustomerId}", session.Id, customerId);
+            _logger.LogInformation("Successfully created checkout session {SessionId} for customer {CustomerId} with tier {Tier} and price {PriceId}. Checkout URL: {CheckoutUrl}", 
+                session.Id, customerId, tier, priceId, session.Url);
             return session.Url;
         }
         catch (StripeException ex)
         {
-            _logger.LogError(ex, "Stripe error creating checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
-            throw new InvalidOperationException($"Failed to create checkout session: {ex.Message}", ex);
+            _logger.LogError(ex, "Stripe error creating checkout session for customer {CustomerId} with tier {Tier} and price {PriceId}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
+                customerId, tier, priceId, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
+            throw new InvalidOperationException($"Failed to create checkout session for {tier} tier: {ex.Message} (Error Code: {ex.StripeError?.Code})", ex);
         }
     }
 
@@ -183,5 +192,39 @@ public class StripeService : IStripeService
         var priceIds = _stripeSettings.GetPriceIds();
         var tierName = tier.ToString().ToLower();
         return priceIds.TryGetValue(tierName, out var priceId) ? priceId : null;
+    }
+
+    private async Task ValidatePriceInStripeAsync(string priceId, SubscriptionTier tier)
+    {
+        try
+        {
+            var priceService = new PriceService();
+            var price = await priceService.GetAsync(priceId);
+            
+            if (!price.Active)
+            {
+                _logger.LogError("Price {PriceId} for tier {Tier} is inactive in Stripe", priceId, tier);
+                throw new InvalidOperationException($"The {tier} plan is currently unavailable - price is inactive");
+            }
+
+            // Also validate the associated product
+            var productService = new ProductService();
+            var product = await productService.GetAsync(price.ProductId);
+            
+            if (!product.Active)
+            {
+                _logger.LogError("Product {ProductId} for price {PriceId} and tier {Tier} is inactive in Stripe", product.Id, priceId, tier);
+                throw new InvalidOperationException($"The {tier} plan is currently unavailable - product is inactive");
+            }
+
+            _logger.LogInformation("Successfully validated price {PriceId} for tier {Tier}. Product: {ProductName} ({ProductId}), Amount: {Amount} {Currency}", 
+                priceId, tier, product.Name, product.Id, price.UnitAmount, price.Currency);
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Failed to validate price {PriceId} for tier {Tier} in Stripe. Error: {StripeErrorType} - {StripeErrorCode}", 
+                priceId, tier, ex.StripeError?.Type, ex.StripeError?.Code);
+            throw new InvalidOperationException($"Unable to validate {tier} plan pricing: {ex.Message}", ex);
+        }
     }
 }

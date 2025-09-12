@@ -91,15 +91,22 @@ public class SubscriptionController : Controller
     {
         if (_currentUserService.Id is null) return Forbid();
 
+        _logger.LogInformation("Processing {Action} request for user {UserId} to tier {Tier}", action, _currentUserService.Id.Value, tier);
+
         try
         {
             // Pre-validate subscription change before creating Stripe session
             var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
             var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
             
+            _logger.LogInformation("User {UserId} current subscription state: Tier={CurrentTier}, SubscriptionId={SubscriptionId}, Status={Status}", 
+                _currentUserService.Id.Value, currentTier, currentSubscription?.Id, currentSubscription?.Status);
+            
             // Validate tier change is allowed
             if (!IsValidTierChange(currentTier, tier))
             {
+                _logger.LogWarning("Invalid tier change attempted by user {UserId}: {CurrentTier} -> {NewTier}", 
+                    _currentUserService.Id.Value, currentTier, tier);
                 TempData["Error"] = $"Invalid subscription change: Cannot change from {currentTier} to {tier}";
                 return RedirectToAction("Index");
             }
@@ -108,11 +115,14 @@ public class SubscriptionController : Controller
             var priceInfo = await _stripeService.GetPriceInfoAsync(tier);
             if (priceInfo == null || !priceInfo.IsActive)
             {
-                _logger.LogWarning("Attempted to subscribe to unavailable tier {Tier} by user {UserId}. PriceInfo: {PriceInfo}", 
+                _logger.LogWarning("Attempted to subscribe to unavailable tier {Tier} by user {UserId}. PriceInfo: {@PriceInfo}", 
                     tier, _currentUserService.Id.Value, priceInfo);
                 TempData["Error"] = $"The {tier} plan is currently unavailable. Please contact support or try a different plan.";
                 return RedirectToAction("Index");
             }
+
+            _logger.LogInformation("Price validation successful for tier {Tier}: {PriceId} - ${Amount} {Currency}", 
+                tier, priceInfo.PriceId, priceInfo.Amount, priceInfo.Currency);
 
             var successUrl = Url.Action("Success", "Subscription", null, Request.Scheme);
             var cancelUrl = Url.Action("Index", "Subscription", null, Request.Scheme);
@@ -122,6 +132,7 @@ public class SubscriptionController : Controller
             // Determine whether to create new subscription or update existing
             if (currentTier == SubscriptionTier.Trial || currentSubscription?.StripeSubscriptionId == null)
             {
+                _logger.LogInformation("Creating new subscription for user {UserId} to tier {Tier}", _currentUserService.Id.Value, tier);
                 checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
                     _currentUserService.Id.Value, 
                     tier, 
@@ -130,6 +141,8 @@ public class SubscriptionController : Controller
             }
             else
             {
+                _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
+                    _currentUserService.Id.Value, currentTier, tier);
                 checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
                     _currentUserService.Id.Value, 
                     tier, 
@@ -137,13 +150,19 @@ public class SubscriptionController : Controller
                     cancelUrl!);
             }
 
+            _logger.LogInformation("Successfully created checkout URL for user {UserId} tier {Tier}: {CheckoutUrl}", 
+                _currentUserService.Id.Value, tier, checkoutUrl);
+
             return Redirect(checkoutUrl);
         }
         catch (Exception ex)
         {
             var errorMessage = action == "Subscribe" 
-                ? $"Error creating subscription: {ex.Message}"
-                : $"Error updating subscription: {ex.Message}";
+                ? $"Error creating subscription for {tier} plan: {ex.Message}"
+                : $"Error updating subscription to {tier} plan: {ex.Message}";
+            
+            _logger.LogError(ex, "Failed to process {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
+                action, _currentUserService.Id.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
             return RedirectToAction("Index");
