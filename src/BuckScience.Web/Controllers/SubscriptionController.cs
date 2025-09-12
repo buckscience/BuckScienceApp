@@ -38,56 +38,12 @@ public class SubscriptionController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        int? userId = _currentUserService.Id;
-        
-        // If user ID is not resolved, try to resolve it manually as a fallback
-        if (userId == null && _currentUserService.IsAuthenticated)
-        {
-            var azureId = _currentUserService.AzureEntraB2CId;
-            if (!string.IsNullOrWhiteSpace(azureId))
-            {
-                _logger.LogWarning("User ID not resolved by middleware for Azure ID {AzureId}, attempting manual resolution", azureId);
-                
-                try
-                {
-                    var user = await _context.ApplicationUsers
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(u => u.AzureEntraB2CId == azureId);
-                    
-                    if (user != null)
-                    {
-                        userId = user.Id;
-                        _logger.LogInformation("Successfully resolved user ID {UserId} for Azure ID {AzureId}", userId, azureId);
-                    }
-                    else
-                    {
-                        _logger.LogError("No ApplicationUser found for Azure ID {AzureId}", azureId);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during manual user resolution for Azure ID {AzureId}", azureId);
-                }
-            }
-        }
-        
-        if (userId == null)
-        {
-            var isAuthenticated = _currentUserService.IsAuthenticated;
-            var email = _currentUserService.Email;
-            var azureId = _currentUserService.AzureEntraB2CId;
-            
-            _logger.LogError("User ID resolution failed in subscription index. Auth: {IsAuthenticated}, Email: {Email}, AzureId: {AzureId}", 
-                isAuthenticated, email, azureId);
-            
-            TempData["Error"] = "Unable to load subscription information due to user identification issues. Please try refreshing the page or logging out and back in. If the problem persists, contact support.";
-            return RedirectToAction("Index", "Home");
-        }
+        if (_currentUserService.Id is null) return Forbid();
 
-        var subscription = await _subscriptionService.GetUserSubscriptionAsync(userId.Value);
-        var tier = await _subscriptionService.GetUserSubscriptionTierAsync(userId.Value);
-        var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(userId.Value);
-        var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(userId.Value);
+        var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
+        var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
+        var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUserService.Id.Value);
+        var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(_currentUserService.Id.Value);
 
         // Fetch dynamic pricing information from Stripe
         var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
@@ -133,57 +89,13 @@ public class SubscriptionController : Controller
 
     private async Task<IActionResult> ProcessSubscriptionChange(SubscriptionTier tier, string action)
     {
-        int? userId = _currentUserService.Id;
-        
-        // If user ID is not resolved, try to resolve it manually as a fallback
-        if (userId == null && _currentUserService.IsAuthenticated)
-        {
-            var azureId = _currentUserService.AzureEntraB2CId;
-            if (!string.IsNullOrWhiteSpace(azureId))
-            {
-                _logger.LogWarning("User ID not resolved by middleware for Azure ID {AzureId}, attempting manual resolution", azureId);
-                
-                try
-                {
-                    var user = await _context.ApplicationUsers
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(u => u.AzureEntraB2CId == azureId);
-                    
-                    if (user != null)
-                    {
-                        userId = user.Id;
-                        _logger.LogInformation("Successfully resolved user ID {UserId} for Azure ID {AzureId}", userId, azureId);
-                    }
-                    else
-                    {
-                        _logger.LogError("No ApplicationUser found for Azure ID {AzureId}", azureId);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during manual user resolution for Azure ID {AzureId}", azureId);
-                }
-            }
-        }
-        
-        if (userId == null)
-        {
-            var isAuthenticated = _currentUserService.IsAuthenticated;
-            var email = _currentUserService.Email;
-            var azureId = _currentUserService.AzureEntraB2CId;
-            
-            _logger.LogError("User ID resolution failed during subscription upgrade. Auth: {IsAuthenticated}, Email: {Email}, AzureId: {AzureId}", 
-                isAuthenticated, email, azureId);
-            
-            TempData["Error"] = "Unable to process subscription change due to user identification issues. Please try refreshing the page or logging out and back in. If the problem persists, contact support.";
-            return RedirectToAction("Index");
-        }
+        if (_currentUserService.Id is null) return Forbid();
 
         try
         {
             // Pre-validate subscription change before creating Stripe session
-            var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(userId.Value);
-            var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(userId.Value);
+            var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
+            var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
             
             // Validate tier change is allowed
             if (!IsValidTierChange(currentTier, tier))
@@ -209,7 +121,7 @@ public class SubscriptionController : Controller
             if (currentTier == SubscriptionTier.Trial || currentSubscription?.StripeSubscriptionId == null)
             {
                 checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
-                    userId.Value, 
+                    _currentUserService.Id.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
@@ -217,7 +129,7 @@ public class SubscriptionController : Controller
             else
             {
                 checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
-                    userId.Value, 
+                    _currentUserService.Id.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
