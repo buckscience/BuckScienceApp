@@ -110,16 +110,32 @@ public class SubscriptionViewModel
         switch (CurrentTier)
         {
             case SubscriptionTier.Trial:
-                upgrades.AddRange([SubscriptionTier.Fawn, SubscriptionTier.Doe, SubscriptionTier.Buck, SubscriptionTier.Trophy]);
+                upgrades.AddRange([SubscriptionTier.Fawn, SubscriptionTier.Doe, SubscriptionTier.Buck]);
+                // Only add Trophy if it has valid pricing configuration
+                if (PricingInfo.ContainsKey(SubscriptionTier.Trophy) && PricingInfo[SubscriptionTier.Trophy].IsActive)
+                {
+                    upgrades.Add(SubscriptionTier.Trophy);
+                }
                 break;
             case SubscriptionTier.Fawn:
-                upgrades.AddRange([SubscriptionTier.Doe, SubscriptionTier.Buck, SubscriptionTier.Trophy]);
+                upgrades.AddRange([SubscriptionTier.Doe, SubscriptionTier.Buck]);
+                if (PricingInfo.ContainsKey(SubscriptionTier.Trophy) && PricingInfo[SubscriptionTier.Trophy].IsActive)
+                {
+                    upgrades.Add(SubscriptionTier.Trophy);
+                }
                 break;
             case SubscriptionTier.Doe:
-                upgrades.AddRange([SubscriptionTier.Buck, SubscriptionTier.Trophy]);
+                upgrades.Add(SubscriptionTier.Buck);
+                if (PricingInfo.ContainsKey(SubscriptionTier.Trophy) && PricingInfo[SubscriptionTier.Trophy].IsActive)
+                {
+                    upgrades.Add(SubscriptionTier.Trophy);
+                }
                 break;
             case SubscriptionTier.Buck:
-                upgrades.Add(SubscriptionTier.Trophy);
+                if (PricingInfo.ContainsKey(SubscriptionTier.Trophy) && PricingInfo[SubscriptionTier.Trophy].IsActive)
+                {
+                    upgrades.Add(SubscriptionTier.Trophy);
+                }
                 break;
         }
         
