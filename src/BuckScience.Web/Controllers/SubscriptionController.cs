@@ -108,6 +108,8 @@ public class SubscriptionController : Controller
             var priceInfo = await _stripeService.GetPriceInfoAsync(tier);
             if (priceInfo == null || !priceInfo.IsActive)
             {
+                _logger.LogWarning("Attempted to subscribe to unavailable tier {Tier} by user {UserId}. PriceInfo: {PriceInfo}", 
+                    tier, _currentUserService.Id.Value, priceInfo);
                 TempData["Error"] = $"The {tier} plan is currently unavailable. Please contact support or try a different plan.";
                 return RedirectToAction("Index");
             }
