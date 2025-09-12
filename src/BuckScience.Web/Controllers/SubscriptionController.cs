@@ -1,11 +1,13 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Domain.Enums;
+using BuckScience.Shared.Configuration;
 using BuckScience.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Stripe;
 using Stripe.Checkout;
 using DomainSubscription = BuckScience.Domain.Entities.Subscription;
@@ -20,19 +22,22 @@ public class SubscriptionController : Controller
     private readonly IStripeService _stripeService;
     private readonly IAppDbContext _context;
     private readonly ILogger<SubscriptionController> _logger;
+    private readonly StripeSettings _stripeSettings;
 
     public SubscriptionController(
         ISubscriptionService subscriptionService,
         ICurrentUserService currentUserService,
         IStripeService stripeService,
         IAppDbContext context,
-        ILogger<SubscriptionController> logger)
+        ILogger<SubscriptionController> logger,
+        IOptions<StripeSettings> stripeSettings)
     {
         _subscriptionService = subscriptionService;
         _currentUserService = currentUserService;
         _stripeService = stripeService;
         _context = context;
         _logger = logger;
+        _stripeSettings = stripeSettings.Value;
     }
 
     [HttpGet]
@@ -208,21 +213,35 @@ public class SubscriptionController : Controller
         
         try
         {
-            _logger.LogInformation("Received Stripe webhook");
+            _logger.LogInformation("Received Stripe webhook with payload length: {PayloadLength}", json.Length);
             
-            // Parse the Stripe event
+            // Get the Stripe signature from headers
+            var stripeSignature = Request.Headers["Stripe-Signature"].FirstOrDefault();
+            if (string.IsNullOrEmpty(stripeSignature))
+            {
+                _logger.LogError("Missing Stripe-Signature header in webhook request");
+                return BadRequest("Missing Stripe signature");
+            }
+            
+            // Verify the webhook signature and parse the event
             Event stripeEvent;
             try
             {
-                stripeEvent = EventUtility.ParseEvent(json);
+                stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, _stripeSettings.WebhookSecret);
+                _logger.LogInformation("Successfully verified Stripe webhook signature for event: {EventType} with ID: {EventId}", 
+                    stripeEvent.Type, stripeEvent.Id);
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, "Failed to verify Stripe webhook signature. Signature: {Signature}, PayloadLength: {Length}", 
+                    stripeSignature, json.Length);
+                return BadRequest("Invalid Stripe signature");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to parse Stripe event from JSON: {Json}", json);
                 return BadRequest("Invalid event format");
             }
-            
-            _logger.LogInformation("Processing Stripe event: {EventType} with ID: {EventId}", stripeEvent.Type, stripeEvent.Id);
 
             switch (stripeEvent.Type)
             {
@@ -285,10 +304,22 @@ public class SubscriptionController : Controller
                 subscription.CurrentPeriodStart = DateTime.UtcNow;
                 subscription.CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1);
 
+                // Determine the tier from the subscription
+                var tier = await DetermineSubscriptionTierFromStripe(session.SubscriptionId);
+                if (tier.HasValue)
+                {
+                    subscription.Tier = tier.Value;
+                    _logger.LogInformation("Updated subscription tier to {Tier} for user {UserId}", tier.Value, subscription.UserId);
+                }
+                else
+                {
+                    _logger.LogWarning("Could not determine subscription tier for Stripe subscription {SubscriptionId}", session.SubscriptionId);
+                }
+
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation("Updated subscription {SubscriptionId} for user {UserId} to active status", 
-                    subscription.Id, subscription.UserId);
+                _logger.LogInformation("Updated subscription {SubscriptionId} for user {UserId} to active status with tier {Tier}", 
+                    subscription.Id, subscription.UserId, subscription.Tier);
             }
         }
         catch (Exception ex)
@@ -366,6 +397,46 @@ public class SubscriptionController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling subscription deletion for Stripe subscription {SubscriptionId}", stripeSubscription.Id);
+        }
+    }
+
+    private async Task<SubscriptionTier?> DetermineSubscriptionTierFromStripe(string stripeSubscriptionId)
+    {
+        try
+        {
+            var subscriptionService = new Stripe.SubscriptionService();
+            var stripeSubscription = await subscriptionService.GetAsync(stripeSubscriptionId);
+            
+            if (stripeSubscription?.Items?.Data?.FirstOrDefault()?.Price?.Id == null)
+            {
+                _logger.LogError("No price ID found in Stripe subscription {SubscriptionId}", stripeSubscriptionId);
+                return null;
+            }
+
+            var priceId = stripeSubscription.Items.Data.First().Price.Id;
+            _logger.LogInformation("Found price ID {PriceId} for Stripe subscription {SubscriptionId}", priceId, stripeSubscriptionId);
+
+            // Map price ID to subscription tier
+            var priceIds = _stripeSettings.GetPriceIds();
+            foreach (var (tierName, tierPriceId) in priceIds)
+            {
+                if (tierPriceId == priceId)
+                {
+                    if (Enum.TryParse<SubscriptionTier>(tierName, true, out var tier))
+                    {
+                        _logger.LogInformation("Mapped price ID {PriceId} to tier {Tier}", priceId, tier);
+                        return tier;
+                    }
+                }
+            }
+
+            _logger.LogWarning("Could not map price ID {PriceId} to any subscription tier", priceId);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error determining subscription tier from Stripe subscription {SubscriptionId}", stripeSubscriptionId);
+            return null;
         }
     }
 }

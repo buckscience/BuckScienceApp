@@ -3,11 +3,13 @@ using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 using BuckScience.Infrastructure.Persistence;
+using BuckScience.Shared.Configuration;
 using BuckScience.Web.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Text;
 
@@ -20,6 +22,7 @@ public class SubscriptionWebhookIntegrationTests
     private readonly Mock<IStripeService> _mockStripeService;
     private readonly Mock<ILogger<SubscriptionController>> _mockLogger;
     private readonly Mock<ILogger<BuckScience.Infrastructure.Services.SubscriptionService>> _mockSubscriptionLogger;
+    private readonly Mock<IOptions<StripeSettings>> _mockStripeSettings;
     private readonly AppDbContext _context;
 
     public SubscriptionWebhookIntegrationTests()
@@ -29,6 +32,18 @@ public class SubscriptionWebhookIntegrationTests
         _mockStripeService = new Mock<IStripeService>();
         _mockLogger = new Mock<ILogger<SubscriptionController>>();
         _mockSubscriptionLogger = new Mock<ILogger<BuckScience.Infrastructure.Services.SubscriptionService>>();
+        
+        // Setup mock StripeSettings
+        _mockStripeSettings = new Mock<IOptions<StripeSettings>>();
+        var stripeSettings = new StripeSettings
+        {
+            WebhookSecret = "whsec_test_secret",
+            PriceFawn = "price_fawn_test",
+            PriceDoe = "price_doe_test", 
+            PriceBuck = "price_buck_test",
+            PriceTrophy = "price_trophy_test"
+        };
+        _mockStripeSettings.Setup(x => x.Value).Returns(stripeSettings);
         
         _context = CreateInMemoryContext();
     }
@@ -255,7 +270,8 @@ public class SubscriptionWebhookIntegrationTests
             _mockCurrentUserService.Object,
             _mockStripeService.Object,
             _context,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockStripeSettings.Object);
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(realStripeWebhookJson));
         var httpContext = new DefaultHttpContext();
