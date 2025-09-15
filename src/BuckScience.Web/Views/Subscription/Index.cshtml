@@ -186,19 +186,24 @@
                                                 <li><i class="fas fa-camera text-success me-1"></i>@limits.Cameras Cameras</li>
                                                 <li><i class="fas fa-image text-warning me-1"></i>@limits.Photos Photos</li>
                                             </ul>
-                                            <form asp-action="Subscribe" method="post" class="mt-auto subscription-form">
-                                                <input type="hidden" name="tier" value="@tier" />
-                                                <button type="submit" class="btn btn-primary w-100">
-                                                    @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
-                                                    {
-                                                        <text>Start Plan</text>
-                                                    }
-                                                    else
-                                                    {
-                                                        <text>Upgrade Now</text>
-                                                    }
-                                                </button>
-                                            </form>
+                                            @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                            {
+                                                <form asp-action="Subscribe" method="post" class="mt-auto subscription-form">
+                                                    <input type="hidden" name="tier" value="@tier" />
+                                                    <button type="submit" class="btn btn-primary w-100">
+                                                        Upgrade to Plan
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form asp-action="Update" method="post" class="mt-auto subscription-form">
+                                                    <input type="hidden" name="newTier" value="@tier" />
+                                                    <button type="submit" class="btn btn-primary w-100">
+                                                        Upgrade Now
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -284,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const subscriptionForms = document.querySelectorAll('.subscription-form');
     subscriptionForms.forEach(form => {
         form.addEventListener('submit', function(e) {
-            const tierInput = form.querySelector('input[name="tier"], input[name="newTier"]');
+            const tierInput = form.querySelector('input[name="newTier"]');
             const tier = tierInput ? tierInput.value : 'unknown';
             const action = form.getAttribute('action');
             
@@ -312,8 +317,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Log current pricing info for debugging
-    const pricingInfo = @Html.Raw(Json.Serialize(Model.PricingInfo));
-    console.log('[BuckScience Subscription Debug] Current pricing info:', pricingInfo);
+    // Log that pricing info is available for debugging  
+    const pricingTierCount = @{
+        if (Model.PricingInfo?.Count != null) 
+        {
+            @Model.PricingInfo.Count.ToString("0")
+        } 
+        else 
+        {
+            @:0
+        }
+    };
+    console.log('[BuckScience Subscription Debug] Pricing info available for tier count:', pricingTierCount);
 });
 </script>
