@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Log that pricing info is available for debugging  
-    const pricingTierCount = @(Model.PricingInfo?.Count ?? 0);
+    const pricingTierCount = @Html.Raw(Json.Serialize(Model.PricingInfo?.Count ?? 0));
     console.log('[BuckScience Subscription Debug] Pricing info available for tier count:', pricingTierCount);
 });
 </script>
