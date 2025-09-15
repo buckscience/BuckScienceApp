@@ -128,12 +128,12 @@ app.UseAuthorization();
 // Resolve DB user id once per request (must be BEFORE SetupFlow)
 app.UseResolveCurrentUser();
 
+// Enforce onboarding after current user is resolved but BEFORE routing
+app.UseMiddleware<SetupFlowMiddleware>();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-// Enforce onboarding after current user is resolved
-app.UseMiddleware<SetupFlowMiddleware>();
 
 app.MapRazorPages();
 

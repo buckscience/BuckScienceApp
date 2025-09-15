@@ -43,14 +43,6 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Explicit bypass via attribute (works when running after routing)
-        var endpoint = context.GetEndpoint();
-        if (endpoint?.Metadata?.GetMetadata<SkipSetupCheckAttribute>() is not null)
-        {
-            await _next(context);
-            return;
-        }
-
         // Ensure we can map the principal to an application user
         var userId = currentUser.Id;
         if (!userId.HasValue)
@@ -78,8 +70,8 @@ public sealed class SetupFlowMiddleware
         var routeCamId = TryGetCameraId(context, path);
 
         _logger.LogInformation(
-            "SetupFlow: State={State}, PrimaryPid={PrimaryPid}, RoutePid={RoutePid}, FirstCamId={FirstCamId}, EndpointSet={EndpointSet}, {Method} {Path}",
-            state, primaryPropertyId, routePid, firstCameraId, endpoint != null, method, path);
+            "SetupFlow: State={State}, PrimaryPid={PrimaryPid}, RoutePid={RoutePid}, FirstCamId={FirstCamId}, {Method} {Path}",
+            state, primaryPropertyId, routePid, firstCameraId, method, path);
 
         // Allow everything once complete
         if (state == OnboardingState.Complete)
