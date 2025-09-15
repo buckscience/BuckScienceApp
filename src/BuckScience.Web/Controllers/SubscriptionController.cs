@@ -60,45 +60,69 @@ public class SubscriptionController : Controller
                 _currentUser.AzureEntraB2CId, _currentUser.Email, _currentUser.Name);
             
             // Attempt to provision the user as a fallback
-            await TryEnsureUserProvisionedAsync();
+            var indexProvisioningResult = await TryEnsureUserProvisionedAsync();
             
-            // Check again after provisioning attempt
-            if (_currentUser.Id is null)
+            // Check if provisioning was successful
+            if (!indexProvisioningResult.Success || indexProvisioningResult.UserId == null)
             {
-                TempData["Error"] = "User account setup is incomplete. Please contact support or try signing out and back in.";
+                _logger.LogError("Failed to provision user during subscription index access. Error: {Error}", indexProvisioningResult.ErrorMessage);
+                TempData["Error"] = $"Account setup error: {indexProvisioningResult.ErrorMessage ?? "Unknown error"}. Please try signing out and back in, or contact support.";
                 return RedirectToAction("Index", "Home");
             }
+            
+            // Use the provisioned user ID for the rest of the request
+            var userId = indexProvisioningResult.UserId.Value;
+            _logger.LogInformation("Successfully provisioned user during index access. Using provisioned user ID: {UserId}", userId);
+            
+            var userSubscription = await _subscriptionService.GetUserSubscriptionAsync(userId);
+            var userTier = await _subscriptionService.GetUserSubscriptionTierAsync(userId);
+            var userTrialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(userId);
+            var userIsTrialExpired = await _subscriptionService.IsTrialExpiredAsync(userId);
+            
+            // Continue with the rest of the method using the provisioned userId
+            return await BuildSubscriptionIndexView(userSubscription, userTier, userTrialDaysRemaining, userIsTrialExpired, userId);
         }
 
         var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUser.Id.Value);
         var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUser.Id.Value);
         var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUser.Id.Value);
         var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(_currentUser.Id.Value);
+        
+        return await BuildSubscriptionIndexView(subscription, tier, trialDaysRemaining, isTrialExpired, _currentUser.Id.Value);
+    }
+
+    private async Task<IActionResult> BuildSubscriptionIndexView(
+        Domain.Entities.Subscription? subscription, 
+        SubscriptionTier tier, 
+        int trialDaysRemaining, 
+        bool isTrialExpired, 
+        int userId)
+    {
 
         // Fetch dynamic pricing information from Stripe
         var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
         try
         {
-            _logger.LogInformation("Fetching pricing information from Stripe for subscription index page for user {UserId}", _currentUser.Id.Value);
+            _logger.LogInformation("Fetching pricing information from Stripe for subscription index page for user {UserId}", userId);
             pricingInfo = await _stripeService.GetPricingInfoAsync();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Stripe configuration"))
         {
             // Configuration error - show user-friendly message
-            _logger.LogError(ex, "Stripe configuration error when loading pricing for user {UserId}: {ErrorMessage}", _currentUser.Id.Value, ex.Message);
+            _logger.LogError(ex, "Stripe configuration error when loading pricing for user {UserId}: {ErrorMessage}", userId, ex.Message);
             TempData["Error"] = "Subscription service is currently unavailable due to configuration issues. Please contact support.";
         }
         catch (Stripe.StripeException ex)
         {
             // Stripe API error - log details but show generic message to user
             _logger.LogError(ex, "Stripe API error when loading pricing for user {UserId}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
-                _currentUser.Id.Value, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
+                userId, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
             TempData["Warning"] = "Unable to load current pricing from Stripe. Showing estimated prices. Please refresh the page or contact support if the issue persists.";
         }
         catch (Exception ex)
         {
             // Unexpected error - log details but don't expose internals to user
-            _logger.LogError(ex, "Unexpected error loading pricing for user {UserId}: {ErrorMessage}", _currentUser.Id.Value, ex.Message);
+            _logger.LogError(ex, "Unexpected error loading pricing for user {UserId}: {ErrorMessage}", userId, ex.Message);
             TempData["Warning"] = "Unable to load current pricing information. Please refresh the page or contact support if the issue persists.";
         }
 
@@ -143,36 +167,55 @@ public class SubscriptionController : Controller
 
         if (_currentUser.Id is null)
         {
-            _logger.LogError("Authenticated user not found in database. B2C ID: {B2CId}, Email: {Email}, Name: {Name}", 
-                _currentUser.AzureEntraB2CId, _currentUser.Email, _currentUser.Name);
+            _logger.LogError("Authenticated user not found in database during {Action}. B2C ID: {B2CId}, Email: {Email}, Name: {Name}", 
+                action, _currentUser.AzureEntraB2CId, _currentUser.Email, _currentUser.Name);
             
             // Attempt to provision the user as a fallback
-            await TryEnsureUserProvisionedAsync();
+            var actionProvisioningResult = await TryEnsureUserProvisionedAsync();
             
-            // Check again after provisioning attempt
-            if (_currentUser.Id is null)
+            // Check again after provisioning attempt - but don't rely on _currentUser.Id as it won't be updated in the same request
+            if (!actionProvisioningResult.Success)
             {
-                TempData["Error"] = "User account setup is incomplete. Please contact support or try signing out and back in.";
+                _logger.LogError("Failed to provision user during {Action}. Error: {Error}", action, actionProvisioningResult.ErrorMessage);
+                TempData["Error"] = $"Account setup error: {actionProvisioningResult.ErrorMessage}. Please try signing out and back in, or contact support.";
                 return RedirectToAction("Index");
             }
+            
+            // Use the provisioned user ID directly
+            _logger.LogInformation("Successfully provisioned user during {Action}. Using provisioned user ID: {UserId}", action, actionProvisioningResult.UserId);
         }
 
-        _logger.LogInformation("Processing {Action} request for user {UserId} to tier {Tier}", action, _currentUser.Id.Value, tier);
+        // Get the actual user ID to use (either from current user service or from provisioning)
+        UserProvisioningResult? subscriptionProvisioningResult = null;
+        if (_currentUser.Id is null)
+        {
+            subscriptionProvisioningResult = await TryEnsureUserProvisionedAsync();
+        }
+        
+        var userId = _currentUser.Id ?? subscriptionProvisioningResult?.UserId;
+        if (userId == null)
+        {
+            _logger.LogError("No valid user ID available for {Action} after provisioning attempts", action);
+            TempData["Error"] = "Unable to determine user account. Please try signing out and back in, or contact support.";
+            return RedirectToAction("Index");
+        }
+
+        _logger.LogInformation("Processing {Action} request for user {UserId} to tier {Tier}", action, userId.Value, tier);
 
         try
         {
             // Pre-validate subscription change before creating Stripe session
-            var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUser.Id.Value);
-            var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUser.Id.Value);
+            var currentSubscription = await _subscriptionService.GetUserSubscriptionAsync(userId.Value);
+            var currentTier = await _subscriptionService.GetUserSubscriptionTierAsync(userId.Value);
             
             _logger.LogInformation("User {UserId} current subscription state: Tier={CurrentTier}, SubscriptionId={SubscriptionId}, Status={Status}", 
-                _currentUser.Id.Value, currentTier, currentSubscription?.Id, currentSubscription?.Status);
+                userId.Value, currentTier, currentSubscription?.Id, currentSubscription?.Status);
             
             // Validate tier change is allowed
             if (!IsValidTierChange(currentTier, tier))
             {
                 _logger.LogWarning("Invalid tier change attempted by user {UserId}: {CurrentTier} -> {NewTier}", 
-                    _currentUser.Id.Value, currentTier, tier);
+                    userId.Value, currentTier, tier);
                 TempData["Error"] = $"Invalid subscription change: Cannot change from {currentTier} to {tier}";
                 return RedirectToAction("Index");
             }
@@ -182,7 +225,7 @@ public class SubscriptionController : Controller
             if (priceInfo == null || !priceInfo.IsActive)
             {
                 _logger.LogWarning("Attempted to subscribe to unavailable tier {Tier} by user {UserId}. PriceInfo: {@PriceInfo}", 
-                    tier, _currentUser.Id.Value, priceInfo);
+                    tier, userId.Value, priceInfo);
                 TempData["Error"] = $"The {tier} plan is currently unavailable. Please contact support or try a different plan.";
                 return RedirectToAction("Index");
             }
@@ -198,9 +241,9 @@ public class SubscriptionController : Controller
             // Determine whether to create new subscription or update existing
             if (currentTier == SubscriptionTier.Trial || currentSubscription?.StripeSubscriptionId == null)
             {
-                _logger.LogInformation("Creating new subscription for user {UserId} to tier {Tier}", _currentUser.Id.Value, tier);
+                _logger.LogInformation("Creating new subscription for user {UserId} to tier {Tier}", userId.Value, tier);
                 checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
-                    _currentUser.Id.Value, 
+                    userId.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
@@ -208,16 +251,16 @@ public class SubscriptionController : Controller
             else
             {
                 _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
-                    _currentUser.Id.Value, currentTier, tier);
+                    userId.Value, currentTier, tier);
                 checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
-                    _currentUser.Id.Value, 
+                    userId.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
             }
 
             _logger.LogInformation("Successfully created checkout URL for user {UserId} tier {Tier}: {CheckoutUrl}", 
-                _currentUser.Id.Value, tier, checkoutUrl);
+                userId.Value, tier, checkoutUrl);
 
             return Redirect(checkoutUrl);
         }
@@ -229,7 +272,7 @@ public class SubscriptionController : Controller
                 : $"Unable to update subscription to {tier} plan due to configuration issues. Please contact support.";
             
             _logger.LogError(ex, "Configuration error during {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
-                action, _currentUser.Id.Value, tier, ex.Message);
+                action, userId.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
             return RedirectToAction("Index");
@@ -242,7 +285,7 @@ public class SubscriptionController : Controller
                 : $"Unable to update subscription to {tier} plan. Please try again or contact support.";
             
             _logger.LogError(ex, "Stripe API error during {Action} for user {UserId} to tier {Tier}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
-                action, _currentUser.Id.Value, tier, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
+                action, userId.Value, tier, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
             
             TempData["Error"] = errorMessage;
             return RedirectToAction("Index");
@@ -255,7 +298,7 @@ public class SubscriptionController : Controller
                 : $"An unexpected error occurred while updating your subscription to {tier}. Please try again or contact support.";
             
             _logger.LogError(ex, "Unexpected error during {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
-                action, _currentUser.Id.Value, tier, ex.Message);
+                action, userId.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
             return RedirectToAction("Index");
@@ -682,13 +725,17 @@ public class SubscriptionController : Controller
     /// Attempts to provision a user that is authenticated but not found in the database.
     /// This can happen if the user provisioning during authentication failed or was skipped.
     /// </summary>
-    private async Task TryEnsureUserProvisionedAsync()
+    private async Task<UserProvisioningResult> TryEnsureUserProvisionedAsync()
     {
         try
         {
             if (!_currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUser.AzureEntraB2CId))
             {
-                return;
+                return new UserProvisioningResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = "User is not authenticated or missing B2C ID" 
+                };
             }
 
             _logger.LogInformation("Attempting to provision authenticated user with B2C ID: {B2CId}", _currentUser.AzureEntraB2CId);
@@ -705,12 +752,47 @@ public class SubscriptionController : Controller
             await _userProvisioningService.EnsureUserAsync(authUser);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully provisioned user with B2C ID: {B2CId}", _currentUser.AzureEntraB2CId);
+            // Now get the user ID from the database
+            var provisionedUser = await _context.ApplicationUsers
+                .Where(u => u.AzureEntraB2CId == _currentUser.AzureEntraB2CId)
+                .Select(u => new { u.Id })
+                .FirstOrDefaultAsync();
+
+            if (provisionedUser == null)
+            {
+                _logger.LogError("Failed to find provisioned user with B2C ID: {B2CId}", _currentUser.AzureEntraB2CId);
+                return new UserProvisioningResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = "Failed to provision user in database" 
+                };
+            }
+
+            _logger.LogInformation("Successfully provisioned user with B2C ID: {B2CId}, User ID: {UserId}", 
+                _currentUser.AzureEntraB2CId, provisionedUser.Id);
+            
+            return new UserProvisioningResult 
+            { 
+                Success = true, 
+                UserId = provisionedUser.Id 
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to provision user with B2C ID: {B2CId}", _currentUser.AzureEntraB2CId);
+            return new UserProvisioningResult 
+            { 
+                Success = false, 
+                ErrorMessage = ex.Message 
+            };
         }
+    }
+
+    private class UserProvisioningResult
+    {
+        public bool Success { get; set; }
+        public int? UserId { get; set; }
+        public string? ErrorMessage { get; set; }
     }
 
     private static string? ExtractFirstName(string? fullName)

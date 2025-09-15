@@ -28,7 +28,7 @@ public class DemoSubscriptionController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> SimulateSubscription(SubscriptionTier tier)
+    public IActionResult SimulateSubscription(SubscriptionTier tier)
     {
         if (_currentUser.Id == null)
         {
