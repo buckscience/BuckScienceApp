@@ -58,8 +58,8 @@ public class StripeService : IStripeService
                 Mode = "subscription",
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
-                // Add locale and additional configuration to prevent checkout issues
-                Locale = "auto",
+                // Add configuration to prevent checkout issues (avoid 'auto' locale that may cause issues)
+                Locale = "en", // Use explicit locale instead of 'auto' to prevent encoding issues
                 AllowPromotionCodes = false,
                 BillingAddressCollection = "required",
                 // Configure subscription settings for auto-renewal
