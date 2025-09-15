@@ -84,47 +84,55 @@ public class SubscriptionService : ISubscriptionService
         if (user == null)
         {
             _logger.LogError("User {UserId} not found when creating subscription", userId);
-            throw new ArgumentException("User not found", nameof(userId));
+            throw new ArgumentException("User not found. Please ensure you are logged in correctly.", nameof(userId));
         }
 
         var subscription = await GetUserSubscriptionAsync(userId);
         string customerId;
 
-        if (subscription?.StripeCustomerId != null)
+        try
         {
-            customerId = subscription.StripeCustomerId;
-            _logger.LogInformation("Using existing Stripe customer {CustomerId} for user {UserId}", customerId, userId);
-        }
-        else
-        {
-            _logger.LogInformation("Creating new Stripe customer for user {UserId} with email {Email}", userId, user.Email);
-            customerId = await _stripeService.CreateCustomerAsync(user.Email, user.DisplayName);
-            
-            if (subscription == null)
+            if (subscription?.StripeCustomerId != null)
             {
-                subscription = new Subscription
-                {
-                    UserId = userId,
-                    StripeCustomerId = customerId,
-                    Tier = tier,
-                    Status = "active",
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.Subscriptions.Add(subscription);
-                _logger.LogInformation("Created new subscription record for user {UserId}", userId);
+                customerId = subscription.StripeCustomerId;
+                _logger.LogInformation("Using existing Stripe customer {CustomerId} for user {UserId}", customerId, userId);
             }
             else
             {
-                subscription.StripeCustomerId = customerId;
-                subscription.Tier = tier;
-                _logger.LogInformation("Updated existing subscription record for user {UserId} with Stripe customer {CustomerId}", userId, customerId);
+                _logger.LogInformation("Creating new Stripe customer for user {UserId} with email {Email}", userId, user.Email);
+                customerId = await _stripeService.CreateCustomerAsync(user.Email, user.DisplayName);
+                
+                if (subscription == null)
+                {
+                    subscription = new Subscription
+                    {
+                        UserId = userId,
+                        StripeCustomerId = customerId,
+                        Tier = tier,
+                        Status = "active",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Subscriptions.Add(subscription);
+                    _logger.LogInformation("Created new subscription record for user {UserId}", userId);
+                }
+                else
+                {
+                    subscription.StripeCustomerId = customerId;
+                    subscription.Tier = tier;
+                    _logger.LogInformation("Updated existing subscription record for user {UserId} with Stripe customer {CustomerId}", userId, customerId);
+                }
+
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
+            _logger.LogInformation("Creating Stripe checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
+            return await _stripeService.CreateCheckoutSessionAsync(customerId, tier, successUrl, cancelUrl);
         }
-
-        _logger.LogInformation("Creating Stripe checkout session for customer {CustomerId} with tier {Tier}", customerId, tier);
-        return await _stripeService.CreateCheckoutSessionAsync(customerId, tier, successUrl, cancelUrl);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create subscription for user {UserId} with tier {Tier}: {ErrorMessage}", userId, tier, ex.Message);
+            throw new InvalidOperationException($"Unable to create {tier} subscription. Please try again or contact support.", ex);
+        }
     }
 
     public async Task<string> UpdateSubscriptionAsync(int userId, SubscriptionTier newTier, string successUrl, string cancelUrl)
@@ -134,15 +142,8 @@ public class SubscriptionService : ISubscriptionService
         var subscription = await GetUserSubscriptionAsync(userId);
         if (subscription == null)
         {
-            // Enhanced error message with debugging information
-            var allSubscriptions = await _context.Subscriptions.ToListAsync();
-            var subscriptionCount = allSubscriptions.Count;
-            var userIds = string.Join(", ", allSubscriptions.Select(s => s.UserId));
-            
-            _logger.LogError("No subscription found for user {UserId}. Total subscriptions: {Count}. User IDs: [{UserIds}]", 
-                userId, subscriptionCount, userIds);
-            
-            throw new InvalidOperationException($"No subscription found for user ID {userId}. Total subscriptions in database: {subscriptionCount}. User IDs found: [{userIds}]");
+            _logger.LogError("No subscription found for user {UserId}", userId);
+            throw new InvalidOperationException($"No subscription found for user. Please contact support if you believe this is an error.");
         }
 
         // If this is a trial user (no Stripe IDs), treat it as a new subscription creation
@@ -157,7 +158,16 @@ public class SubscriptionService : ISubscriptionService
         _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
             userId, subscription.Tier, newTier);
         
-        return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
+        try
+        {
+            return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create checkout session for subscription update for user {UserId} to tier {NewTier}: {ErrorMessage}", 
+                userId, newTier, ex.Message);
+            throw new InvalidOperationException($"Unable to process subscription update to {newTier}. Please try again or contact support.", ex);
+        }
     }
 
     public async Task<SubscriptionTier> GetUserSubscriptionTierAsync(int userId)

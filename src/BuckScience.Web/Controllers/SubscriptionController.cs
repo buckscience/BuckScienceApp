@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Stripe;
 using Stripe.Checkout;
 using DomainSubscription = BuckScience.Domain.Entities.Subscription;
 
@@ -54,13 +53,27 @@ public class SubscriptionController : Controller
         var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
         try
         {
+            _logger.LogInformation("Fetching pricing information from Stripe for subscription index page for user {UserId}", _currentUserService.Id.Value);
             pricingInfo = await _stripeService.GetPricingInfoAsync();
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Stripe configuration"))
+        {
+            // Configuration error - show user-friendly message
+            _logger.LogError(ex, "Stripe configuration error when loading pricing for user {UserId}: {ErrorMessage}", _currentUserService.Id.Value, ex.Message);
+            TempData["Error"] = "Subscription service is currently unavailable due to configuration issues. Please contact support.";
+        }
+        catch (StripeException ex)
+        {
+            // Stripe API error - log details but show generic message to user
+            _logger.LogError(ex, "Stripe API error when loading pricing for user {UserId}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
+                _currentUserService.Id.Value, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
+            TempData["Warning"] = "Unable to load current pricing from Stripe. Showing estimated prices. Please refresh the page or contact support if the issue persists.";
         }
         catch (Exception ex)
         {
-            // Log error but continue with fallback pricing
-            // In production, you'd want proper logging here
-            TempData["Warning"] = $"Unable to load current pricing from Stripe: {ex.Message}. Showing estimated prices.";
+            // Unexpected error - log details but don't expose internals to user
+            _logger.LogError(ex, "Unexpected error loading pricing for user {UserId}: {ErrorMessage}", _currentUserService.Id.Value, ex.Message);
+            TempData["Warning"] = "Unable to load current pricing information. Please refresh the page or contact support if the issue persists.";
         }
 
         var viewModel = new SubscriptionViewModel
@@ -160,13 +173,40 @@ public class SubscriptionController : Controller
 
             return Redirect(checkoutUrl);
         }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Stripe configuration") || ex.Message.Contains("No valid price ID"))
+        {
+            // Configuration or pricing errors - user-friendly message
+            var errorMessage = action == "Subscribe" 
+                ? $"Unable to process subscription for {tier} plan due to configuration issues. Please contact support."
+                : $"Unable to update subscription to {tier} plan due to configuration issues. Please contact support.";
+            
+            _logger.LogError(ex, "Configuration error during {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
+                action, _currentUserService.Id.Value, tier, ex.Message);
+            
+            TempData["Error"] = errorMessage;
+            return RedirectToAction("Index");
+        }
+        catch (Stripe.StripeException ex)
+        {
+            // Stripe API errors - log details but show generic message
+            var errorMessage = action == "Subscribe" 
+                ? $"Unable to process subscription for {tier} plan. Please try again or contact support."
+                : $"Unable to update subscription to {tier} plan. Please try again or contact support.";
+            
+            _logger.LogError(ex, "Stripe API error during {Action} for user {UserId} to tier {Tier}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
+                action, _currentUserService.Id.Value, tier, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
+            
+            TempData["Error"] = errorMessage;
+            return RedirectToAction("Index");
+        }
         catch (Exception ex)
         {
+            // Unexpected errors - log details but don't expose internals
             var errorMessage = action == "Subscribe" 
-                ? $"Error creating subscription for {tier} plan: {ex.Message}"
-                : $"Error updating subscription to {tier} plan: {ex.Message}";
+                ? $"An unexpected error occurred while processing your {tier} subscription. Please try again or contact support."
+                : $"An unexpected error occurred while updating your subscription to {tier}. Please try again or contact support.";
             
-            _logger.LogError(ex, "Failed to process {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
+            _logger.LogError(ex, "Unexpected error during {Action} for user {UserId} to tier {Tier}: {ErrorMessage}", 
                 action, _currentUserService.Id.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
@@ -210,79 +250,106 @@ public class SubscriptionController : Controller
     public async Task<IActionResult> Webhook()
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+        var requestId = Guid.NewGuid().ToString("N")[..8]; // Short request ID for correlation
+        
+        _logger.LogInformation("Webhook {RequestId}: Received Stripe webhook with payload length: {PayloadLength}", requestId, json.Length);
         
         try
         {
-            _logger.LogInformation("Received Stripe webhook with payload length: {PayloadLength}", json.Length);
-            
             // Get the Stripe signature from headers
             var stripeSignature = Request.Headers["Stripe-Signature"].FirstOrDefault();
             if (string.IsNullOrEmpty(stripeSignature))
             {
-                _logger.LogError("Missing Stripe-Signature header in webhook request");
+                _logger.LogError("Webhook {RequestId}: Missing Stripe-Signature header in webhook request", requestId);
                 return BadRequest("Missing Stripe signature");
             }
             
             // Verify the webhook signature and parse the event
-            Event stripeEvent;
+            Stripe.Event stripeEvent;
             try
             {
-                stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, _stripeSettings.WebhookSecret);
-                _logger.LogInformation("Successfully verified Stripe webhook signature for event: {EventType} with ID: {EventId}", 
-                    stripeEvent.Type, stripeEvent.Id);
+                stripeEvent = Stripe.EventUtility.ConstructEvent(json, stripeSignature, _stripeSettings.WebhookSecret);
+                _logger.LogInformation("Webhook {RequestId}: Successfully verified Stripe webhook signature for event: {EventType} with ID: {EventId}", 
+                    requestId, stripeEvent.Type, stripeEvent.Id);
             }
-            catch (StripeException ex)
+            catch (Stripe.StripeException ex)
             {
-                _logger.LogError(ex, "Failed to verify Stripe webhook signature. Signature: {Signature}, PayloadLength: {Length}", 
-                    stripeSignature, json.Length);
+                _logger.LogError(ex, "Webhook {RequestId}: Failed to verify Stripe webhook signature. Signature: {Signature}, PayloadLength: {Length}", 
+                    requestId, stripeSignature, json.Length);
                 return BadRequest("Invalid Stripe signature");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to parse Stripe event from JSON: {Json}", json);
+                _logger.LogError(ex, "Webhook {RequestId}: Failed to parse Stripe event from JSON", requestId);
                 return BadRequest("Invalid event format");
             }
 
+            // Check for duplicate events (basic deduplication)
+            if (await IsEventAlreadyProcessedAsync(stripeEvent.Id))
+            {
+                _logger.LogInformation("Webhook {RequestId}: Event {EventId} already processed, skipping", requestId, stripeEvent.Id);
+                return Ok(); // Return success for duplicate events
+            }
+
+            // Process the event based on type
+            bool processed = false;
             switch (stripeEvent.Type)
             {
                 case "checkout.session.completed":
-                    await HandleCheckoutSessionCompletedAsync(stripeEvent);
+                    processed = await HandleCheckoutSessionCompletedAsync(stripeEvent, requestId);
                     break;
                     
                 case "customer.subscription.created":
                 case "customer.subscription.updated":
-                    await HandleSubscriptionUpdatedAsync(stripeEvent);
+                    processed = await HandleSubscriptionUpdatedAsync(stripeEvent, requestId);
                     break;
                     
                 case "customer.subscription.deleted":
-                    await HandleSubscriptionDeletedAsync(stripeEvent);
+                    processed = await HandleSubscriptionDeletedAsync(stripeEvent, requestId);
                     break;
                     
                 default:
-                    _logger.LogInformation("Unhandled Stripe event type: {EventType}", stripeEvent.Type);
+                    _logger.LogInformation("Webhook {RequestId}: Unhandled Stripe event type: {EventType}", requestId, stripeEvent.Type);
+                    processed = true; // Consider unhandled events as "processed" to avoid retries
                     break;
+            }
+
+            if (processed)
+            {
+                // Mark event as processed for deduplication
+                await MarkEventAsProcessedAsync(stripeEvent.Id);
+                _logger.LogInformation("Webhook {RequestId}: Successfully processed event {EventId} of type {EventType}", 
+                    requestId, stripeEvent.Id, stripeEvent.Type);
+            }
+            else
+            {
+                _logger.LogError("Webhook {RequestId}: Failed to process event {EventId} of type {EventType}", 
+                    requestId, stripeEvent.Id, stripeEvent.Type);
+                return StatusCode(500, "Failed to process webhook event");
             }
 
             return Ok();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing Stripe webhook: {ErrorMessage}", ex.Message);
-            return StatusCode(500);
+            _logger.LogError(ex, "Webhook {RequestId}: Unexpected error processing Stripe webhook: {ErrorMessage}", requestId, ex.Message);
+            return StatusCode(500, "Internal server error processing webhook");
         }
     }
 
-    private async Task HandleCheckoutSessionCompletedAsync(Event stripeEvent)
+    private async Task<bool> HandleCheckoutSessionCompletedAsync(Stripe.Event stripeEvent, string requestId)
     {
         var session = stripeEvent.Data.Object as Session;
         if (session?.CustomerId == null)
         {
-            _logger.LogError("Failed to parse checkout session from webhook event");
-            return;
+            _logger.LogError("Webhook {RequestId}: Failed to parse checkout session from webhook event or missing customer ID", requestId);
+            return false;
         }
 
-        _logger.LogInformation("Processing checkout session completed for customer: {CustomerId}", session.CustomerId);
+        _logger.LogInformation("Webhook {RequestId}: Processing checkout session completed for customer: {CustomerId}, session: {SessionId}, mode: {Mode}", 
+            requestId, session.CustomerId, session.Id, session.Mode);
 
+        using var transaction = await ((DbContext)_context).Database.BeginTransactionAsync();
         try
         {
             // Find the user by Stripe customer ID
@@ -292,53 +359,79 @@ public class SubscriptionController : Controller
 
             if (subscription == null)
             {
-                _logger.LogError("No subscription found for Stripe customer ID: {CustomerId}", session.CustomerId);
-                return;
+                _logger.LogError("Webhook {RequestId}: No subscription found for Stripe customer ID: {CustomerId}", requestId, session.CustomerId);
+                return false;
             }
 
             // Update subscription with Stripe subscription ID if it's a subscription mode session
             if (session.Mode == "subscription" && !string.IsNullOrEmpty(session.SubscriptionId))
             {
+                // Get detailed subscription information from Stripe to set proper dates
+                var stripeSubscriptionService = new Stripe.SubscriptionService();
+                var stripeSubscription = await stripeSubscriptionService.GetAsync(session.SubscriptionId);
+                
                 subscription.StripeSubscriptionId = session.SubscriptionId;
-                subscription.Status = "active";
-                subscription.CurrentPeriodStart = DateTime.UtcNow;
-                subscription.CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+                subscription.Status = stripeSubscription.Status ?? "active";
+                
+                // Use actual subscription dates from Stripe instead of hardcoded values
+                if (stripeSubscription.CurrentPeriodStart.HasValue)
+                    subscription.CurrentPeriodStart = stripeSubscription.CurrentPeriodStart.Value;
+                if (stripeSubscription.CurrentPeriodEnd.HasValue)
+                    subscription.CurrentPeriodEnd = stripeSubscription.CurrentPeriodEnd.Value;
 
-                // Determine the tier from the subscription
-                var tier = await DetermineSubscriptionTierFromStripe(session.SubscriptionId);
+                // Determine the tier from the subscription with enhanced logic
+                var tier = await DetermineSubscriptionTierFromStripeAsync(session.SubscriptionId, requestId);
                 if (tier.HasValue)
                 {
                     subscription.Tier = tier.Value;
-                    _logger.LogInformation("Updated subscription tier to {Tier} for user {UserId}", tier.Value, subscription.UserId);
+                    _logger.LogInformation("Webhook {RequestId}: Updated subscription tier to {Tier} for user {UserId}", requestId, tier.Value, subscription.UserId);
                 }
                 else
                 {
-                    _logger.LogWarning("Could not determine subscription tier for Stripe subscription {SubscriptionId}", session.SubscriptionId);
+                    _logger.LogWarning("Webhook {RequestId}: Could not determine subscription tier for Stripe subscription {SubscriptionId}, keeping existing tier {Tier}", 
+                        requestId, session.SubscriptionId, subscription.Tier);
                 }
 
-                await _context.SaveChangesAsync();
+                // Save changes within transaction
+                var changesCount = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 
-                _logger.LogInformation("Updated subscription {SubscriptionId} for user {UserId} to active status with tier {Tier}", 
-                    subscription.Id, subscription.UserId, subscription.Tier);
+                _logger.LogInformation("Webhook {RequestId}: Updated subscription {SubscriptionId} for user {UserId} to status {Status} with tier {Tier}. Period: {PeriodStart} to {PeriodEnd}. Database changes: {ChangesCount}", 
+                    requestId, subscription.Id, subscription.UserId, subscription.Status, subscription.Tier, 
+                    subscription.CurrentPeriodStart, subscription.CurrentPeriodEnd, changesCount);
+                
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("Webhook {RequestId}: Checkout session {SessionId} is not a subscription mode or missing subscription ID. Mode: {Mode}, SubscriptionId: {SubscriptionId}", 
+                    requestId, session.Id, session.Mode, session.SubscriptionId);
+                await transaction.CommitAsync();
+                return true; // Not an error, just not a subscription checkout
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling checkout session completed for customer {CustomerId}", session.CustomerId);
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Webhook {RequestId}: Error handling checkout session completed for customer {CustomerId}, session {SessionId}: {ErrorMessage}", 
+                requestId, session.CustomerId, session.Id, ex.Message);
+            return false;
         }
     }
 
-    private async Task HandleSubscriptionUpdatedAsync(Event stripeEvent)
+    private async Task<bool> HandleSubscriptionUpdatedAsync(Stripe.Event stripeEvent, string requestId)
     {
         var stripeSubscription = stripeEvent.Data.Object as Stripe.Subscription;
         if (stripeSubscription?.Id == null)
         {
-            _logger.LogError("Failed to parse subscription from webhook event");
-            return;
+            _logger.LogError("Webhook {RequestId}: Failed to parse subscription from webhook event or missing subscription ID", requestId);
+            return false;
         }
 
-        _logger.LogInformation("Processing subscription update for Stripe subscription: {SubscriptionId}", stripeSubscription.Id);
+        _logger.LogInformation("Webhook {RequestId}: Processing subscription update for Stripe subscription: {SubscriptionId}, status: {Status}, customer: {CustomerId}", 
+            requestId, stripeSubscription.Id, stripeSubscription.Status, stripeSubscription.CustomerId);
 
+        using var transaction = await ((DbContext)_context).Database.BeginTransactionAsync();
         try
         {
             var subscription = await _context.Subscriptions
@@ -346,35 +439,65 @@ public class SubscriptionController : Controller
 
             if (subscription == null)
             {
-                _logger.LogError("No local subscription found for Stripe subscription ID: {SubscriptionId}", stripeSubscription.Id);
-                return;
+                _logger.LogError("Webhook {RequestId}: No local subscription found for Stripe subscription ID: {SubscriptionId}", requestId, stripeSubscription.Id);
+                return false;
             }
 
-            // Update basic subscription details
+            // Update subscription details from Stripe data
+            var previousStatus = subscription.Status;
+            var previousTier = subscription.Tier;
+            
             subscription.Status = stripeSubscription.Status ?? "active";
-
-            await _context.SaveChangesAsync();
             
-            _logger.LogInformation("Successfully updated subscription {SubscriptionId} for user {UserId}", 
-                subscription.Id, subscription.UserId);
+            // Update period dates if available
+            if (stripeSubscription.CurrentPeriodStart.HasValue)
+                subscription.CurrentPeriodStart = stripeSubscription.CurrentPeriodStart.Value;
+            if (stripeSubscription.CurrentPeriodEnd.HasValue)
+                subscription.CurrentPeriodEnd = stripeSubscription.CurrentPeriodEnd.Value;
+
+            // Update subscription tier based on current price
+            var updatedTier = await DetermineSubscriptionTierFromStripeAsync(stripeSubscription.Id, requestId);
+            if (updatedTier.HasValue)
+            {
+                subscription.Tier = updatedTier.Value;
+            }
+
+            // Set cancellation date if subscription was canceled
+            if (stripeSubscription.Status == "canceled" && stripeSubscription.CanceledAt.HasValue)
+            {
+                subscription.CanceledAt = stripeSubscription.CanceledAt.Value;
+            }
+
+            var changesCount = await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            
+            _logger.LogInformation("Webhook {RequestId}: Successfully updated subscription {SubscriptionId} for user {UserId}. Status: {PreviousStatus} -> {NewStatus}, Tier: {PreviousTier} -> {NewTier}. Database changes: {ChangesCount}", 
+                requestId, subscription.Id, subscription.UserId, previousStatus, subscription.Status, previousTier, subscription.Tier, changesCount);
+            
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling subscription update for Stripe subscription {SubscriptionId}", stripeSubscription.Id);
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Webhook {RequestId}: Error handling subscription update for Stripe subscription {SubscriptionId}: {ErrorMessage}", 
+                requestId, stripeSubscription.Id, ex.Message);
+            return false;
         }
     }
 
-    private async Task HandleSubscriptionDeletedAsync(Event stripeEvent)
+    private async Task<bool> HandleSubscriptionDeletedAsync(Stripe.Event stripeEvent, string requestId)
     {
         var stripeSubscription = stripeEvent.Data.Object as Stripe.Subscription;
         if (stripeSubscription?.Id == null)
         {
-            _logger.LogError("Failed to parse subscription from webhook event");
-            return;
+            _logger.LogError("Webhook {RequestId}: Failed to parse subscription from webhook event or missing subscription ID", requestId);
+            return false;
         }
 
-        _logger.LogInformation("Processing subscription deletion for Stripe subscription: {SubscriptionId}", stripeSubscription.Id);
+        _logger.LogInformation("Webhook {RequestId}: Processing subscription deletion for Stripe subscription: {SubscriptionId}, canceled at: {CanceledAt}", 
+            requestId, stripeSubscription.Id, stripeSubscription.CanceledAt);
 
+        using var transaction = await ((DbContext)_context).Database.BeginTransactionAsync();
         try
         {
             var subscription = await _context.Subscriptions
@@ -382,25 +505,37 @@ public class SubscriptionController : Controller
 
             if (subscription == null)
             {
-                _logger.LogError("No local subscription found for Stripe subscription ID: {SubscriptionId}", stripeSubscription.Id);
-                return;
+                _logger.LogError("Webhook {RequestId}: No local subscription found for Stripe subscription ID: {SubscriptionId}", requestId, stripeSubscription.Id);
+                return false;
             }
 
+            var previousStatus = subscription.Status;
             subscription.Status = "canceled";
-            subscription.CanceledAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
             
-            _logger.LogInformation("Successfully canceled subscription {SubscriptionId} for user {UserId}", 
-                subscription.Id, subscription.UserId);
+            // Set cancellation date from Stripe data
+            if (stripeSubscription.CanceledAt.HasValue)
+                subscription.CanceledAt = stripeSubscription.CanceledAt.Value;
+            else
+                subscription.CanceledAt = DateTime.UtcNow;
+
+            var changesCount = await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            
+            _logger.LogInformation("Webhook {RequestId}: Successfully canceled subscription {SubscriptionId} for user {UserId}. Status: {PreviousStatus} -> canceled. Canceled at: {CanceledAt}. Database changes: {ChangesCount}", 
+                requestId, subscription.Id, subscription.UserId, previousStatus, subscription.CanceledAt, changesCount);
+            
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling subscription deletion for Stripe subscription {SubscriptionId}", stripeSubscription.Id);
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Webhook {RequestId}: Error handling subscription deletion for Stripe subscription {SubscriptionId}: {ErrorMessage}", 
+                requestId, stripeSubscription.Id, ex.Message);
+            return false;
         }
     }
 
-    private async Task<SubscriptionTier?> DetermineSubscriptionTierFromStripe(string stripeSubscriptionId)
+    private async Task<SubscriptionTier?> DetermineSubscriptionTierFromStripeAsync(string stripeSubscriptionId, string requestId)
     {
         try
         {
@@ -409,34 +544,81 @@ public class SubscriptionController : Controller
             
             if (stripeSubscription?.Items?.Data?.FirstOrDefault()?.Price?.Id == null)
             {
-                _logger.LogError("No price ID found in Stripe subscription {SubscriptionId}", stripeSubscriptionId);
+                _logger.LogError("Webhook {RequestId}: No price ID found in Stripe subscription {SubscriptionId}", requestId, stripeSubscriptionId);
                 return null;
             }
 
             var priceId = stripeSubscription.Items.Data.First().Price.Id;
-            _logger.LogInformation("Found price ID {PriceId} for Stripe subscription {SubscriptionId}", priceId, stripeSubscriptionId);
+            _logger.LogInformation("Webhook {RequestId}: Found price ID {PriceId} for Stripe subscription {SubscriptionId}", requestId, priceId, stripeSubscriptionId);
 
-            // Map price ID to subscription tier
+            // Map price ID to subscription tier with enhanced matching
             var priceIds = _stripeSettings.GetPriceIds();
             foreach (var (tierName, tierPriceId) in priceIds)
             {
-                if (tierPriceId == priceId)
+                if (string.Equals(tierPriceId, priceId, StringComparison.OrdinalIgnoreCase))
                 {
                     if (Enum.TryParse<SubscriptionTier>(tierName, true, out var tier))
                     {
-                        _logger.LogInformation("Mapped price ID {PriceId} to tier {Tier}", priceId, tier);
+                        _logger.LogInformation("Webhook {RequestId}: Mapped price ID {PriceId} to tier {Tier}", requestId, priceId, tier);
                         return tier;
+                    }
+                    else
+                    {
+                        _logger.LogError("Webhook {RequestId}: Failed to parse tier name '{TierName}' to SubscriptionTier enum for price {PriceId}", 
+                            requestId, tierName, priceId);
                     }
                 }
             }
 
-            _logger.LogWarning("Could not map price ID {PriceId} to any subscription tier", priceId);
+            _logger.LogWarning("Webhook {RequestId}: Could not map price ID {PriceId} to any configured subscription tier. Available tiers: {AvailableTiers}", 
+                requestId, priceId, string.Join(", ", priceIds.Select(p => $"{p.Key}={p.Value}")));
+            return null;
+        }
+        catch (Stripe.StripeException ex)
+        {
+            _logger.LogError(ex, "Webhook {RequestId}: Stripe error determining subscription tier from subscription {SubscriptionId}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
+                requestId, stripeSubscriptionId, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error determining subscription tier from Stripe subscription {SubscriptionId}", stripeSubscriptionId);
+            _logger.LogError(ex, "Webhook {RequestId}: Unexpected error determining subscription tier from Stripe subscription {SubscriptionId}", 
+                requestId, stripeSubscriptionId);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Simple event deduplication to prevent processing the same webhook multiple times.
+    /// In a production system, this should be more sophisticated (e.g., using Redis or database).
+    /// </summary>
+    private static readonly HashSet<string> ProcessedEvents = new();
+    private static readonly object ProcessedEventsLock = new();
+
+    private Task<bool> IsEventAlreadyProcessedAsync(string eventId)
+    {
+        lock (ProcessedEventsLock)
+        {
+            return Task.FromResult(ProcessedEvents.Contains(eventId));
+        }
+    }
+
+    private Task MarkEventAsProcessedAsync(string eventId)
+    {
+        lock (ProcessedEventsLock)
+        {
+            ProcessedEvents.Add(eventId);
+            
+            // Simple cleanup: remove old events if we have too many
+            if (ProcessedEvents.Count > 1000)
+            {
+                var oldEvents = ProcessedEvents.Take(500).ToList();
+                foreach (var oldEvent in oldEvents)
+                {
+                    ProcessedEvents.Remove(oldEvent);
+                }
+            }
+        }
+        return Task.CompletedTask;
     }
 }
