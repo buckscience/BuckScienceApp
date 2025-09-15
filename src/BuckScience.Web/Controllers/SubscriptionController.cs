@@ -52,7 +52,7 @@ public class SubscriptionController : Controller
         {
             _logger.LogWarning("Unauthenticated user attempted to access subscription page");
             TempData["Error"] = "You must be logged in to view your subscription. Please sign in.";
-            return Challenge(); // This is appropriate for the Index page
+            return RedirectToAction("Index", "Home"); // Redirect to home instead of auth challenge
         }
 
         if (_currentUser.Id is null)
