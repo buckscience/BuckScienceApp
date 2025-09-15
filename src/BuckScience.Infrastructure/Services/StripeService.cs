@@ -1,4 +1,5 @@
 using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using BuckScience.Shared.Configuration;
 using Microsoft.Extensions.Logging;

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Security;
 using Microsoft.AspNetCore.Http;

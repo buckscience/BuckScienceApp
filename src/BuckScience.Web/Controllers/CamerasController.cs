@@ -1,5 +1,6 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Tags;

@@ -1,6 +1,6 @@
 using BuckScience.Domain.Enums;
 
-namespace BuckScience.Application.Abstractions;
+namespace BuckScience.Application.Abstractions.Services;
 
 public interface IStripeService
 {

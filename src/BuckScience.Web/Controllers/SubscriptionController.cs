@@ -1,5 +1,6 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using BuckScience.Shared.Configuration;
 using BuckScience.Web.ViewModels;
@@ -22,6 +23,7 @@ public class SubscriptionController : Controller
     private readonly IAppDbContext _context;
     private readonly ILogger<SubscriptionController> _logger;
     private readonly StripeSettings _stripeSettings;
+    private readonly IUserProvisioningService _userProvisioningService;
 
     public SubscriptionController(
         ISubscriptionService subscriptionService,
@@ -29,7 +31,8 @@ public class SubscriptionController : Controller
         IStripeService stripeService,
         IAppDbContext context,
         ILogger<SubscriptionController> logger,
-        IOptions<StripeSettings> stripeSettings)
+        IOptions<StripeSettings> stripeSettings,
+        IUserProvisioningService userProvisioningService)
     {
         _subscriptionService = subscriptionService;
         _currentUserService = currentUserService;
@@ -37,12 +40,35 @@ public class SubscriptionController : Controller
         _context = context;
         _logger = logger;
         _stripeSettings = stripeSettings.Value;
+        _userProvisioningService = userProvisioningService;
     }
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        if (_currentUserService.Id is null) return Forbid();
+        // Enhanced user validation with better diagnostics
+        if (!_currentUserService.IsAuthenticated)
+        {
+            _logger.LogWarning("Unauthenticated user attempted to access subscription page");
+            TempData["Error"] = "You must be logged in to view your subscription. Please sign in.";
+            return Challenge(); // This is appropriate for the Index page
+        }
+
+        if (_currentUserService.Id is null)
+        {
+            _logger.LogError("Authenticated user not found in database during subscription index access. B2C ID: {B2CId}, Email: {Email}, Name: {Name}", 
+                _currentUserService.AzureEntraB2CId, _currentUserService.Email, _currentUserService.Name);
+            
+            // Attempt to provision the user as a fallback
+            await TryEnsureUserProvisionedAsync();
+            
+            // Check again after provisioning attempt
+            if (_currentUserService.Id is null)
+            {
+                TempData["Error"] = "User account setup is incomplete. Please contact support or try signing out and back in.";
+                return RedirectToAction("Index", "Home");
+            }
+        }
 
         var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUserService.Id.Value);
         var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
@@ -107,7 +133,29 @@ public class SubscriptionController : Controller
 
     private async Task<IActionResult> ProcessSubscriptionChange(SubscriptionTier tier, string action)
     {
-        if (_currentUserService.Id is null) return Forbid();
+        // Enhanced user authentication validation with better diagnostics
+        if (!_currentUserService.IsAuthenticated)
+        {
+            _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier}", action, tier);
+            TempData["Error"] = "You must be logged in to manage your subscription. Please sign in and try again.";
+            return RedirectToAction("Index");
+        }
+
+        if (_currentUserService.Id is null)
+        {
+            _logger.LogError("Authenticated user not found in database. B2C ID: {B2CId}, Email: {Email}, Name: {Name}", 
+                _currentUserService.AzureEntraB2CId, _currentUserService.Email, _currentUserService.Name);
+            
+            // Attempt to provision the user as a fallback
+            await TryEnsureUserProvisionedAsync();
+            
+            // Check again after provisioning attempt
+            if (_currentUserService.Id is null)
+            {
+                TempData["Error"] = "User account setup is incomplete. Please contact support or try signing out and back in.";
+                return RedirectToAction("Index");
+            }
+        }
 
         _logger.LogInformation("Processing {Action} request for user {UserId} to tier {Tier}", action, _currentUserService.Id.Value, tier);
 
@@ -628,5 +676,54 @@ public class SubscriptionController : Controller
             }
         }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Attempts to provision a user that is authenticated but not found in the database.
+    /// This can happen if the user provisioning during authentication failed or was skipped.
+    /// </summary>
+    private async Task TryEnsureUserProvisionedAsync()
+    {
+        try
+        {
+            if (!_currentUserService.IsAuthenticated || string.IsNullOrWhiteSpace(_currentUserService.AzureEntraB2CId))
+            {
+                return;
+            }
+
+            _logger.LogInformation("Attempting to provision authenticated user with B2C ID: {B2CId}", _currentUserService.AzureEntraB2CId);
+
+            // Create AuthUser from current user service
+            var authUser = new AuthUser(
+                Subject: _currentUserService.AzureEntraB2CId!,
+                Email: _currentUserService.Email,
+                FirstName: ExtractFirstName(_currentUserService.Name),
+                LastName: ExtractLastName(_currentUserService.Name),
+                DisplayName: _currentUserService.Name
+            );
+
+            await _userProvisioningService.EnsureUserAsync(authUser);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully provisioned user with B2C ID: {B2CId}", _currentUserService.AzureEntraB2CId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to provision user with B2C ID: {B2CId}", _currentUserService.AzureEntraB2CId);
+        }
+    }
+
+    private static string? ExtractFirstName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return null;
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : null;
+    }
+
+    private static string? ExtractLastName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return null;
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : null;
     }
 }

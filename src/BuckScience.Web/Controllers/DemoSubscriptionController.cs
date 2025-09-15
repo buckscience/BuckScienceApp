@@ -1,5 +1,6 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
