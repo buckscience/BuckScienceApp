@@ -128,7 +128,7 @@ app.UseAuthorization();
 // Resolve DB user id once per request (must be BEFORE SetupFlow)
 app.UseResolveCurrentUser();
 
-// Enforce onboarding after current user is resolved but BEFORE routing
+// Enforce onboarding after current user is resolved and AFTER routing to access endpoint metadata
 app.UseMiddleware<SetupFlowMiddleware>();
 
 app.MapControllerRoute(

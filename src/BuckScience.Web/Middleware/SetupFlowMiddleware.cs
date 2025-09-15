@@ -37,8 +37,25 @@ public sealed class SetupFlowMiddleware
         }
 
         // Allow static content, health checks, auth, error endpoints, and subscription management
-        if (IsStaticOrHealth(path) || IsAuthOrError(path) || IsSubscriptionPath(path))
+        if (IsStaticOrHealth(path) || IsAuthOrError(path))
         {
+            await _next(context);
+            return;
+        }
+
+        // Check if the endpoint has SkipSetupCheck attribute (now that routing has occurred)
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata?.GetMetadata<SkipSetupCheckAttribute>() != null)
+        {
+            _logger.LogInformation("SetupFlow: Skipping setup check for {Path} due to SkipSetupCheck attribute", path);
+            await _next(context);
+            return;
+        }
+
+        // Allow subscription paths (fallback for cases where routing might not have occurred)
+        if (IsSubscriptionPath(path))
+        {
+            _logger.LogInformation("SetupFlow: Allowing subscription path {Path}", path);
             await _next(context);
             return;
         }
@@ -47,15 +64,7 @@ public sealed class SetupFlowMiddleware
         var userId = currentUser.Id;
         if (!userId.HasValue)
         {
-            // For subscription paths, allow the controller to handle user provisioning
-            if (IsSubscriptionPath(path))
-            {
-                _logger.LogInformation("SetupFlow: Allowing subscription path {Path} for user provisioning", path);
-                await _next(context);
-                return;
-            }
-            
-            _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. Blocking. Path={Path}", path);
+            _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. User may need provisioning. Path={Path}", path);
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             await context.Response.WriteAsync("User is authenticated but not provisioned.");
             return;
