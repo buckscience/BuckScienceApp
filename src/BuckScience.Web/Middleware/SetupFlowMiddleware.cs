@@ -36,9 +36,17 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Allow static content, health checks, auth, error endpoints, and subscription management
+        // Allow static content, health checks, auth, error endpoints
         if (IsStaticOrHealth(path) || IsAuthOrError(path))
         {
+            await _next(context);
+            return;
+        }
+
+        // Allow subscription paths completely - let controllers handle user provisioning
+        if (IsSubscriptionPath(path))
+        {
+            _logger.LogInformation("SetupFlow: Allowing subscription path {Path} - controller will handle user provisioning", path);
             await _next(context);
             return;
         }
@@ -52,21 +60,24 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Allow subscription paths (fallback for cases where routing might not have occurred)
-        if (IsSubscriptionPath(path))
-        {
-            _logger.LogInformation("SetupFlow: Allowing subscription path {Path}", path);
-            await _next(context);
-            return;
-        }
-
         // Ensure we can map the principal to an application user
         var userId = currentUser.Id;
         if (!userId.HasValue)
         {
             _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. User may need provisioning. Path={Path}", path);
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("User is authenticated but not provisioned.");
+            // Instead of returning 403, show a friendly error message without triggering auth challenges
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            context.Response.ContentType = "text/html";
+            await context.Response.WriteAsync(@"
+                <!DOCTYPE html>
+                <html>
+                <head><title>Account Setup Required</title></head>
+                <body style='font-family: Arial, sans-serif; padding: 40px; text-align: center;'>
+                    <h2>Account Setup Required</h2>
+                    <p>Your account needs to be set up. Please try signing out and signing back in.</p>
+                    <p><a href='/Home/SignOutUser'>Sign Out</a> | <a href='/'>Home</a></p>
+                </body>
+                </html>");
             return;
         }
 
