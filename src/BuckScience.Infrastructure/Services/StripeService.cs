@@ -39,6 +39,9 @@ public class StripeService : IStripeService
 
         try
         {
+            // Use a timeout to prevent infinite hangs during debug
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            
             var options = new SessionCreateOptions
             {
                 Customer = customerId,
@@ -57,21 +60,44 @@ public class StripeService : IStripeService
                 // Add locale and additional configuration to prevent checkout issues
                 Locale = "auto",
                 AllowPromotionCodes = false,
-                BillingAddressCollection = "required"
+                BillingAddressCollection = "required",
+                // Configure subscription settings for auto-renewal
+                SubscriptionData = new SessionSubscriptionDataOptions
+                {
+                    // Ensure the subscription is set up for automatic renewal
+                    TrialPeriodDays = null, // No trial period for paid subscriptions
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "user_tier", tier.ToString() },
+                        { "created_from", "application_upgrade" }
+                    }
+                }
             };
 
             var service = new SessionService();
-            var session = await service.CreateAsync(options);
+            var session = await service.CreateAsync(options, cancellationToken: cts.Token);
             
             _logger.LogInformation("Successfully created checkout session {SessionId} for customer {CustomerId} with tier {Tier} and price {PriceId}. Checkout URL: {CheckoutUrl}", 
                 session.Id, customerId, tier, priceId, session.Url);
             return session.Url;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("Timeout creating checkout session for customer {CustomerId} with tier {Tier} and price {PriceId}", 
+                customerId, tier, priceId);
+            throw new InvalidOperationException($"Request timed out while creating checkout session for {tier} tier. Please try again.");
         }
         catch (StripeException ex)
         {
             _logger.LogError(ex, "Stripe error creating checkout session for customer {CustomerId} with tier {Tier} and price {PriceId}. StripeError: {StripeErrorType} - {StripeErrorCode} - {StripeErrorMessage}", 
                 customerId, tier, priceId, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
             throw new InvalidOperationException($"Failed to create checkout session for {tier} tier: {ex.Message} (Error Code: {ex.StripeError?.Code})", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error creating checkout session for customer {CustomerId} with tier {Tier} and price {PriceId}: {ErrorMessage}", 
+                customerId, tier, priceId, ex.Message);
+            throw new InvalidOperationException($"An unexpected error occurred while creating checkout session for {tier} tier. Please try again or contact support.", ex);
         }
     }
 
@@ -91,8 +117,11 @@ public class StripeService : IStripeService
 
         try
         {
+            // Use timeout to prevent debug hangs
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            
             var service = new Stripe.SubscriptionService();
-            var subscription = await service.GetAsync(subscriptionId);
+            var subscription = await service.GetAsync(subscriptionId, cancellationToken: cts.Token);
             
             if (subscription == null)
             {
@@ -120,12 +149,18 @@ public class StripeService : IStripeService
                 Price = priceId,
             };
 
-            var updatedItem = await subscriptionItemService.UpdateAsync(subscriptionItem.Id, options);
+            var updatedItem = await subscriptionItemService.UpdateAsync(subscriptionItem.Id, options, cancellationToken: cts.Token);
             
             _logger.LogInformation("Successfully updated subscription {SubscriptionId} item {ItemId} to price {PriceId} for tier {Tier}", 
                 subscriptionId, subscriptionItem.Id, priceId, newTier);
             
             return subscription.Id;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("Timeout updating subscription {SubscriptionId} to tier {Tier} with price {PriceId}", 
+                subscriptionId, newTier, priceId);
+            throw new InvalidOperationException($"Request timed out while updating subscription to {newTier} tier. Please try again.");
         }
         catch (StripeException ex)
         {
@@ -141,6 +176,9 @@ public class StripeService : IStripeService
         
         try
         {
+            // Use timeout to prevent debug hangs
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            
             var options = new CustomerCreateOptions
             {
                 Email = email,
@@ -148,10 +186,15 @@ public class StripeService : IStripeService
             };
 
             var service = new CustomerService();
-            var customer = await service.CreateAsync(options);
+            var customer = await service.CreateAsync(options, cancellationToken: cts.Token);
             
             _logger.LogInformation("Successfully created Stripe customer {CustomerId} for email {Email}", customer.Id, email);
             return customer.Id;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("Timeout creating customer for email {Email}", email);
+            throw new InvalidOperationException($"Request timed out while creating customer for {email}. Please try again.");
         }
         catch (StripeException ex)
         {
@@ -167,11 +210,19 @@ public class StripeService : IStripeService
         
         try
         {
+            // Use timeout to prevent debug hangs
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            
             var service = new Stripe.SubscriptionService();
-            var canceledSubscription = await service.CancelAsync(subscriptionId);
+            var canceledSubscription = await service.CancelAsync(subscriptionId, cancellationToken: cts.Token);
             
             _logger.LogInformation("Successfully canceled Stripe subscription {SubscriptionId}. Status: {Status}", 
                 subscriptionId, canceledSubscription.Status);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("Timeout canceling subscription {SubscriptionId}", subscriptionId);
+            throw new InvalidOperationException($"Request timed out while canceling subscription {subscriptionId}. Please try again.");
         }
         catch (StripeException ex)
         {

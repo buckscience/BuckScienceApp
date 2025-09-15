@@ -92,6 +92,16 @@ public class SubscriptionService : ISubscriptionService
 
         try
         {
+            // Check if user already has an active paid subscription
+            if (subscription?.StripeSubscriptionId != null && subscription.Status == "active")
+            {
+                _logger.LogWarning("User {UserId} already has an active subscription {SubscriptionId} with tier {CurrentTier}. Cannot create new subscription, redirecting to update.", 
+                    userId, subscription.StripeSubscriptionId, subscription.Tier);
+                
+                // Instead of creating a new subscription, update the existing one
+                return await UpdateSubscriptionAsync(userId, tier, successUrl, cancelUrl);
+            }
+
             if (subscription?.StripeCustomerId != null)
             {
                 customerId = subscription.StripeCustomerId;
@@ -153,13 +163,39 @@ public class SubscriptionService : ISubscriptionService
             return await CreateSubscriptionAsync(userId, newTier, successUrl, cancelUrl);
         }
 
-        // For subscription updates, we'll create a new checkout session
-        // In a real implementation, you might want to handle proration differently
-        _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
-            userId, subscription.Tier, newTier);
-        
         try
         {
+            // For existing paid subscriptions, we need to cancel the current one first
+            // to prevent multiple active subscriptions
+            if (subscription.Status == "active" && subscription.StripeSubscriptionId != null)
+            {
+                _logger.LogInformation("Canceling existing active subscription {StripeSubscriptionId} for user {UserId} before creating new one", 
+                    subscription.StripeSubscriptionId, userId);
+                
+                try
+                {
+                    await _stripeService.CancelSubscriptionAsync(subscription.StripeSubscriptionId);
+                    
+                    // Update local subscription status
+                    subscription.Status = "canceled";
+                    subscription.CanceledAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Successfully canceled existing subscription {StripeSubscriptionId} for user {UserId}", 
+                        subscription.StripeSubscriptionId, userId);
+                }
+                catch (Exception cancelEx)
+                {
+                    _logger.LogError(cancelEx, "Failed to cancel existing subscription {StripeSubscriptionId} for user {UserId}. Proceeding with new subscription creation anyway.", 
+                        subscription.StripeSubscriptionId, userId);
+                    // Continue with new subscription creation even if cancellation fails
+                }
+            }
+
+            // Create a new checkout session for the new tier
+            _logger.LogInformation("Creating new checkout session for user {UserId} from {CurrentTier} to {NewTier}", 
+                userId, subscription.Tier, newTier);
+            
             return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
         }
         catch (Exception ex)

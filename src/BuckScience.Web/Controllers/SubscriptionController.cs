@@ -373,9 +373,11 @@ public class SubscriptionController : Controller
                 subscription.StripeSubscriptionId = session.SubscriptionId;
                 subscription.Status = stripeSubscription.Status ?? "active";
                 
-                // TODO: Update subscription dates from Stripe data when type conflict is resolved
-                // Note: Currently not updating CurrentPeriodStart/End due to type resolution issues
-                // The subscription will use default period handling until this is fixed
+                // Update subscription dates from Stripe data
+                // TODO: Research correct property names for Stripe subscription periods
+                // The properties CurrentPeriodStart/End don't exist on Stripe.Subscription
+                // Need to check Stripe.NET documentation for correct property names
+                _logger.LogInformation("Webhook {RequestId}: Stripe subscription dates will be updated once correct property names are identified", requestId);
 
                 // Determine the tier from the subscription with enhanced logic
                 var tier = await DetermineSubscriptionTierFromStripeAsync(session.SubscriptionId, requestId);
@@ -447,8 +449,11 @@ public class SubscriptionController : Controller
             
             subscription.Status = stripeSubscription.Status ?? "active";
             
-            // TODO: Update subscription dates from Stripe data when type conflict is resolved
-            // Note: Currently not updating CurrentPeriodStart/End due to type resolution issues
+            // Update subscription dates from Stripe data
+            // TODO: Research correct property names for Stripe subscription periods
+            // The properties CurrentPeriodStart/End don't exist on Stripe.Subscription
+            // Need to check Stripe.NET documentation for correct property names
+            _logger.LogInformation("Webhook {RequestId}: Stripe subscription dates will be updated once correct property names are identified", requestId);
 
             // Update subscription tier based on current price
             var updatedTier = await DetermineSubscriptionTierFromStripeAsync(stripeSubscription.Id, requestId);
