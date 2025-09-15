@@ -146,6 +146,7 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
+    [AllowAnonymous] // Prevent auth challenges - handle authentication manually
     public async Task<IActionResult> Subscribe(SubscriptionTier tier)
     {
         return await ProcessSubscriptionChange(tier, "Subscribe");
@@ -153,6 +154,7 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
+    [AllowAnonymous] // Prevent auth challenges - handle authentication manually
     public async Task<IActionResult> Update(SubscriptionTier newTier)
     {
         return await ProcessSubscriptionChange(newTier, "Update");
@@ -160,12 +162,12 @@ public class SubscriptionController : Controller
 
     private async Task<IActionResult> ProcessSubscriptionChange(SubscriptionTier tier, string action)
     {
-        // Enhanced user authentication validation with better diagnostics
+        // Manual authentication check - no challenges, only redirects
         if (!_currentUser.IsAuthenticated)
         {
             _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier}", action, tier);
             TempData["Error"] = "You must be logged in to manage your subscription. Please sign in and try again.";
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
         }
 
         if (_currentUser.Id is null)
@@ -181,7 +183,7 @@ public class SubscriptionController : Controller
             {
                 _logger.LogError("Failed to provision user during {Action}. Error: {Error}", action, actionProvisioningResult.ErrorMessage);
                 TempData["Error"] = $"Account setup error: {actionProvisioningResult.ErrorMessage}. Please try signing out and back in, or contact support.";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
             
             // Use the provisioned user ID directly
@@ -200,7 +202,7 @@ public class SubscriptionController : Controller
         {
             _logger.LogError("No valid user ID available for {Action} after provisioning attempts", action);
             TempData["Error"] = "Unable to determine user account. Please try signing out and back in, or contact support.";
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
         }
 
         _logger.LogInformation("Processing {Action} request for user {UserId} to tier {Tier}", action, userId.Value, tier);
@@ -220,7 +222,7 @@ public class SubscriptionController : Controller
                 _logger.LogWarning("Invalid tier change attempted by user {UserId}: {CurrentTier} -> {NewTier}", 
                     userId.Value, currentTier, tier);
                 TempData["Error"] = $"Invalid subscription change: Cannot change from {currentTier} to {tier}";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
 
             // Check if pricing is available for this tier
@@ -230,7 +232,7 @@ public class SubscriptionController : Controller
                 _logger.LogWarning("Attempted to subscribe to unavailable tier {Tier} by user {UserId}. PriceInfo: {@PriceInfo}", 
                     tier, userId.Value, priceInfo);
                 TempData["Error"] = $"The {tier} plan is currently unavailable. Please contact support or try a different plan.";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
 
             _logger.LogInformation("Price validation successful for tier {Tier}: {PriceId} - ${Amount} {Currency}", 
@@ -278,7 +280,7 @@ public class SubscriptionController : Controller
                 action, userId.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
         }
         catch (Stripe.StripeException ex)
         {
@@ -291,7 +293,7 @@ public class SubscriptionController : Controller
                 action, userId.Value, tier, ex.StripeError?.Type, ex.StripeError?.Code, ex.StripeError?.Message);
             
             TempData["Error"] = errorMessage;
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
         }
         catch (Exception ex)
         {
@@ -304,7 +306,7 @@ public class SubscriptionController : Controller
                 action, userId.Value, tier, ex.Message);
             
             TempData["Error"] = errorMessage;
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
         }
     }
 
