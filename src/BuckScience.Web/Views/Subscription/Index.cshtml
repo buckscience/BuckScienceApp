@@ -186,19 +186,24 @@
                                                 <li><i class="fas fa-camera text-success me-1"></i>@limits.Cameras Cameras</li>
                                                 <li><i class="fas fa-image text-warning me-1"></i>@limits.Photos Photos</li>
                                             </ul>
-                                            <form asp-action="Update" method="post" class="mt-auto subscription-form">
-                                                <input type="hidden" name="newTier" value="@tier" />
-                                                <button type="submit" class="btn btn-primary w-100">
-                                                    @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
-                                                    {
-                                                        <text>Upgrade to Plan</text>
-                                                    }
-                                                    else
-                                                    {
-                                                        <text>Upgrade Now</text>
-                                                    }
-                                                </button>
-                                            </form>
+                                            @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                            {
+                                                <form asp-action="Subscribe" method="post" class="mt-auto subscription-form">
+                                                    <input type="hidden" name="tier" value="@tier" />
+                                                    <button type="submit" class="btn btn-primary w-100">
+                                                        Upgrade to Plan
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form asp-action="Update" method="post" class="mt-auto subscription-form">
+                                                    <input type="hidden" name="newTier" value="@tier" />
+                                                    <button type="submit" class="btn btn-primary w-100">
+                                                        Upgrade Now
+                                                    </button>
+                                                </form>
+                                            }
                                         </div>
                                     </div>
                                 </div>
