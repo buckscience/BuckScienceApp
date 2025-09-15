@@ -243,33 +243,46 @@ public class SubscriptionController : Controller
             var successUrl = Url.Action("Success", "Subscription", null, Request.Scheme);
             var cancelUrl = Url.Action("Index", "Subscription", null, Request.Scheme);
 
-            string checkoutUrl;
+            string resultUrl;
             
             // Determine whether to create new subscription or update existing
             if (currentTier == SubscriptionTier.Trial || currentSubscription?.StripeSubscriptionId == null)
             {
                 _logger.LogInformation("Creating new subscription for user {UserId} to tier {Tier}", userId.Value, tier);
-                checkoutUrl = await _subscriptionService.CreateSubscriptionAsync(
+                resultUrl = await _subscriptionService.CreateSubscriptionAsync(
                     userId.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
+                
+                _logger.LogInformation("Successfully created checkout URL for user {UserId} tier {Tier}: {CheckoutUrl}", 
+                    userId.Value, tier, resultUrl);
             }
             else
             {
                 _logger.LogInformation("Updating existing subscription for user {UserId} from {CurrentTier} to {NewTier}", 
                     userId.Value, currentTier, tier);
-                checkoutUrl = await _subscriptionService.UpdateSubscriptionAsync(
+                resultUrl = await _subscriptionService.UpdateSubscriptionAsync(
                     userId.Value, 
                     tier, 
                     successUrl!, 
                     cancelUrl!);
+                
+                // Check if this is a direct success URL (subscription updated in Stripe) or checkout URL
+                if (resultUrl == successUrl)
+                {
+                    _logger.LogInformation("Subscription successfully updated in Stripe for user {UserId} to tier {Tier}. Redirecting to success page.", 
+                        userId.Value, tier);
+                    TempData["Success"] = $"Your subscription has been successfully updated to {tier}!";
+                }
+                else
+                {
+                    _logger.LogInformation("Successfully created checkout URL for subscription update user {UserId} tier {Tier}: {CheckoutUrl}", 
+                        userId.Value, tier, resultUrl);
+                }
             }
 
-            _logger.LogInformation("Successfully created checkout URL for user {UserId} tier {Tier}: {CheckoutUrl}", 
-                userId.Value, tier, checkoutUrl);
-
-            return Redirect(checkoutUrl);
+            return Redirect(resultUrl);
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Stripe configuration") || ex.Message.Contains("No valid price ID"))
         {

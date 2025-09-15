@@ -166,42 +166,37 @@ public class SubscriptionService : ISubscriptionService
 
         try
         {
-            // For existing paid subscriptions, we need to cancel the current one first
-            // to prevent multiple active subscriptions
+            // For existing paid subscriptions, update the Stripe subscription directly instead of canceling and recreating
             if (subscription.Status == "active" && subscription.StripeSubscriptionId != null)
             {
-                _logger.LogInformation("Canceling existing active subscription {StripeSubscriptionId} for user {UserId} before creating new one", 
-                    subscription.StripeSubscriptionId, userId);
+                _logger.LogInformation("Updating existing Stripe subscription {StripeSubscriptionId} for user {UserId} from {CurrentTier} to {NewTier}", 
+                    subscription.StripeSubscriptionId, userId, subscription.Tier, newTier);
                 
-                try
-                {
-                    await _stripeService.CancelSubscriptionAsync(subscription.StripeSubscriptionId);
-                    
-                    // Update local subscription status
-                    subscription.Status = "canceled";
-                    subscription.CanceledAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Successfully canceled existing subscription {StripeSubscriptionId} for user {UserId}", 
-                        subscription.StripeSubscriptionId, userId);
-                }
-                catch (Exception cancelEx)
-                {
-                    _logger.LogError(cancelEx, "Failed to cancel existing subscription {StripeSubscriptionId} for user {UserId}. Proceeding with new subscription creation anyway.", 
-                        subscription.StripeSubscriptionId, userId);
-                    // Continue with new subscription creation even if cancellation fails
-                }
-            }
+                // Use Stripe's subscription update API to modify the existing subscription
+                var updatedSubscriptionId = await _stripeService.UpdateSubscriptionAsync(subscription.StripeSubscriptionId, newTier);
+                
+                _logger.LogInformation("Successfully updated Stripe subscription {StripeSubscriptionId} for user {UserId} to tier {NewTier}", 
+                    updatedSubscriptionId, userId, newTier);
 
-            // Create a new checkout session for the new tier
-            _logger.LogInformation("Creating new checkout session for user {UserId} from {CurrentTier} to {NewTier}", 
-                userId, subscription.Tier, newTier);
-            
-            return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
+                // Update local subscription tier immediately (webhook will also update it, but this ensures consistency)
+                subscription.Tier = newTier;
+                await _context.SaveChangesAsync();
+                
+                // Return success URL directly since the subscription was updated, not checkout needed
+                return successUrl;
+            }
+            else
+            {
+                // If subscription is not active, create a new checkout session
+                _logger.LogInformation("Creating new checkout session for inactive subscription. User {UserId} from {CurrentTier} to {NewTier}", 
+                    userId, subscription.Tier, newTier);
+                
+                return await _stripeService.CreateCheckoutSessionAsync(subscription.StripeCustomerId, newTier, successUrl, cancelUrl);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create checkout session for subscription update for user {UserId} to tier {NewTier}: {ErrorMessage}", 
+            _logger.LogError(ex, "Failed to update subscription for user {UserId} to tier {NewTier}: {ErrorMessage}", 
                 userId, newTier, ex.Message);
             throw new InvalidOperationException($"Unable to process subscription update to {newTier}. Please try again or contact support.", ex);
         }
