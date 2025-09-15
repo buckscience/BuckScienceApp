@@ -15,7 +15,6 @@ using SubscriptionEntity = BuckScience.Domain.Entities.Subscription;
 
 namespace BuckScience.Web.Controllers;
 
-[Authorize]
 public class SubscriptionController : Controller
 {
     private readonly ISubscriptionService _subscriptionService;
@@ -45,6 +44,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous] // Allow access for Stripe redirects - handle auth manually
     public async Task<IActionResult> Index()
     {
         // Enhanced user validation with better diagnostics
@@ -147,6 +147,7 @@ public class SubscriptionController : Controller
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
     [AllowAnonymous] // Prevent auth challenges - handle authentication manually
+    [IgnoreAntiforgeryToken] // Prevent anti-forgery validation conflicts
     public async Task<IActionResult> Subscribe(SubscriptionTier tier)
     {
         return await ProcessSubscriptionChange(tier, "Subscribe");
@@ -155,6 +156,7 @@ public class SubscriptionController : Controller
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
     [AllowAnonymous] // Prevent auth challenges - handle authentication manually
+    [IgnoreAntiforgeryToken] // Prevent anti-forgery validation conflicts
     public async Task<IActionResult> Update(SubscriptionTier newTier)
     {
         return await ProcessSubscriptionChange(newTier, "Update");
@@ -328,6 +330,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous] // Allow Stripe to redirect back without auth challenges
     public IActionResult Success()
     {
         TempData["Success"] = "Your subscription has been successfully processed!";
@@ -335,6 +338,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
+    [AllowAnonymous] // Allow Stripe to redirect back without auth challenges
     public IActionResult Cancel()
     {
         TempData["Info"] = "Subscription process was cancelled.";
@@ -343,6 +347,7 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
     public async Task<IActionResult> Webhook()
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();

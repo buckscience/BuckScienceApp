@@ -43,10 +43,13 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Allow subscription paths completely - let controllers handle user provisioning
+        // Allow subscription paths completely - bypass ALL authorization checks
         if (IsSubscriptionPath(path))
         {
-            _logger.LogInformation("SetupFlow: Allowing subscription path {Path} - controller will handle user provisioning", path);
+            _logger.LogInformation("SetupFlow: Allowing subscription path {Path} - bypassing all setup and authorization checks", path);
+            
+            // For subscription paths, we want to ensure the request reaches the controller
+            // without any authentication challenges, even if user is not properly provisioned
             await _next(context);
             return;
         }
