@@ -4,8 +4,10 @@ using BuckScience.Application.Photos;
 using BuckScience.Infrastructure;
 using BuckScience.Web.Auth;
 using BuckScience.Web.Middleware;
+using BuckScience.Web.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -69,8 +71,15 @@ builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
 
 builder.Services.AddAuthorization(options =>
 {
-    options.FallbackPolicy = options.DefaultPolicy;
+    // Create a custom fallback policy that excludes subscription routes
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .AddRequirements(new SubscriptionRouteBypassRequirement())
+        .Build();
 });
+
+// Register the custom authorization handler for subscription route bypass
+builder.Services.AddScoped<IAuthorizationHandler, SubscriptionRouteBypassHandler>();
 
 var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
 Directory.CreateDirectory(keysPath);
