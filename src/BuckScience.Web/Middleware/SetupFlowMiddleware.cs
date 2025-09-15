@@ -36,8 +36,8 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Allow static content, health checks, auth, and error endpoints
-        if (IsStaticOrHealth(path) || IsAuthOrError(path))
+        // Allow static content, health checks, auth, error endpoints, and subscription management
+        if (IsStaticOrHealth(path) || IsAuthOrError(path) || IsSubscriptionPath(path))
         {
             await _next(context);
             return;
@@ -55,6 +55,14 @@ public sealed class SetupFlowMiddleware
         var userId = currentUser.Id;
         if (!userId.HasValue)
         {
+            // For subscription paths, allow the controller to handle user provisioning
+            if (IsSubscriptionPath(path))
+            {
+                _logger.LogInformation("SetupFlow: Allowing subscription path {Path} for user provisioning", path);
+                await _next(context);
+                return;
+            }
+            
             _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. Blocking. Path={Path}", path);
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             await context.Response.WriteAsync("User is authenticated but not provisioned.");
@@ -228,6 +236,9 @@ public sealed class SetupFlowMiddleware
         path.StartsWith("/signout-", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/account", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/error", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSubscriptionPath(string path) =>
+        path.StartsWith("/subscription", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsStaticOrHealth(string path) =>
         path.StartsWith("/css/", StringComparison.OrdinalIgnoreCase) ||

@@ -3,6 +3,7 @@ using BuckScience.Application.Abstractions.Auth;
 using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using BuckScience.Shared.Configuration;
+using BuckScience.Web.Security;
 using BuckScience.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -144,12 +145,14 @@ public class SubscriptionController : Controller
     }
 
     [HttpPost]
+    [SkipSetupCheck] // Allow subscription changes for users that need provisioning
     public async Task<IActionResult> Subscribe(SubscriptionTier tier)
     {
         return await ProcessSubscriptionChange(tier, "Subscribe");
     }
 
     [HttpPost]
+    [SkipSetupCheck] // Allow subscription changes for users that need provisioning
     public async Task<IActionResult> Update(SubscriptionTier newTier)
     {
         return await ProcessSubscriptionChange(newTier, "Update");
