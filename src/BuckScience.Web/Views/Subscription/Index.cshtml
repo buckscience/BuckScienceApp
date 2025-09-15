@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Log that pricing info is available for debugging  
-    const pricingTierCount = @(Model.PricingInfo?.Count ?? 0);
+    const pricingTierCount = @(Model.PricingInfo != null ? Model.PricingInfo.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0");
     console.log('[BuckScience Subscription Debug] Pricing info available for tier count:', pricingTierCount);
 });
 </script>
