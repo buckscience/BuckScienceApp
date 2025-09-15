@@ -11,14 +11,14 @@ namespace BuckScience.Web.Controllers;
 public class DemoSubscriptionController : Controller
 {
     private readonly ISubscriptionService _subscriptionService;
-    private readonly ICurrentUserService _currentUserService;
+    private readonly ICurrentUserService _currentUser;
 
     public DemoSubscriptionController(
         ISubscriptionService subscriptionService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUser)
     {
         _subscriptionService = subscriptionService;
-        _currentUserService = currentUserService;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -30,7 +30,7 @@ public class DemoSubscriptionController : Controller
     [HttpPost]
     public async Task<IActionResult> SimulateSubscription(SubscriptionTier tier)
     {
-        if (_currentUserService.Id == null)
+        if (_currentUser.Id == null)
         {
             return Unauthorized();
         }
@@ -52,18 +52,18 @@ public class DemoSubscriptionController : Controller
     [HttpPost]
     public async Task<IActionResult> CheckLimits()
     {
-        if (_currentUserService.Id == null)
+        if (_currentUser.Id == null)
         {
             return Unauthorized();
         }
 
         try
         {
-            var canAddProperty = await _subscriptionService.CanAddPropertyAsync(_currentUserService.Id.Value);
-            var canAddCamera = await _subscriptionService.CanAddCameraAsync(_currentUserService.Id.Value);
-            var canUploadPhoto = await _subscriptionService.CanUploadPhotoAsync(_currentUserService.Id.Value);
-            var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUserService.Id.Value);
-            var trialDays = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUserService.Id.Value);
+            var canAddProperty = await _subscriptionService.CanAddPropertyAsync(_currentUser.Id.Value);
+            var canAddCamera = await _subscriptionService.CanAddCameraAsync(_currentUser.Id.Value);
+            var canUploadPhoto = await _subscriptionService.CanUploadPhotoAsync(_currentUser.Id.Value);
+            var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUser.Id.Value);
+            var trialDays = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUser.Id.Value);
 
             var message = $"Demo Limits Check - Tier: {tier}, " +
                          $"Can Add Property: {canAddProperty}, " +
