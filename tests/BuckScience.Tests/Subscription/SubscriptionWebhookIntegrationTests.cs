@@ -1,5 +1,6 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 using BuckScience.Infrastructure.Persistence;
@@ -23,6 +24,7 @@ public class SubscriptionWebhookIntegrationTests
     private readonly Mock<ILogger<SubscriptionController>> _mockLogger;
     private readonly Mock<ILogger<BuckScience.Infrastructure.Services.SubscriptionService>> _mockSubscriptionLogger;
     private readonly Mock<IOptions<StripeSettings>> _mockStripeSettings;
+    private readonly Mock<IUserProvisioningService> _mockUserProvisioningService;
     private readonly AppDbContext _context;
 
     public SubscriptionWebhookIntegrationTests()
@@ -32,6 +34,7 @@ public class SubscriptionWebhookIntegrationTests
         _mockStripeService = new Mock<IStripeService>();
         _mockLogger = new Mock<ILogger<SubscriptionController>>();
         _mockSubscriptionLogger = new Mock<ILogger<BuckScience.Infrastructure.Services.SubscriptionService>>();
+        _mockUserProvisioningService = new Mock<IUserProvisioningService>();
         
         // Setup mock StripeSettings
         _mockStripeSettings = new Mock<IOptions<StripeSettings>>();
@@ -271,7 +274,8 @@ public class SubscriptionWebhookIntegrationTests
             _mockStripeService.Object,
             _context,
             _mockLogger.Object,
-            _mockStripeSettings.Object);
+            _mockStripeSettings.Object,
+            _mockUserProvisioningService.Object);
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(realStripeWebhookJson));
         var httpContext = new DefaultHttpContext();

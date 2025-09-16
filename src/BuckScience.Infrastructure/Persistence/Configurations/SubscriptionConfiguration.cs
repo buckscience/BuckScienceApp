@@ -37,8 +37,9 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Indexes
-        builder.HasIndex(s => s.UserId);
+        // Indexes and constraints
+        builder.HasIndex(s => s.UserId)
+            .IsUnique(); // Ensure only one subscription per user
         builder.HasIndex(s => s.StripeCustomerId);
         builder.HasIndex(s => s.StripeSubscriptionId);
 

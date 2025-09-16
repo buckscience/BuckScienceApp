@@ -41,10 +41,11 @@ public sealed class ResolveCurrentUserMiddleware
                 if (appUserId.HasValue)
                 {
                     context.Items[CurrentUserConstants.AppUserIdItemKey] = appUserId.Value;
+                    _logger.LogDebug("ResolveCurrentUser: Found ApplicationUser {UserId} for external id {ExternalId}", appUserId.Value, externalId);
                 }
                 else
                 {
-                    _logger.LogDebug("ResolveCurrentUser: No ApplicationUser found for external id {ExternalId}", externalId);
+                    _logger.LogWarning("ResolveCurrentUser: No ApplicationUser found for external id {ExternalId}. User may need to be provisioned.", externalId);
                 }
             }
             else

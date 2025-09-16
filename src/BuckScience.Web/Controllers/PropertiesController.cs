@@ -1,5 +1,6 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Application.Cameras;
 using BuckScience.Application.Photos;
 using BuckScience.Application.Profiles;
@@ -566,11 +567,11 @@ public class PropertiesController : Controller
 
     private static string FormatDateRange(DateTime startDateTime, DateTime? endDateTime)
     {
-        var startText = startDateTime.ToString("MMM ''yy"); // e.g., "Mar '24"
+        var startText = startDateTime.ToString("MMM yy"); // e.g., "Mar 24"
         
         if (endDateTime.HasValue)
         {
-            var endText = endDateTime.Value.ToString("MMM ''yy"); // e.g., "Dec '25"
+            var endText = endDateTime.Value.ToString("MMM yy"); // e.g., "Dec 25"
             return $"{startText} - {endText}";
         }
         else

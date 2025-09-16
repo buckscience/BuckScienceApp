@@ -1,5 +1,6 @@
 ﻿using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Infrastructure.Auth;
 using BuckScience.Infrastructure.Persistence;
 using BuckScience.Infrastructure.Services;

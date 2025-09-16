@@ -1,4 +1,5 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Entities;
 using BuckScience.Shared.Configuration;
 using Microsoft.EntityFrameworkCore;

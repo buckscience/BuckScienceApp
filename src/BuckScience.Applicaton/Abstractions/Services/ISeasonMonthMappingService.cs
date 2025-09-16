@@ -1,7 +1,7 @@
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 
-namespace BuckScience.Application.Abstractions;
+namespace BuckScience.Application.Abstractions.Services;
 
 /// <summary>
 /// Interface for managing season-to-month mappings with property-specific overrides.

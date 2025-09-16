@@ -1,4 +1,5 @@
 using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Entities;
 using BuckScience.Domain.Enums;
 
@@ -160,6 +161,34 @@ public class SubscriptionViewModel
         }
         
         return downgrades;
+    }
+
+    public List<SubscriptionTier> GetAllAvailableTiers()
+    {
+        var tiers = new List<SubscriptionTier>
+        {
+            SubscriptionTier.Trial,
+            SubscriptionTier.Fawn,
+            SubscriptionTier.Doe,
+            SubscriptionTier.Buck
+        };
+        
+        // Only add Trophy if it has valid pricing configuration
+        if (PricingInfo.ContainsKey(SubscriptionTier.Trophy) && PricingInfo[SubscriptionTier.Trophy].IsActive)
+        {
+            tiers.Add(SubscriptionTier.Trophy);
+        }
+        
+        return tiers;
+    }
+
+    public bool IsTierAvailable(SubscriptionTier tier)
+    {
+        if (tier == SubscriptionTier.Trophy)
+        {
+            return PricingInfo.ContainsKey(tier) && PricingInfo[tier].IsActive;
+        }
+        return tier != SubscriptionTier.Expired;
     }
 
     public (string Properties, string Cameras, string Photos) GetTierLimits(SubscriptionTier tier)

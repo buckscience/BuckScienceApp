@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.Security;
 using Microsoft.AspNetCore.Http;
@@ -35,17 +36,29 @@ public sealed class SetupFlowMiddleware
             return;
         }
 
-        // Allow static content, health checks, auth, and error endpoints
+        // Allow static content, health checks, auth, error endpoints
         if (IsStaticOrHealth(path) || IsAuthOrError(path))
         {
             await _next(context);
             return;
         }
 
-        // Explicit bypass via attribute (works when running after routing)
-        var endpoint = context.GetEndpoint();
-        if (endpoint?.Metadata?.GetMetadata<SkipSetupCheckAttribute>() is not null)
+        // Allow subscription paths completely - bypass ALL authorization checks
+        if (IsSubscriptionPath(path))
         {
+            _logger.LogInformation("SetupFlow: ALLOWING subscription path {Method} {Path} - bypassing all setup and authorization checks", method, path);
+            
+            // For subscription paths, we want to ensure the request reaches the controller
+            // without any authentication challenges, even if user is not properly provisioned
+            await _next(context);
+            return;
+        }
+
+        // Check if the endpoint has SkipSetupCheck attribute (now that routing has occurred)
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata?.GetMetadata<SkipSetupCheckAttribute>() != null)
+        {
+            _logger.LogInformation("SetupFlow: Skipping setup check for {Path} due to SkipSetupCheck attribute", path);
             await _next(context);
             return;
         }
@@ -54,9 +67,20 @@ public sealed class SetupFlowMiddleware
         var userId = currentUser.Id;
         if (!userId.HasValue)
         {
-            _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. Blocking. Path={Path}", path);
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("User is authenticated but not provisioned.");
+            _logger.LogWarning("SetupFlow: Authenticated principal has no ApplicationUser.Id mapping. User may need provisioning. Path={Path}", path);
+            // Instead of returning 403, show a friendly error message without triggering auth challenges
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            context.Response.ContentType = "text/html";
+            await context.Response.WriteAsync(@"
+                <!DOCTYPE html>
+                <html>
+                <head><title>Account Setup Required</title></head>
+                <body style='font-family: Arial, sans-serif; padding: 40px; text-align: center;'>
+                    <h2>Account Setup Required</h2>
+                    <p>Your account needs to be set up. Please try signing out and signing back in.</p>
+                    <p><a href='/Home/SignOutUser'>Sign Out</a> | <a href='/'>Home</a></p>
+                </body>
+                </html>");
             return;
         }
 
@@ -69,8 +93,8 @@ public sealed class SetupFlowMiddleware
         var routeCamId = TryGetCameraId(context, path);
 
         _logger.LogInformation(
-            "SetupFlow: State={State}, PrimaryPid={PrimaryPid}, RoutePid={RoutePid}, FirstCamId={FirstCamId}, EndpointSet={EndpointSet}, {Method} {Path}",
-            state, primaryPropertyId, routePid, firstCameraId, endpoint != null, method, path);
+            "SetupFlow: State={State}, PrimaryPid={PrimaryPid}, RoutePid={RoutePid}, FirstCamId={FirstCamId}, {Method} {Path}",
+            state, primaryPropertyId, routePid, firstCameraId, method, path);
 
         // Allow everything once complete
         if (state == OnboardingState.Complete)
@@ -227,6 +251,9 @@ public sealed class SetupFlowMiddleware
         path.StartsWith("/signout-", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/account", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("/error", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSubscriptionPath(string path) =>
+        path.StartsWith("/subscription", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsStaticOrHealth(string path) =>
         path.StartsWith("/css/", StringComparison.OrdinalIgnoreCase) ||
