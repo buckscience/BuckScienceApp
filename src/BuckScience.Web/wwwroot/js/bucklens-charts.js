@@ -77,7 +77,8 @@ BuckLens.Charts = {
                 this.loadTimeOfDayChart(profileId),
                 this.loadMoonPhaseChart(profileId),
                 this.loadWindDirectionChart(profileId),
-                this.loadTemperatureChart(profileId)
+                this.loadTemperatureChart(profileId),
+                this.loadSightingHeatmap(profileId)
             ]);
 
             // Hide loading state
@@ -267,6 +268,70 @@ BuckLens.Charts = {
         
         const chartData = await response.json();
         this.createBarChart('temperatureChart', chartData);
+    },
+
+    // Load sighting heatmap
+    async loadSightingHeatmap(profileId) {
+        const container = document.getElementById('sightingHeatmap');
+        if (!container) {
+            console.error('Heatmap container not found');
+            return;
+        }
+
+        // Show loading state
+        container.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                <div>
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="text-muted mb-0">Loading sighting locations...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            console.log('Loading sighting heatmap for profile:', profileId);
+            const response = await fetch(`/profiles/${profileId}/analytics/sightings/locations`);
+            
+            if (!response.ok) {
+                console.error('Failed to load sighting locations, status:', response.status);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const locationData = await response.json();
+            console.log('Raw API response:', locationData);
+            console.log('Location data type:', typeof locationData);
+            console.log('Is array:', Array.isArray(locationData));
+            console.log('Number of sighting locations:', locationData ? locationData.length : 0);
+            
+            // Debug each location point
+            if (locationData && locationData.length > 0) {
+                locationData.forEach((point, index) => {
+                    console.log(`Location ${index}:`, {
+                        lat: point.latitude,
+                        lng: point.longitude,
+                        camera: point.cameraName,
+                        date: point.dateTaken
+                    });
+                });
+            }
+            
+            this.createSightingHeatmap(locationData || []);
+        } catch (error) {
+            console.error('Error loading sighting heatmap:', error);
+            // Show detailed error in the heatmap container
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div>
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                        <p class="text-muted mb-2">Failed to load sighting locations</p>
+                        <small class="text-muted d-block">${error.message}</small>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="BuckLensCharts.loadSightingHeatmap(${profileId})">
+                            <i class="fas fa-redo me-1"></i>Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
     },
 
     // Create bar chart with optional moon phase icons
@@ -597,6 +662,509 @@ BuckLens.Charts = {
         container.appendChild(legendContainer);
     },
 
+    // Create sighting heatmap using Mapbox
+    createSightingHeatmap(locationData) {
+        const container = document.getElementById('sightingHeatmap');
+        if (!container) {
+            console.error('Sighting heatmap container not found');
+            return;
+        }
+
+        try {
+            console.log('=== HEATMAP DATA DEBUGGING ===');
+            // Enhanced debugging - log raw response first
+            console.log('=== HEATMAP DEBUG START ===');
+            console.log('Raw API response:', JSON.stringify(locationData, null, 2));
+            
+            if (locationData && Array.isArray(locationData)) {
+                locationData.forEach((point, index) => {
+                    console.log(`Point ${index + 1}:`, {
+                        photoId: point.photoId,
+                        camera: point.cameraName,
+                        date: point.dateTaken,
+                        lat: point.latitude,
+                        lng: point.longitude,
+                        latType: typeof point.latitude,
+                        lngType: typeof point.longitude
+                    });
+                    
+                    // Special detection for user's coordinate
+                    if (point.latitude === 31.44147 && point.longitude === -93.438233) {
+                        console.log('🎯 FOUND USER COORDINATE: Louisiana location detected!');
+                    }
+                    
+                    // Check for 0,0 coordinates
+                    if (point.latitude === 0 && point.longitude === 0) {
+                        console.warn('⚠️ Found 0,0 coordinate for camera:', point.cameraName);
+                    }
+                });
+                
+                const validCoords = locationData.filter(d => d.latitude != null && d.longitude != null && d.latitude !== 0 && d.longitude !== 0);
+                console.log(`Valid coordinates found: ${validCoords.length} of ${locationData.length}`);
+            }
+            console.log('=== HEATMAP DEBUG END ===');
+
+            console.log('Creating heatmap with location data:', locationData);
+            
+            // Check if we have any location data
+            if (!locationData || locationData.length === 0) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 400px;">
+                        <div>
+                            <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-2">No location data available</p>
+                            <small class="text-muted d-block">Sightings need camera location data to appear on the heatmap</small>
+                            <small class="text-muted">Check that your cameras have GPS coordinates configured</small>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter out points without valid coordinates and debug each point
+            const validLocations = locationData.filter((point, index) => {
+                const hasLat = point.latitude != null && !isNaN(point.latitude);
+                const hasLng = point.longitude != null && !isNaN(point.longitude);
+                const isValid = hasLat && hasLng;
+                
+            // Enhanced coordinate debugging
+            console.log(`Location ${index}:`, {
+                camera: point.cameraName,
+                lat: point.latitude,
+                lng: point.longitude,
+                latType: typeof point.latitude,
+                lngType: typeof point.longitude,
+                hasLat,
+                hasLng,
+                isValid,
+                // Show expected US coordinate ranges for validation
+                latInUSRange: hasLat ? (point.latitude >= 24.396308 && point.latitude <= 49.384358) : false,
+                lngInUSRange: hasLng ? (point.longitude >= -125.0 && point.longitude <= -66.93457) : false,
+                // Check for invalid latitude (must be -90 to +90)
+                latIsPhysicallyValid: hasLat ? (point.latitude >= -90 && point.latitude <= 90) : false,
+                // Check for invalid longitude (must be -180 to +180) 
+                lngIsPhysicallyValid: hasLng ? (point.longitude >= -180 && point.longitude <= 180) : false,
+                // Add more debugging info
+                isZeroCoord: point.latitude === 0 && point.longitude === 0,
+                isNullCoord: point.latitude === null || point.longitude === null
+            });
+            
+            // Check for physically impossible coordinates
+            if (hasLat && (point.latitude < -90 || point.latitude > 90)) {
+                console.error(`🚨 INVALID LATITUDE: ${point.latitude} for camera ${point.cameraName} - latitude must be between -90 and +90`);
+            }
+            if (hasLng && (point.longitude < -180 || point.longitude > 180)) {
+                console.error(`🚨 INVALID LONGITUDE: ${point.longitude} for camera ${point.cameraName} - longitude must be between -180 and +180`);
+            }
+            
+            // Special check for the user's reported coordinate
+            if (hasLat && hasLng && 
+                (Math.abs(point.latitude - 31.44147) < 0.0001 || Math.abs(point.longitude - (-93.438233)) < 0.0001)) {
+                console.log(`🎯 FOUND USER'S COORDINATE: Lat=${point.latitude}, Lng=${point.longitude}`);
+                console.log(`Expected location: Louisiana, USA (near Texas border)`);
+                console.log(`GeoJSON format will be: [${point.longitude}, ${point.latitude}]`);
+            }
+                
+                return isValid;
+            });
+
+            console.log('Filtered to', validLocations.length, 'valid locations out of', locationData.length, 'total');
+
+            // Check for potentially swapped coordinates (lat/lng reversed)
+            const suspiciousCoords = validLocations.filter(point => {
+                const latInUSRange = point.latitude >= 24.396308 && point.latitude <= 49.384358;
+                const lngInUSRange = point.longitude >= -125.0 && point.longitude <= -66.93457;
+                return !latInUSRange || !lngInUSRange;
+            });
+            
+            if (suspiciousCoords.length > 0) {
+                console.warn('⚠️ COORDINATE WARNING: Found coordinates outside US ranges:');
+                suspiciousCoords.forEach(point => {
+                    console.warn(`Camera: ${point.cameraName}, Lat: ${point.latitude}, Lng: ${point.longitude}`);
+                    // Check if swapping would fix it
+                    const swappedLatInRange = point.longitude >= 24.396308 && point.longitude <= 49.384358;
+                    const swappedLngInRange = point.latitude >= -125.0 && point.latitude <= -66.93457;
+                    if (swappedLatInRange && swappedLngInRange) {
+                        console.warn(`🔄 Coordinates appear to be SWAPPED! Should be Lat: ${point.longitude}, Lng: ${point.latitude}`);
+                    }
+                });
+            }
+
+            if (validLocations.length === 0) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 400px;">
+                        <div>
+                            <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-2">No valid coordinates found</p>
+                            <small class="text-muted d-block">Found ${locationData.length} sighting(s), but none have GPS coordinates</small>
+                            <small class="text-muted">Camera locations must be configured to show on the heatmap</small>
+                            <div class="mt-3">
+                                <details class="text-start">
+                                    <summary class="text-muted small">Show debug info</summary>
+                                    <pre class="small mt-2">${JSON.stringify(locationData, null, 2)}</pre>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create a unique map container ID to avoid conflicts
+            const mapId = 'heatmap-' + Date.now();
+            container.innerHTML = `
+                <div id="${mapId}" style="width: 100%; height: 400px; border-radius: 8px; position: relative;">
+                    <div class="d-flex align-items-center justify-content-center text-center" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 1000;" id="${mapId}-loading">
+                        <div>
+                            <div class="spinner-border text-primary mb-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mb-0">Loading map...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Wait for the container to be in the DOM
+            setTimeout(() => {
+                const mapContainer = document.getElementById(mapId);
+                if (!mapContainer) return;
+
+                // Calculate bounds from the valid location data
+                const lats = validLocations.map(d => d.latitude);
+                const lngs = validLocations.map(d => d.longitude);
+                
+                console.log('Valid latitudes:', lats);
+                console.log('Valid longitudes:', lngs);
+                
+                // Enhanced bounds debugging
+                console.log('Coordinate analysis:');
+                console.log(`  Latitude range: ${Math.min(...lats)} to ${Math.max(...lats)}`);
+                console.log(`  Longitude range: ${Math.min(...lngs)} to ${Math.max(...lngs)}`);
+                console.log(`  Expected for US: Lat 24.4-49.4, Lng -125.0 to -66.9`);
+                
+                // Check if coordinates might be swapped
+                const minLat = Math.min(...lats);
+                const maxLat = Math.max(...lats);
+                const minLng = Math.min(...lngs);
+                const maxLng = Math.max(...lngs);
+                
+                if (minLat < -90 || maxLat > 90) {
+                    console.error('🚨 INVALID LATITUDES DETECTED - values outside -90 to +90 range!');
+                }
+                if (minLng < -180 || maxLng > 180) {
+                    console.error('🚨 INVALID LONGITUDES DETECTED - values outside -180 to +180 range!');
+                }
+                
+                // Check for coordinate swap indicators
+                if (minLat > 0 && maxLat < 50 && minLng > 0 && maxLng < 50) {
+                    console.warn('🔄 POSSIBLE COORDINATE SWAP: Both lat and lng are positive and in similar ranges - check if they are swapped!');
+                }
+                
+                const bounds = [
+                    [Math.min(...lngs), Math.min(...lats)], // Southwest corner
+                    [Math.max(...lngs), Math.max(...lats)]  // Northeast corner
+                ];
+
+                // Add padding to bounds
+                const latRange = Math.max(...lats) - Math.min(...lats);
+                const lngRange = Math.max(...lngs) - Math.min(...lngs);
+                const padding = Math.max(latRange, lngRange) * 0.1; // 10% padding
+
+                bounds[0][0] -= padding; // West
+                bounds[0][1] -= padding; // South
+                bounds[1][0] += padding; // East
+                bounds[1][1] += padding; // North
+                
+                console.log('Calculated map bounds:', bounds);
+                console.log('Coordinate ranges - Lat:', latRange, 'Lng:', lngRange);
+
+                // Get Mapbox token
+                const token = this.getMapboxToken();
+                if (!token) {
+                    console.warn('Mapbox token not found for heatmap - showing fallback display');
+                    // Show sighting locations as cards instead of map
+                    container.innerHTML = `
+                        <div class="p-4" style="min-height: 400px;">
+                            <div class="text-center mb-3">
+                                <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                                <p class="text-muted mb-2">Map unavailable - showing locations as list</p>
+                                <small class="text-muted">Mapbox configuration needed for map display</small>
+                            </div>
+                            <div class="row g-2">
+                                ${validLocations.map(point => `
+                                    <div class="col-md-6">
+                                        <div class="card card-body text-start">
+                                            <strong class="text-success">${point.cameraName}</strong>
+                                            <small class="text-muted">${point.dateTaken}</small>
+                                            ${point.latitude && point.longitude ? `<small class="text-muted">📍 Lat: ${point.latitude.toFixed(6)}, Lng: ${point.longitude.toFixed(6)}</small>` : ''}
+                                            ${point.temperature ? `<small class="text-muted">🌡️ ${point.temperature}°F</small>` : ''}
+                                            ${point.windDirection ? `<small class="text-muted">💨 ${point.windDirection}</small>` : ''}
+                                            ${point.moonPhase ? `<small class="text-muted">🌙 ${point.moonPhase}</small>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                console.log('Creating heatmap with', validLocations.length, 'valid sighting locations');
+
+                // Initialize Mapbox map with different strategies for single vs multiple points
+                mapboxgl.accessToken = token;
+                
+                let mapConfig = {
+                    container: mapId,
+                    style: 'mapbox://styles/mapbox/light-v11' // Light style for better heatmap visibility
+                };
+                
+                if (validLocations.length === 1) {
+                    // For single point, center on the location with better zoom level
+                    mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
+                    mapConfig.zoom = 14; // Closer zoom for single points
+                    console.log('Single point detected, centering map at:', mapConfig.center);
+                    console.log(`Single point details: Camera=${validLocations[0].cameraName}, Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}`);
+                    console.log(`Expected location for Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}:`);
+                    if (validLocations[0].latitude > 24 && validLocations[0].latitude < 50 && validLocations[0].longitude > -125 && validLocations[0].longitude < -66) {
+                        console.log('✅ Coordinates appear to be in the United States');
+                    } else {
+                        console.warn('⚠️ Coordinates do NOT appear to be in the United States!');
+                        console.log(`  Latitude ${validLocations[0].latitude} ${validLocations[0].latitude > 24 && validLocations[0].latitude < 50 ? '✅' : '❌'} (US range: 24.4-49.4)`);
+                        console.log(`  Longitude ${validLocations[0].longitude} ${validLocations[0].longitude > -125 && validLocations[0].longitude < -66 ? '✅' : '❌'} (US range: -125.0 to -66.9)`);
+                    }
+                } else {
+                    // For multiple points, use bounds
+                    mapConfig.bounds = bounds;
+                    mapConfig.fitBoundsOptions = { padding: 20 };
+                    console.log('Multiple points detected, using bounds:', bounds);
+                    console.log(`Bounds breakdown: SW=[${bounds[0][0]}, ${bounds[0][1]}], NE=[${bounds[1][0]}, ${bounds[1][1]}]`);
+                }
+                
+                const map = new mapboxgl.Map(mapConfig);
+
+                // Add error handling for map loading failures
+                map.on('error', (error) => {
+                    console.error('Mapbox error:', error);
+                    container.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                            <div>
+                                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                                <p class="text-muted mb-0">Map failed to load</p>
+                                <small class="text-muted">Please check your internet connection or try refreshing the page</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Add timeout fallback in case map never loads
+                const loadTimeout = setTimeout(() => {
+                    if (map.loaded && !map.loaded()) {
+                        console.warn('Map load timeout - showing fallback');
+                        container.innerHTML = `
+                            <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                                <div>
+                                    <i class="fas fa-clock text-warning fa-2x mb-2"></i>
+                                    <p class="text-muted mb-0">Map taking too long to load</p>
+                                    <small class="text-muted">Showing sighting locations as a list instead</small>
+                                    <div class="mt-3">
+                                        ${validLocations.map(point => `
+                                            <div class="card card-body mb-2 text-start">
+                                                <strong>${point.cameraName}</strong><br>
+                                                <small class="text-muted">${point.dateTaken}</small>
+                                                ${point.temperature ? `<br><small>Temperature: ${point.temperature}°F</small>` : ''}
+                                                ${point.windDirection ? `<br><small>Wind: ${point.windDirection}</small>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }, 10000); // 10 second timeout
+
+                map.on('load', () => {
+                    // Clear the timeout since map loaded successfully
+                    clearTimeout(loadTimeout);
+                    
+                    // Remove loading indicator
+                    const loadingIndicator = document.getElementById(`${mapId}-loading`);
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                    
+                    console.log('Mapbox map loaded successfully');
+                    console.log('Valid location data for heatmap:', validLocations);
+                    
+                    // Convert location data to GeoJSON format for heatmap
+                    const geojsonData = {
+                        type: 'FeatureCollection',
+                        features: validLocations.map(point => ({
+                            type: 'Feature',
+                            properties: {
+                                photoId: point.photoId,
+                                dateTaken: point.dateTaken,
+                                cameraName: point.cameraName,
+                                temperature: point.temperature,
+                                windDirection: point.windDirection,
+                                moonPhase: point.moonPhase
+                            },
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [point.longitude, point.latitude]
+                            }
+                        }))
+                    };
+
+                    // Add the data source
+                    map.addSource('sightings', {
+                        type: 'geojson',
+                        data: geojsonData
+                    });
+
+                    console.log('Added data source with', geojsonData.features.length, 'features');
+
+                    // Add heatmap layer - make more visible for small datasets
+                    map.addLayer({
+                        id: 'sightings-heatmap',
+                        type: 'heatmap',
+                        source: 'sightings',
+                        maxzoom: 15,
+                        paint: {
+                            // Increase weight to make heatmap more visible
+                            'heatmap-weight': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                0, 1,
+                                9, 3
+                            ],
+                            // Color ramp - standard heatmap colors (blue to red)
+                            'heatmap-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['heatmap-density'],
+                                0, 'rgba(33, 102, 172, 0)',      // Transparent at low density
+                                0.2, 'rgba(103, 169, 207, 0.5)', // Light blue
+                                0.4, 'rgba(209, 229, 240, 0.7)', // Very light blue
+                                0.6, 'rgba(253, 219, 199, 0.8)', // Light orange
+                                0.8, 'rgba(239, 138, 98, 0.9)',  // Orange
+                                1, 'rgba(178, 24, 43, 1)'        // Red for hotspots
+                            ],
+                            // Smaller, more appropriate radius for camera locations
+                            'heatmap-radius': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                0, 15,   // Reasonable radius at low zoom
+                                9, 25,   // Medium radius
+                                16, 40   // Larger radius at high zoom
+                            ],
+                            // Adjust the heatmap opacity
+                            'heatmap-opacity': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                7, 0.9,
+                                15, 0.7
+                            ]
+                        }
+                    });
+
+                    console.log('Added heatmap layer');
+
+                    // Add individual points - always visible for small datasets
+                    map.addLayer({
+                        id: 'sightings-points',
+                        type: 'circle',
+                        source: 'sightings',
+                        maxzoom: 15, // Show points up to zoom level 15, then let heatmap take over
+                        paint: {
+                            // Smaller, more appropriate circle size for camera locations
+                            'circle-radius': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                5, 4,    // Small at low zoom
+                                10, 8,   // Medium at medium zoom
+                                15, 12   // Reasonable size at high zoom
+                            ],
+                            'circle-color': '#527A52',
+                            'circle-stroke-width': 3,
+                            'circle-stroke-color': '#ffffff',
+                            'circle-opacity': 1.0  // Full opacity for maximum visibility
+                        }
+                    });
+
+                    console.log('Added circle points layer');
+
+                    // Add popup on click
+                    map.on('click', 'sightings-points', (e) => {
+                        const properties = e.features[0].properties;
+                        const popup = new mapboxgl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(`
+                                <div class="p-2">
+                                    <h6 class="mb-1">${properties.cameraName}</h6>
+                                    <small class="text-muted d-block">${properties.dateTaken}</small>
+                                    ${properties.temperature ? `<small class="text-muted d-block">Temperature: ${properties.temperature}°F</small>` : ''}
+                                    ${properties.windDirection ? `<small class="text-muted d-block">Wind: ${properties.windDirection}</small>` : ''}
+                                    ${properties.moonPhase ? `<small class="text-muted d-block">Moon: ${properties.moonPhase}</small>` : ''}
+                                </div>
+                            `)
+                            .addTo(map);
+                    });
+
+                    // Change cursor on hover
+                    map.on('mouseenter', 'sightings-points', () => {
+                        map.getCanvas().style.cursor = 'pointer';
+                    });
+
+                    map.on('mouseleave', 'sightings-points', () => {
+                        map.getCanvas().style.cursor = '';
+                    });
+                });
+
+                // Store the map instance for cleanup
+                if (!this.mapInstances) {
+                    this.mapInstances = {};
+                }
+                this.mapInstances[mapId] = map;
+
+            }, 100);
+
+        } catch (error) {
+            console.error('Error creating sighting heatmap:', error);
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div>
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                        <p class="text-muted mb-0">Failed to load heatmap</p>
+                        <small class="text-muted">${error.message}</small>
+                    </div>
+                </div>
+            `;
+        }
+    },
+
+    // Get Mapbox token from various sources
+    getMapboxToken() {
+        // Try meta tag first
+        const meta = document.querySelector('meta[name="mapbox-token"]');
+        if (meta?.content) return meta.content;
+
+        // Try global variable
+        if (window.__MAPBOX_TOKEN) return window.__MAPBOX_TOKEN;
+
+        // Try existing mapbox instance
+        if (typeof mapboxgl !== 'undefined' && mapboxgl.accessToken) {
+            return mapboxgl.accessToken;
+        }
+
+        return null;
+    },
+
     // Handle chart click events for drilldown
     handleChartClick(chartType, dataPoint) {
         console.log('Chart clicked:', chartType, dataPoint);
@@ -758,6 +1326,14 @@ BuckLens.Charts = {
             if (chart) chart.destroy();
         });
         this.chartInstances = {};
+        
+        // Cleanup map instances
+        if (this.mapInstances) {
+            Object.values(this.mapInstances).forEach(map => {
+                if (map) map.remove();
+            });
+            this.mapInstances = {};
+        }
     }
 };
 

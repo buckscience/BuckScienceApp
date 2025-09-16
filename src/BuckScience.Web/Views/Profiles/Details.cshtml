@@ -18,7 +18,7 @@
         <!-- Profile Information Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="profileInfoHeading">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#profileInfoCollapse" aria-expanded="true" aria-controls="profileInfoCollapse">
+                <button class="accordion-button fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#profileInfoCollapse" aria-expanded="true" aria-controls="profileInfoCollapse">
                     <i class="fas fa-user-circle me-2"></i>
                     Profile Information
                 </button>
@@ -84,7 +84,7 @@
         <!-- BuckLens Analytics Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="bucklensAnalyticsHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bucklensAnalyticsCollapse" aria-expanded="false" aria-controls="bucklensAnalyticsCollapse">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#bucklensAnalyticsCollapse" aria-expanded="false" aria-controls="bucklensAnalyticsCollapse">
                     <i class="fas fa-chart-line me-2"></i>
                     BuckLens Analytics
                 </button>
@@ -156,6 +156,22 @@
                             </div>
 
                         </div>
+                        
+                        <!-- Sighting Heatmap/Locations - Full Width Row -->
+                        <div class="row g-4 mt-2">
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm bucklens-chart-card">
+                                    <div class="card-header bg-white border-0">
+                                        <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Sighting Locations</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="sightingHeatmap" style="min-height: 400px;">
+                                            <!-- Heatmap/location data will be populated by JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
 
                     </div>
@@ -166,9 +182,9 @@
         <!-- Tagged Photos Section -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="taggedPhotosHeading">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#taggedPhotosCollapse" aria-expanded="false" aria-controls="taggedPhotosCollapse">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#taggedPhotosCollapse" aria-expanded="false" aria-controls="taggedPhotosCollapse">
                     <i class="fas fa-images me-2"></i>
-                    Tagged Photos
+                    Tagged Photos @if (Model.TaggedPhotos != null && Model.TaggedPhotos.Any()) { <span class="badge badge-custom-primary ms-2 fs-7">@Model.TaggedPhotos.Count()</span> }
                 </button>
             </h2>
             <div id="taggedPhotosCollapse" class="accordion-collapse collapse" aria-labelledby="taggedPhotosHeading" data-bs-parent="#profileDetailsAccordion">

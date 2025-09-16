@@ -40,17 +40,16 @@ public class BuckLensAnalyticsService
                 DateTaken = pc.p.DateTaken,
                 CameraId = pc.c.Id,
                 CameraName = pc.c.PlacementHistories
+                    .Where(ph => ph.EndDateTime == null)
                     .Select(ph => ph.LocationName)
-                    .FirstOrDefault(ln => !string.IsNullOrWhiteSpace(ln)) ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
+                    .FirstOrDefault() ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
                 Latitude = pc.c.PlacementHistories
-                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
-                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Latitude)
+                    .Where(ph => ph.EndDateTime == null)
+                    .Select(ph => (double?)ph.Latitude)
                     .FirstOrDefault(),
                 Longitude = pc.c.PlacementHistories
-                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
-                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Longitude)
+                    .Where(ph => ph.EndDateTime == null)
+                    .Select(ph => (double?)ph.Longitude)
                     .FirstOrDefault(),
                 WeatherId = pc.p.WeatherId,
                 Temperature = pc.p.Weather != null ? pc.p.Weather.Temperature : (double?)null,
