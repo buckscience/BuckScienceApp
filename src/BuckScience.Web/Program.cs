@@ -65,6 +65,49 @@ builder.Services.Configure<CookieAuthenticationOptions>(
         cookie.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
+        
+        // Configure login path to prevent automatic redirects for subscription routes
+        // This is especially important for AJAX calls and API endpoints
+        cookie.LoginPath = "/Account/SignIn";
+        cookie.AccessDeniedPath = "/Account/AccessDenied";
+        
+        // Add events to log authentication redirects for debugging
+        cookie.Events = new CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetService<ILogger<Program>>();
+                logger?.LogWarning("CookieAuth: Redirecting to login for {Method} {Path} - RequestedWith: {RequestedWith}", 
+                    context.Request.Method, context.Request.Path, context.Request.Headers["X-Requested-With"].ToString());
+                
+                // For subscription routes, don't redirect to login - return 401 instead
+                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger?.LogWarning("CookieAuth: BLOCKING login redirect for subscription path {Path} - returning 401 instead", context.Request.Path);
+                    context.Response.StatusCode = 401;
+                    return Task.CompletedTask;
+                }
+                
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetService<ILogger<Program>>();
+                logger?.LogWarning("CookieAuth: Access denied for {Method} {Path}", context.Request.Method, context.Request.Path);
+                
+                // For subscription routes, don't redirect - return 403 instead
+                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger?.LogWarning("CookieAuth: BLOCKING access denied redirect for subscription path {Path} - returning 403 instead", context.Request.Path);
+                    context.Response.StatusCode = 403;
+                    return Task.CompletedTask;
+                }
+                
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddRazorPages().AddMicrosoftIdentityUI();

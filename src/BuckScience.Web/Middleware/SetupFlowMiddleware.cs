@@ -46,7 +46,7 @@ public sealed class SetupFlowMiddleware
         // Allow subscription paths completely - bypass ALL authorization checks
         if (IsSubscriptionPath(path))
         {
-            _logger.LogInformation("SetupFlow: Allowing subscription path {Path} - bypassing all setup and authorization checks", path);
+            _logger.LogInformation("SetupFlow: ALLOWING subscription path {Method} {Path} - bypassing all setup and authorization checks", method, path);
             
             // For subscription paths, we want to ensure the request reaches the controller
             // without any authentication challenges, even if user is not properly provisioned

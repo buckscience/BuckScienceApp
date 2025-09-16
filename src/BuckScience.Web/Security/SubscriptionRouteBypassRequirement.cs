@@ -25,10 +25,25 @@ public class SubscriptionRouteBypassHandler : AuthorizationHandler<SubscriptionR
         if (context.Resource is HttpContext httpContext)
         {
             var path = httpContext.Request.Path.Value ?? string.Empty;
+            var method = httpContext.Request.Method;
+            
+            // Enhanced logging for debugging authorization issues
+            var logger = httpContext.RequestServices.GetService<ILogger<SubscriptionRouteBypassHandler>>();
+            logger?.LogInformation("SubscriptionRouteBypass: Checking {Method} {Path}, User.IsAuthenticated={IsAuth}", 
+                method, path, context.User.Identity?.IsAuthenticated);
             
             // If this is a subscription route, succeed the requirement without authentication
             if (path.StartsWith("/subscription", StringComparison.OrdinalIgnoreCase))
             {
+                logger?.LogInformation("SubscriptionRouteBypass: ALLOWING subscription path {Path} - bypassing authentication requirement", path);
+                context.Succeed(requirement);
+                return Task.CompletedTask;
+            }
+            
+            // Also check for capital S in case of routing differences
+            if (path.StartsWith("/Subscription", StringComparison.OrdinalIgnoreCase))
+            {
+                logger?.LogInformation("SubscriptionRouteBypass: ALLOWING subscription path {Path} (capital S) - bypassing authentication requirement", path);
                 context.Succeed(requirement);
                 return Task.CompletedTask;
             }
@@ -38,6 +53,16 @@ public class SubscriptionRouteBypassHandler : AuthorizationHandler<SubscriptionR
         if (context.User.Identity?.IsAuthenticated == true)
         {
             context.Succeed(requirement);
+        }
+        else
+        {
+            // Log when authentication is required for non-subscription routes
+            if (context.Resource is HttpContext ctx)
+            {
+                var logger = ctx.RequestServices.GetService<ILogger<SubscriptionRouteBypassHandler>>();
+                logger?.LogWarning("SubscriptionRouteBypass: REQUIRING authentication for {Path} - user not authenticated", 
+                    ctx.Request.Path.Value);
+            }
         }
         
         return Task.CompletedTask;
