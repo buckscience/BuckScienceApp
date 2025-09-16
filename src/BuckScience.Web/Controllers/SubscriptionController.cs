@@ -181,25 +181,16 @@ public class SubscriptionController : Controller
         _logger.LogInformation("ProcessSubscriptionChange started: {Action} to {Tier}, User.IsAuthenticated: {IsAuth}, HasUserId: {HasId}", 
             action, tier, _currentUser.IsAuthenticated, _currentUser.Id.HasValue);
             
-        // Manual authentication check - no challenges, only redirects
+        // For subscription changes, we require authentication but handle it gracefully without challenges
         if (!_currentUser.IsAuthenticated)
         {
-            _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier} - redirecting to authenticate", action, tier);
+            _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier} - returning friendly error", action, tier);
             
-            // Instead of just redirecting to Home, provide a clear path to authentication
-            TempData["Error"] = "Please sign in to upgrade your subscription.";
+            // Don't redirect to authentication - instead show a user-friendly message
+            TempData["Error"] = "Please sign in to upgrade your subscription. You can browse our subscription plans without signing in, but you'll need an account to make changes.";
             
-            // Check if this is likely a direct API call or form submission
-            if (Request.Headers.ContainsKey("X-Requested-With") || 
-                Request.ContentType?.Contains("application/json") == true)
-            {
-                // For AJAX calls, return JSON error
-                return Json(new { success = false, error = "Authentication required", redirectUrl = "/Account/SignIn" });
-            }
-            
-            // For regular form submissions, redirect to sign in with return URL
-            var returnUrl = Url.Action("Index", "Subscription");
-            return RedirectToAction("SignIn", "Account", new { returnUrl });
+            // Always redirect back to the subscription page to show available plans
+            return RedirectToAction("Index", "Subscription");
         }
 
         if (_currentUser.Id is null)
