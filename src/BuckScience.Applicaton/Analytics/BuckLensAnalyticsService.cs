@@ -43,14 +43,16 @@ public class BuckLensAnalyticsService
                     .Select(ph => ph.LocationName)
                     .FirstOrDefault(ln => !string.IsNullOrWhiteSpace(ln)) ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
                 Latitude = pc.c.PlacementHistories
-                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
-                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Latitude)
+                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken && (ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken))
+                    .Where(ph => ph.Latitude != null && ph.Latitude != 0)
+                    .OrderByDescending(ph => ph.StartDateTime)
+                    .Select(ph => (double?)ph.Latitude)
                     .FirstOrDefault(),
                 Longitude = pc.c.PlacementHistories
-                    .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
-                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Longitude)
+                    .Where(ph => ph.StartDateTime <= pc.p.DateTaken && (ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken))
+                    .Where(ph => ph.Longitude != null && ph.Longitude != 0)
+                    .OrderByDescending(ph => ph.StartDateTime)
+                    .Select(ph => (double?)ph.Longitude)
                     .FirstOrDefault(),
                 WeatherId = pc.p.WeatherId,
                 Temperature = pc.p.Weather != null ? pc.p.Weather.Temperature : (double?)null,
