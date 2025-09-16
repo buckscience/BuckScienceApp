@@ -272,11 +272,66 @@ BuckLens.Charts = {
 
     // Load sighting heatmap
     async loadSightingHeatmap(profileId) {
-        const response = await fetch(`/profiles/${profileId}/analytics/sightings/locations`);
-        if (!response.ok) throw new Error('Failed to load sighting locations');
-        
-        const locationData = await response.json();
-        this.createSightingHeatmap(locationData);
+        const container = document.getElementById('sightingHeatmap');
+        if (!container) {
+            console.error('Heatmap container not found');
+            return;
+        }
+
+        // Show loading state
+        container.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                <div>
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="text-muted mb-0">Loading sighting locations...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            console.log('Loading sighting heatmap for profile:', profileId);
+            const response = await fetch(`/profiles/${profileId}/analytics/sightings/locations`);
+            
+            if (!response.ok) {
+                console.error('Failed to load sighting locations, status:', response.status);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const locationData = await response.json();
+            console.log('Raw API response:', locationData);
+            console.log('Location data type:', typeof locationData);
+            console.log('Is array:', Array.isArray(locationData));
+            console.log('Number of sighting locations:', locationData ? locationData.length : 0);
+            
+            // Debug each location point
+            if (locationData && locationData.length > 0) {
+                locationData.forEach((point, index) => {
+                    console.log(`Location ${index}:`, {
+                        lat: point.latitude,
+                        lng: point.longitude,
+                        camera: point.cameraName,
+                        date: point.dateTaken
+                    });
+                });
+            }
+            
+            this.createSightingHeatmap(locationData || []);
+        } catch (error) {
+            console.error('Error loading sighting heatmap:', error);
+            // Show detailed error in the heatmap container
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div>
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                        <p class="text-muted mb-2">Failed to load sighting locations</p>
+                        <small class="text-muted d-block">${error.message}</small>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="BuckLensCharts.loadSightingHeatmap(${profileId})">
+                            <i class="fas fa-redo me-1"></i>Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
     },
 
     // Create bar chart with optional moon phase icons
@@ -616,14 +671,58 @@ BuckLens.Charts = {
         }
 
         try {
+            console.log('Creating heatmap with location data:', locationData);
+            console.log('Data type:', typeof locationData, 'Is array:', Array.isArray(locationData));
+            
             // Check if we have any location data
             if (!locationData || locationData.length === 0) {
                 container.innerHTML = `
                     <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
                         <div>
                             <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
-                            <p class="text-muted mb-0">No location data available</p>
-                            <small class="text-muted">Sightings need camera location data to appear on the heatmap</small>
+                            <p class="text-muted mb-2">No location data available</p>
+                            <small class="text-muted d-block">Sightings need camera location data to appear on the heatmap</small>
+                            <small class="text-muted">Check that your cameras have GPS coordinates configured</small>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter out points without valid coordinates and debug each point
+            const validLocations = locationData.filter((point, index) => {
+                const hasLat = point.latitude != null && !isNaN(point.latitude);
+                const hasLng = point.longitude != null && !isNaN(point.longitude);
+                const isValid = hasLat && hasLng;
+                
+                console.log(`Location ${index}:`, {
+                    camera: point.cameraName,
+                    lat: point.latitude,
+                    lng: point.longitude,
+                    hasLat,
+                    hasLng,
+                    isValid
+                });
+                
+                return isValid;
+            });
+
+            console.log('Filtered to', validLocations.length, 'valid locations out of', locationData.length, 'total');
+
+            if (validLocations.length === 0) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                        <div>
+                            <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-2">No valid coordinates found</p>
+                            <small class="text-muted d-block">Found ${locationData.length} sighting(s), but none have GPS coordinates</small>
+                            <small class="text-muted">Camera locations must be configured to show on the heatmap</small>
+                            <div class="mt-3">
+                                <details class="text-start">
+                                    <summary class="text-muted small">Show debug info</summary>
+                                    <pre class="small mt-2">${JSON.stringify(locationData, null, 2)}</pre>
+                                </details>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -650,9 +749,13 @@ BuckLens.Charts = {
                 const mapContainer = document.getElementById(mapId);
                 if (!mapContainer) return;
 
-                // Calculate bounds from the data
-                const lats = locationData.map(d => d.latitude);
-                const lngs = locationData.map(d => d.longitude);
+                // Calculate bounds from the valid location data
+                const lats = validLocations.map(d => d.latitude);
+                const lngs = validLocations.map(d => d.longitude);
+                
+                console.log('Valid latitudes:', lats);
+                console.log('Valid longitudes:', lngs);
+                
                 const bounds = [
                     [Math.min(...lngs), Math.min(...lats)], // Southwest corner
                     [Math.max(...lngs), Math.max(...lats)]  // Northeast corner
@@ -667,6 +770,9 @@ BuckLens.Charts = {
                 bounds[0][1] -= padding; // South
                 bounds[1][0] += padding; // East
                 bounds[1][1] += padding; // North
+                
+                console.log('Calculated map bounds:', bounds);
+                console.log('Coordinate ranges - Lat:', latRange, 'Lng:', lngRange);
 
                 // Get Mapbox token
                 const token = this.getMapboxToken();
@@ -684,18 +790,29 @@ BuckLens.Charts = {
                     return;
                 }
 
-                console.log('Creating heatmap with', locationData.length, 'sighting locations');
+                console.log('Creating heatmap with', validLocations.length, 'valid sighting locations');
 
-                // Initialize Mapbox map
+                // Initialize Mapbox map with different strategies for single vs multiple points
                 mapboxgl.accessToken = token;
-                const map = new mapboxgl.Map({
+                
+                let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/light-v11', // Lighter style for better heatmap visibility
-                    bounds: bounds,
-                    fitBoundsOptions: {
-                        padding: 20
-                    }
-                });
+                    style: 'mapbox://styles/mapbox/light-v11' // Lighter style for better heatmap visibility
+                };
+                
+                if (validLocations.length === 1) {
+                    // For single point, center on the location with a reasonable zoom
+                    mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
+                    mapConfig.zoom = 12;
+                    console.log('Single point detected, centering map at:', mapConfig.center);
+                } else {
+                    // For multiple points, use bounds
+                    mapConfig.bounds = bounds;
+                    mapConfig.fitBoundsOptions = { padding: 20 };
+                    console.log('Multiple points detected, using bounds:', bounds);
+                }
+                
+                const map = new mapboxgl.Map(mapConfig);
 
                 // Add error handling for map loading failures
                 map.on('error', (error) => {
@@ -722,7 +839,7 @@ BuckLens.Charts = {
                                     <p class="text-muted mb-0">Map taking too long to load</p>
                                     <small class="text-muted">Showing sighting locations as a list instead</small>
                                     <div class="mt-3">
-                                        ${locationData.map(point => `
+                                        ${validLocations.map(point => `
                                             <div class="card card-body mb-2 text-start">
                                                 <strong>${point.cameraName}</strong><br>
                                                 <small class="text-muted">${point.dateTaken}</small>
@@ -748,12 +865,12 @@ BuckLens.Charts = {
                     }
                     
                     console.log('Mapbox map loaded successfully');
-                    console.log('Location data for heatmap:', locationData);
+                    console.log('Valid location data for heatmap:', validLocations);
                     
                     // Convert location data to GeoJSON format for heatmap
                     const geojsonData = {
                         type: 'FeatureCollection',
-                        features: locationData.map(point => ({
+                        features: validLocations.map(point => ({
                             type: 'Feature',
                             properties: {
                                 photoId: point.photoId,
@@ -838,14 +955,14 @@ BuckLens.Charts = {
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                5, 6,    // Larger at low zoom
-                                10, 10,  // Even larger at medium zoom
-                                15, 15   // Large at high zoom
+                                5, 8,    // Larger at low zoom
+                                10, 15,  // Even larger at medium zoom
+                                15, 25   // Very large at high zoom
                             ],
                             'circle-color': '#527A52',
-                            'circle-stroke-width': 2,
+                            'circle-stroke-width': 3,
                             'circle-stroke-color': '#ffffff',
-                            'circle-opacity': 0.8
+                            'circle-opacity': 1.0  // Full opacity for maximum visibility
                         }
                     });
 
