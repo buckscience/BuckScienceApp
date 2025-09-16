@@ -77,30 +77,37 @@ builder.Services.Configure<CookieAuthenticationOptions>(
             OnRedirectToLogin = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetService<ILogger<Program>>();
-                logger?.LogWarning("CookieAuth: Redirecting to login for {Method} {Path} - RequestedWith: {RequestedWith}", 
-                    context.Request.Method, context.Request.Path, context.Request.Headers["X-Requested-With"].ToString());
+                logger?.LogWarning("CookieAuth: Redirecting to login for {Method} {Path} - RequestedWith: {RequestedWith}, User.IsAuthenticated: {IsAuth}", 
+                    context.Request.Method, context.Request.Path, context.Request.Headers["X-Requested-With"].ToString(),
+                    context.HttpContext.User.Identity?.IsAuthenticated);
                 
                 // For subscription routes, don't redirect to login - return 401 instead
-                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase))
+                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase) ||
+                    context.Request.Path.StartsWithSegments("/Subscription", StringComparison.OrdinalIgnoreCase))
                 {
                     logger?.LogWarning("CookieAuth: BLOCKING login redirect for subscription path {Path} - returning 401 instead", context.Request.Path);
                     context.Response.StatusCode = 401;
+                    context.Response.Headers["X-Auth-Bypass"] = "subscription-route";
                     return Task.CompletedTask;
                 }
                 
+                logger?.LogInformation("CookieAuth: Proceeding with login redirect to {RedirectUri}", context.RedirectUri);
                 context.Response.Redirect(context.RedirectUri);
                 return Task.CompletedTask;
             },
             OnRedirectToAccessDenied = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetService<ILogger<Program>>();
-                logger?.LogWarning("CookieAuth: Access denied for {Method} {Path}", context.Request.Method, context.Request.Path);
+                logger?.LogWarning("CookieAuth: Access denied for {Method} {Path}, User.IsAuthenticated: {IsAuth}", 
+                    context.Request.Method, context.Request.Path, context.HttpContext.User.Identity?.IsAuthenticated);
                 
                 // For subscription routes, don't redirect - return 403 instead
-                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase))
+                if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase) ||
+                    context.Request.Path.StartsWithSegments("/Subscription", StringComparison.OrdinalIgnoreCase))
                 {
                     logger?.LogWarning("CookieAuth: BLOCKING access denied redirect for subscription path {Path} - returning 403 instead", context.Request.Path);
                     context.Response.StatusCode = 403;
+                    context.Response.Headers["X-Auth-Bypass"] = "subscription-route";
                     return Task.CompletedTask;
                 }
                 

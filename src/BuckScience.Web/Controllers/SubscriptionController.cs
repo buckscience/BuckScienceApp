@@ -47,15 +47,19 @@ public class SubscriptionController : Controller
     [AllowAnonymous] // Allow access for Stripe redirects - handle auth manually
     public async Task<IActionResult> Index()
     {
-        // Enhanced user validation with better diagnostics
+        _logger.LogInformation("Subscription Index accessed - User.IsAuthenticated: {IsAuth}, HasUserId: {HasId}", 
+            _currentUser.IsAuthenticated, _currentUser.Id.HasValue);
+            
+        // Enhanced user validation with better diagnostics - but allow access even if not authenticated
+        // This ensures the subscription page can be viewed to see available plans
         if (!_currentUser.IsAuthenticated)
         {
-            _logger.LogWarning("Unauthenticated user attempted to access subscription page");
-            TempData["Error"] = "You must be logged in to view your subscription. Please sign in.";
-            return RedirectToAction("Index", "Home"); // Redirect to home instead of auth challenge
+            _logger.LogInformation("Unauthenticated user accessing subscription page - showing available plans");
+            // Allow unauthenticated users to see the subscription page and available plans
+            // They'll be prompted to authenticate when they try to upgrade
         }
 
-        if (_currentUser.Id is null)
+        if (_currentUser.IsAuthenticated && _currentUser.Id is null)
         {
             _logger.LogError("Authenticated user not found in database during subscription index access. B2C ID: {B2CId}, Email: {Email}, Name: {Name}", 
                 _currentUser.AzureEntraB2CId, _currentUser.Email, _currentUser.Name);
@@ -84,12 +88,22 @@ public class SubscriptionController : Controller
             return await BuildSubscriptionIndexView(userSubscription, userTier, userTrialDaysRemaining, userIsTrialExpired, userId);
         }
 
-        var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUser.Id.Value);
-        var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUser.Id.Value);
-        var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUser.Id.Value);
-        var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(_currentUser.Id.Value);
-        
-        return await BuildSubscriptionIndexView(subscription, tier, trialDaysRemaining, isTrialExpired, _currentUser.Id.Value);
+        // For authenticated users with valid ID, or unauthenticated users, show the subscription page
+        if (_currentUser.IsAuthenticated && _currentUser.Id.HasValue)
+        {
+            var subscription = await _subscriptionService.GetUserSubscriptionAsync(_currentUser.Id.Value);
+            var tier = await _subscriptionService.GetUserSubscriptionTierAsync(_currentUser.Id.Value);
+            var trialDaysRemaining = await _subscriptionService.GetTrialDaysRemainingAsync(_currentUser.Id.Value);
+            var isTrialExpired = await _subscriptionService.IsTrialExpiredAsync(_currentUser.Id.Value);
+            
+            return await BuildSubscriptionIndexView(subscription, tier, trialDaysRemaining, isTrialExpired, _currentUser.Id.Value);
+        }
+        else
+        {
+            // Unauthenticated user - show basic subscription page with available plans
+            _logger.LogInformation("Showing subscription plans to unauthenticated user");
+            return await BuildSubscriptionIndexView(null, SubscriptionTier.Trial, 0, true, null);
+        }
     }
 
     private async Task<IActionResult> BuildSubscriptionIndexView(
@@ -97,14 +111,14 @@ public class SubscriptionController : Controller
         SubscriptionTier tier, 
         int trialDaysRemaining, 
         bool isTrialExpired, 
-        int userId)
+        int? userId)
     {
 
         // Fetch dynamic pricing information from Stripe
         var pricingInfo = new Dictionary<SubscriptionTier, StripePriceInfo>();
         try
         {
-            _logger.LogInformation("Fetching pricing information from Stripe for subscription index page for user {UserId}", userId);
+            _logger.LogInformation("Fetching pricing information from Stripe for subscription index page for user {UserId}", userId?.ToString() ?? "unauthenticated");
             pricingInfo = await _stripeService.GetPricingInfoAsync();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Stripe configuration"))
@@ -164,12 +178,28 @@ public class SubscriptionController : Controller
 
     private async Task<IActionResult> ProcessSubscriptionChange(SubscriptionTier tier, string action)
     {
+        _logger.LogInformation("ProcessSubscriptionChange started: {Action} to {Tier}, User.IsAuthenticated: {IsAuth}, HasUserId: {HasId}", 
+            action, tier, _currentUser.IsAuthenticated, _currentUser.Id.HasValue);
+            
         // Manual authentication check - no challenges, only redirects
         if (!_currentUser.IsAuthenticated)
         {
-            _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier}", action, tier);
-            TempData["Error"] = "You must be logged in to manage your subscription. Please sign in and try again.";
-            return RedirectToAction("Index", "Home");
+            _logger.LogWarning("Unauthenticated user attempted to {Action} to tier {Tier} - redirecting to authenticate", action, tier);
+            
+            // Instead of just redirecting to Home, provide a clear path to authentication
+            TempData["Error"] = "Please sign in to upgrade your subscription.";
+            
+            // Check if this is likely a direct API call or form submission
+            if (Request.Headers.ContainsKey("X-Requested-With") || 
+                Request.ContentType?.Contains("application/json") == true)
+            {
+                // For AJAX calls, return JSON error
+                return Json(new { success = false, error = "Authentication required", redirectUrl = "/Account/SignIn" });
+            }
+            
+            // For regular form submissions, redirect to sign in with return URL
+            var returnUrl = Url.Action("Index", "Subscription");
+            return RedirectToAction("SignIn", "Account", new { returnUrl });
         }
 
         if (_currentUser.Id is null)
