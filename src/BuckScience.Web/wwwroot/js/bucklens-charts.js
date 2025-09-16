@@ -632,7 +632,18 @@ BuckLens.Charts = {
 
             // Create a unique map container ID to avoid conflicts
             const mapId = 'heatmap-' + Date.now();
-            container.innerHTML = `<div id="${mapId}" style="width: 100%; height: 250px; border-radius: 8px;"></div>`;
+            container.innerHTML = `
+                <div id="${mapId}" style="width: 100%; height: 250px; border-radius: 8px; position: relative;">
+                    <div class="d-flex align-items-center justify-content-center text-center" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 1000;" id="${mapId}-loading">
+                        <div>
+                            <div class="spinner-border text-primary mb-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mb-0">Loading map...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
 
             // Wait for the container to be in the DOM
             setTimeout(() => {
@@ -660,6 +671,7 @@ BuckLens.Charts = {
                 // Get Mapbox token
                 const token = this.getMapboxToken();
                 if (!token) {
+                    console.warn('Mapbox token not found for heatmap');
                     container.innerHTML = `
                         <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
                             <div>
@@ -672,6 +684,8 @@ BuckLens.Charts = {
                     return;
                 }
 
+                console.log('Creating heatmap with', locationData.length, 'sighting locations');
+
                 // Initialize Mapbox map
                 mapboxgl.accessToken = token;
                 const map = new mapboxgl.Map({
@@ -683,7 +697,58 @@ BuckLens.Charts = {
                     }
                 });
 
+                // Add error handling for map loading failures
+                map.on('error', (error) => {
+                    console.error('Mapbox error:', error);
+                    container.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                            <div>
+                                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                                <p class="text-muted mb-0">Map failed to load</p>
+                                <small class="text-muted">Please check your internet connection or try refreshing the page</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Add timeout fallback in case map never loads
+                const loadTimeout = setTimeout(() => {
+                    if (map.loaded && !map.loaded()) {
+                        console.warn('Map load timeout - showing fallback');
+                        container.innerHTML = `
+                            <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                                <div>
+                                    <i class="fas fa-clock text-warning fa-2x mb-2"></i>
+                                    <p class="text-muted mb-0">Map taking too long to load</p>
+                                    <small class="text-muted">Showing sighting locations as a list instead</small>
+                                    <div class="mt-3">
+                                        ${locationData.map(point => `
+                                            <div class="card card-body mb-2 text-start">
+                                                <strong>${point.cameraName}</strong><br>
+                                                <small class="text-muted">${point.dateTaken}</small>
+                                                ${point.temperature ? `<br><small>Temperature: ${point.temperature}°F</small>` : ''}
+                                                ${point.windDirection ? `<br><small>Wind: ${point.windDirection}</small>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }, 10000); // 10 second timeout
+
                 map.on('load', () => {
+                    // Clear the timeout since map loaded successfully
+                    clearTimeout(loadTimeout);
+                    
+                    // Remove loading indicator
+                    const loadingIndicator = document.getElementById(`${mapId}-loading`);
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                    
+                    console.log('Mapbox map loaded successfully');
+                    
                     // Convert location data to GeoJSON format for heatmap
                     const geojsonData = {
                         type: 'FeatureCollection',
