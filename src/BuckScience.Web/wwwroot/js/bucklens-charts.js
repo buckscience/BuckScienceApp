@@ -882,7 +882,7 @@ BuckLens.Charts = {
                 
                 let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/light-v11' // Lighter style for better heatmap visibility
+                    style: 'mapbox://styles/mapbox/satellite-streets-v12' // Lighter style for better heatmap visibility
                 };
                 
                 if (validLocations.length === 1) {
