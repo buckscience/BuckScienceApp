@@ -695,19 +695,45 @@ BuckLens.Charts = {
                 const hasLng = point.longitude != null && !isNaN(point.longitude);
                 const isValid = hasLat && hasLng;
                 
+                // Enhanced coordinate debugging
                 console.log(`Location ${index}:`, {
                     camera: point.cameraName,
                     lat: point.latitude,
                     lng: point.longitude,
+                    latType: typeof point.latitude,
+                    lngType: typeof point.longitude,
                     hasLat,
                     hasLng,
-                    isValid
+                    isValid,
+                    // Show expected US coordinate ranges for validation
+                    latInUSRange: hasLat ? (point.latitude >= 24.396308 && point.latitude <= 49.384358) : false,
+                    lngInUSRange: hasLng ? (point.longitude >= -125.0 && point.longitude <= -66.93457) : false
                 });
                 
                 return isValid;
             });
 
             console.log('Filtered to', validLocations.length, 'valid locations out of', locationData.length, 'total');
+
+            // Check for potentially swapped coordinates (lat/lng reversed)
+            const suspiciousCoords = validLocations.filter(point => {
+                const latInUSRange = point.latitude >= 24.396308 && point.latitude <= 49.384358;
+                const lngInUSRange = point.longitude >= -125.0 && point.longitude <= -66.93457;
+                return !latInUSRange || !lngInUSRange;
+            });
+            
+            if (suspiciousCoords.length > 0) {
+                console.warn('⚠️ COORDINATE WARNING: Found coordinates outside US ranges:');
+                suspiciousCoords.forEach(point => {
+                    console.warn(`Camera: ${point.cameraName}, Lat: ${point.latitude}, Lng: ${point.longitude}`);
+                    // Check if swapping would fix it
+                    const swappedLatInRange = point.longitude >= 24.396308 && point.longitude <= 49.384358;
+                    const swappedLngInRange = point.latitude >= -125.0 && point.latitude <= -66.93457;
+                    if (swappedLatInRange && swappedLngInRange) {
+                        console.warn(`🔄 Coordinates appear to be SWAPPED! Should be Lat: ${point.longitude}, Lng: ${point.latitude}`);
+                    }
+                });
+            }
 
             if (validLocations.length === 0) {
                 container.innerHTML = `
@@ -792,7 +818,7 @@ BuckLens.Charts = {
                                         <div class="card card-body text-start">
                                             <strong class="text-success">${point.cameraName}</strong>
                                             <small class="text-muted">${point.dateTaken}</small>
-                                            ${point.latitude && point.longitude ? `<small class="text-muted">📍 ${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}</small>` : ''}
+                                            ${point.latitude && point.longitude ? `<small class="text-muted">📍 Lat: ${point.latitude.toFixed(6)}, Lng: ${point.longitude.toFixed(6)}</small>` : ''}
                                             ${point.temperature ? `<small class="text-muted">🌡️ ${point.temperature}°F</small>` : ''}
                                             ${point.windDirection ? `<small class="text-muted">💨 ${point.windDirection}</small>` : ''}
                                             ${point.moonPhase ? `<small class="text-muted">🌙 ${point.moonPhase}</small>` : ''}
