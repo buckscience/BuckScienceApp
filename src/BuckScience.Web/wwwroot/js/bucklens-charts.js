@@ -695,20 +695,40 @@ BuckLens.Charts = {
                 const hasLng = point.longitude != null && !isNaN(point.longitude);
                 const isValid = hasLat && hasLng;
                 
-                // Enhanced coordinate debugging
-                console.log(`Location ${index}:`, {
-                    camera: point.cameraName,
-                    lat: point.latitude,
-                    lng: point.longitude,
-                    latType: typeof point.latitude,
-                    lngType: typeof point.longitude,
-                    hasLat,
-                    hasLng,
-                    isValid,
-                    // Show expected US coordinate ranges for validation
-                    latInUSRange: hasLat ? (point.latitude >= 24.396308 && point.latitude <= 49.384358) : false,
-                    lngInUSRange: hasLng ? (point.longitude >= -125.0 && point.longitude <= -66.93457) : false
-                });
+            // Enhanced coordinate debugging
+            console.log(`Location ${index}:`, {
+                camera: point.cameraName,
+                lat: point.latitude,
+                lng: point.longitude,
+                latType: typeof point.latitude,
+                lngType: typeof point.longitude,
+                hasLat,
+                hasLng,
+                isValid,
+                // Show expected US coordinate ranges for validation
+                latInUSRange: hasLat ? (point.latitude >= 24.396308 && point.latitude <= 49.384358) : false,
+                lngInUSRange: hasLng ? (point.longitude >= -125.0 && point.longitude <= -66.93457) : false,
+                // Check for invalid latitude (must be -90 to +90)
+                latIsPhysicallyValid: hasLat ? (point.latitude >= -90 && point.latitude <= 90) : false,
+                // Check for invalid longitude (must be -180 to +180) 
+                lngIsPhysicallyValid: hasLng ? (point.longitude >= -180 && point.longitude <= 180) : false
+            });
+            
+            // Check for physically impossible coordinates
+            if (hasLat && (point.latitude < -90 || point.latitude > 90)) {
+                console.error(`🚨 INVALID LATITUDE: ${point.latitude} for camera ${point.cameraName} - latitude must be between -90 and +90`);
+            }
+            if (hasLng && (point.longitude < -180 || point.longitude > 180)) {
+                console.error(`🚨 INVALID LONGITUDE: ${point.longitude} for camera ${point.cameraName} - longitude must be between -180 and +180`);
+            }
+            
+            // Special check for the user's reported coordinate
+            if (hasLat && hasLng && 
+                (Math.abs(point.latitude - 31.44147) < 0.0001 || Math.abs(point.longitude - (-93.438233)) < 0.0001)) {
+                console.log(`🎯 FOUND USER'S COORDINATE: Lat=${point.latitude}, Lng=${point.longitude}`);
+                console.log(`Expected location: Louisiana, USA (near Texas border)`);
+                console.log(`GeoJSON format will be: [${point.longitude}, ${point.latitude}]`);
+            }
                 
                 return isValid;
             });
@@ -782,6 +802,30 @@ BuckLens.Charts = {
                 console.log('Valid latitudes:', lats);
                 console.log('Valid longitudes:', lngs);
                 
+                // Enhanced bounds debugging
+                console.log('Coordinate analysis:');
+                console.log(`  Latitude range: ${Math.min(...lats)} to ${Math.max(...lats)}`);
+                console.log(`  Longitude range: ${Math.min(...lngs)} to ${Math.max(...lngs)}`);
+                console.log(`  Expected for US: Lat 24.4-49.4, Lng -125.0 to -66.9`);
+                
+                // Check if coordinates might be swapped
+                const minLat = Math.min(...lats);
+                const maxLat = Math.max(...lats);
+                const minLng = Math.min(...lngs);
+                const maxLng = Math.max(...lngs);
+                
+                if (minLat < -90 || maxLat > 90) {
+                    console.error('🚨 INVALID LATITUDES DETECTED - values outside -90 to +90 range!');
+                }
+                if (minLng < -180 || maxLng > 180) {
+                    console.error('🚨 INVALID LONGITUDES DETECTED - values outside -180 to +180 range!');
+                }
+                
+                // Check for coordinate swap indicators
+                if (minLat > 0 && maxLat < 50 && minLng > 0 && maxLng < 50) {
+                    console.warn('🔄 POSSIBLE COORDINATE SWAP: Both lat and lng are positive and in similar ranges - check if they are swapped!');
+                }
+                
                 const bounds = [
                     [Math.min(...lngs), Math.min(...lats)], // Southwest corner
                     [Math.max(...lngs), Math.max(...lats)]  // Northeast corner
@@ -846,11 +890,21 @@ BuckLens.Charts = {
                     mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
                     mapConfig.zoom = 12;
                     console.log('Single point detected, centering map at:', mapConfig.center);
+                    console.log(`Single point details: Camera=${validLocations[0].cameraName}, Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}`);
+                    console.log(`Expected location for Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}:`);
+                    if (validLocations[0].latitude > 24 && validLocations[0].latitude < 50 && validLocations[0].longitude > -125 && validLocations[0].longitude < -66) {
+                        console.log('✅ Coordinates appear to be in the United States');
+                    } else {
+                        console.warn('⚠️ Coordinates do NOT appear to be in the United States!');
+                        console.log(`  Latitude ${validLocations[0].latitude} ${validLocations[0].latitude > 24 && validLocations[0].latitude < 50 ? '✅' : '❌'} (US range: 24.4-49.4)`);
+                        console.log(`  Longitude ${validLocations[0].longitude} ${validLocations[0].longitude > -125 && validLocations[0].longitude < -66 ? '✅' : '❌'} (US range: -125.0 to -66.9)`);
+                    }
                 } else {
                     // For multiple points, use bounds
                     mapConfig.bounds = bounds;
                     mapConfig.fitBoundsOptions = { padding: 20 };
                     console.log('Multiple points detected, using bounds:', bounds);
+                    console.log(`Bounds breakdown: SW=[${bounds[0][0]}, ${bounds[0][1]}], NE=[${bounds[1][0]}, ${bounds[1][1]}]`);
                 }
                 
                 const map = new mapboxgl.Map(mapConfig);
