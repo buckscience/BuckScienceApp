@@ -151,134 +151,181 @@
                 </div>
             </div>
 
-            <!-- Subscription Plans -->
-            @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial || Model.IsTrialExpired)
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-rocket me-2"></i>Choose Your Plan
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @foreach (var tier in Model.GetAvailableUpgrades())
-                            {
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 border-primary position-relative">
-                                        @if (tier == BuckScience.Domain.Enums.SubscriptionTier.Buck)
-                                        {
-                                            <div class="badge bg-success position-absolute top-0 start-50 translate-middle">
-                                                Most Popular
-                                            </div>
-                                        }
-                                        <div class="card-body text-center">
-                                            <h6 class="card-title">@Model.GetTierDisplayName(tier)</h6>
-                                            <h4 class="text-primary">
-                                                $@Model.GetTierPrice(tier).ToString("F2")
-                                                <small class="text-muted">/@Model.GetTierInterval(tier)</small>
-                                            </h4>
-                                            <ul class="list-unstyled small text-muted mb-3">
-                                                @{
-                                                    var limits = Model.GetTierLimits(tier);
-                                                }
-                                                <li><i class="fas fa-map-marked-alt text-primary me-1"></i>@limits.Properties Properties</li>
-                                                <li><i class="fas fa-camera text-success me-1"></i>@limits.Cameras Cameras</li>
-                                                <li><i class="fas fa-image text-warning me-1"></i>@limits.Photos Photos</li>
-                                            </ul>
-                                            @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
-                                            {
-                                                <form asp-action="Subscribe" method="post" class="mt-auto subscription-form">
-                                                    <input type="hidden" name="tier" value="@tier" />
-                                                    <button type="submit" class="btn btn-primary w-100">
-                                                        Upgrade to Plan
-                                                    </button>
-                                                </form>
-                                            }
-                                            else
-                                            {
-                                                <form asp-action="Update" method="post" class="mt-auto subscription-form">
-                                                    <input type="hidden" name="newTier" value="@tier" />
-                                                    <button type="submit" class="btn btn-primary w-100">
-                                                        Upgrade Now
-                                                    </button>
-                                                </form>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
+            <!-- Subscription Plans - Show All Options -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-rocket me-2"></i>Subscription Plans
+                    </h5>
+                    <p class="card-text small text-muted mb-0">
+                        @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                        {
+                            <text>Choose your plan to unlock more features</text>
+                        }
+                        else
+                        {
+                            <text>Current plan: <strong>@Model.GetTierDisplayName(Model.CurrentTier)</strong> - Upgrade or downgrade anytime</text>
+                        }
+                    </p>
                 </div>
-            }
-            else if (Model.IsActive() && Model.CurrentTier != BuckScience.Domain.Enums.SubscriptionTier.Trial)
-            {
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-exchange-alt me-2"></i>Change Your Plan
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @{
-                                var allPlans = new[] { 
-                                    BuckScience.Domain.Enums.SubscriptionTier.Fawn,
-                                    BuckScience.Domain.Enums.SubscriptionTier.Doe,
-                                    BuckScience.Domain.Enums.SubscriptionTier.Buck,
-                                    BuckScience.Domain.Enums.SubscriptionTier.Trophy
-                                }.Where(t => t != Model.CurrentTier && 
-                                           (t != BuckScience.Domain.Enums.SubscriptionTier.Trophy || 
-                                            (Model.PricingInfo.ContainsKey(t) && Model.PricingInfo[t].IsActive)));
-                            }
-                            @foreach (var tier in allPlans)
-                            {
-                                <div class="col-md-3 mb-3">
-                                    <div class="card h-100 @(tier > Model.CurrentTier ? "border-success" : "border-secondary")">
-                                        <div class="card-body text-center">
-                                            <h6 class="card-title">@Model.GetTierDisplayName(tier)</h6>
-                                            <h5 class="@(tier > Model.CurrentTier ? "text-success" : "text-secondary")">
-                                                $@Model.GetTierPrice(tier).ToString("F2")
-                                                <small class="text-muted">/@Model.GetTierInterval(tier)</small>
-                                            </h5>
-                                            @{
-                                                var limits = Model.GetTierLimits(tier);
-                                            }
-                                            <ul class="list-unstyled small text-muted mb-3">
-                                                <li><i class="fas fa-map-marked-alt me-1"></i>@limits.Properties Properties</li>
-                                                <li><i class="fas fa-camera me-1"></i>@limits.Cameras Cameras</li>
-                                                <li><i class="fas fa-image me-1"></i>@limits.Photos Photos</li>
-                                            </ul>
-                                            <form asp-action="Update" method="post" class="mt-auto subscription-form">
-                                                <input type="hidden" name="newTier" value="@tier" />
-                                                <button type="submit" class="btn @(tier > Model.CurrentTier ? "btn-success" : "btn-outline-secondary") btn-sm w-100">
-                                                    @if (tier > Model.CurrentTier)
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var tier in Model.GetAllAvailableTiers())
+                        {
+                            var isCurrentTier = tier == Model.CurrentTier;
+                            var isUpgrade = tier > Model.CurrentTier;
+                            var isDowngrade = tier < Model.CurrentTier && tier != BuckScience.Domain.Enums.SubscriptionTier.Trial;
+                            var canChange = !isCurrentTier && Model.IsActive();
+                                
+                            <div class="col-lg-2 col-md-4 col-sm-6 mb-4">
+                                <div class="card h-100 position-relative @(isCurrentTier ? "border-primary shadow" : (isUpgrade ? "border-success" : (isDowngrade ? "border-warning" : "border-secondary")))">
+                                    
+                                    @* Current Plan Badge *@
+                                    @if (isCurrentTier)
+                                    {
+                                        <div class="badge bg-primary position-absolute top-0 start-50 translate-middle">
+                                            <i class="fas fa-crown me-1"></i>Current Plan
+                                        </div>
+                                    }
+                                    @* Popular Plan Badge *@
+                                    else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Buck)
+                                    {
+                                        <div class="badge bg-success position-absolute top-0 start-50 translate-middle">
+                                            <i class="fas fa-star me-1"></i>Most Popular
+                                        </div>
+                                    }
+                                    @* Trial Badge *@
+                                    else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                    {
+                                        <div class="badge bg-info position-absolute top-0 start-50 translate-middle">
+                                            <i class="fas fa-gift me-1"></i>Free
+                                        </div>
+                                    }
+
+                                    <div class="card-body text-center d-flex flex-column">
+                                        <h6 class="card-title @(isCurrentTier ? "text-primary fw-bold" : "")">
+                                            @Model.GetTierDisplayName(tier)
+                                        </h6>
+                                        
+                                        @if (tier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                        {
+                                            <h4 class="text-success mb-2">
+                                                Free
+                                                <small class="text-muted d-block">
+                                                    @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
                                                     {
-                                                        <i class="fas fa-arrow-up me-1"></i><text>Upgrade</text>
+                                                        @if (Model.IsTrialExpired)
+                                                        {
+                                                            <span class="text-danger">Expired</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>@Model.TrialDaysRemaining days left</span>
+                                                        }
                                                     }
                                                     else
                                                     {
-                                                        <i class="fas fa-arrow-down me-1"></i><text>Downgrade</text>
+                                                        <span>Limited features</span>
                                                     }
+                                                </small>
+                                            </h4>
+                                        }
+                                        else
+                                        {
+                                            <h4 class="@(isCurrentTier ? "text-primary" : (isUpgrade ? "text-success" : (isDowngrade ? "text-warning" : "text-secondary"))) mb-2">
+                                                $@Model.GetTierPrice(tier).ToString("F2")
+                                                <small class="text-muted d-block">/@Model.GetTierInterval(tier)</small>
+                                            </h4>
+                                        }
+
+                                        @{
+                                            var limits = Model.GetTierLimits(tier);
+                                        }
+                                        <ul class="list-unstyled small text-muted mb-3 flex-grow-1">
+                                            <li><i class="fas fa-map-marked-alt text-primary me-1"></i>@limits.Properties Properties</li>
+                                            <li><i class="fas fa-camera text-success me-1"></i>@limits.Cameras Cameras</li>
+                                            <li><i class="fas fa-image text-warning me-1"></i>@limits.Photos Photos</li>
+                                        </ul>
+
+                                        @* Action Buttons *@
+                                        <div class="mt-auto">
+                                            @if (isCurrentTier)
+                                            {
+                                                <button type="button" class="btn btn-primary w-100" disabled>
+                                                    <i class="fas fa-check me-1"></i>Active Plan
                                                 </button>
-                                            </form>
+                                            }
+                                            else if (tier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                            {
+                                                @if (Model.CurrentTier != BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                                {
+                                                    <small class="text-muted">Downgrade to Trial not available</small>
+                                                }
+                                            }
+                                            else if (canChange)
+                                            {
+                                                @if (Model.CurrentTier == BuckScience.Domain.Enums.SubscriptionTier.Trial)
+                                                {
+                                                    <form asp-action="Subscribe" method="post" class="subscription-form">
+                                                        <input type="hidden" name="tier" value="@tier" />
+                                                        <button type="submit" class="btn btn-success w-100">
+                                                            <i class="fas fa-rocket me-1"></i>Start Plan
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <form asp-action="Update" method="post" class="subscription-form">
+                                                        <input type="hidden" name="newTier" value="@tier" />
+                                                        <button type="submit" class="btn @(isUpgrade ? "btn-success" : "btn-warning") w-100">
+                                                            @if (isUpgrade)
+                                                            {
+                                                                <i class="fas fa-arrow-up me-1"></i><text>Upgrade</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="fas fa-arrow-down me-1"></i><text>Downgrade</text>
+                                                            }
+                                                        </button>
+                                                    </form>
+                                                }
+                                            }
+                                            else if (!Model.IsActive())
+                                            {
+                                                <small class="text-muted">Account required</small>
+                                            }
                                         </div>
                                     </div>
                                 </div>
-                            }
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Plan Changes:</strong> Upgrades take effect immediately. Downgrades will take effect at the end of your current billing period.
+                            </div>
+                        }
+                    </div>
+                    
+                    @* Additional Information *@
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-info-circle me-2"></i>Plan Changes</h6>
+                                        <ul class="small mb-0">
+                                            <li><strong>Upgrades:</strong> Take effect immediately with prorated billing</li>
+                                            <li><strong>Downgrades:</strong> Take effect at the end of your current billing period</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-shield-alt me-2"></i>Satisfaction Guarantee</h6>
+                                        <ul class="small mb-0">
+                                            <li>Cancel anytime without penalties</li>
+                                            <li>Data export available upon request</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            }
+            </div>
         </div>
     </div>
 </div>
