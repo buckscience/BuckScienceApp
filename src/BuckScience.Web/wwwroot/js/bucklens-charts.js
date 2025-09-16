@@ -677,7 +677,7 @@ BuckLens.Charts = {
             // Check if we have any location data
             if (!locationData || locationData.length === 0) {
                 container.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 400px;">
                         <div>
                             <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
                             <p class="text-muted mb-2">No location data available</p>
@@ -711,7 +711,7 @@ BuckLens.Charts = {
 
             if (validLocations.length === 0) {
                 container.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 400px;">
                         <div>
                             <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
                             <p class="text-muted mb-2">No valid coordinates found</p>
@@ -732,7 +732,7 @@ BuckLens.Charts = {
             // Create a unique map container ID to avoid conflicts
             const mapId = 'heatmap-' + Date.now();
             container.innerHTML = `
-                <div id="${mapId}" style="width: 100%; height: 250px; border-radius: 8px; position: relative;">
+                <div id="${mapId}" style="width: 100%; height: 400px; border-radius: 8px; position: relative;">
                     <div class="d-flex align-items-center justify-content-center text-center" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 1000;" id="${mapId}-loading">
                         <div>
                             <div class="spinner-border text-primary mb-2" role="status">
@@ -780,7 +780,7 @@ BuckLens.Charts = {
                     console.warn('Mapbox token not found for heatmap - showing fallback display');
                     // Show sighting locations as cards instead of map
                     container.innerHTML = `
-                        <div class="p-4" style="min-height: 250px;">
+                        <div class="p-4" style="min-height: 400px;">
                             <div class="text-center mb-3">
                                 <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
                                 <p class="text-muted mb-2">Map unavailable - showing locations as list</p>
