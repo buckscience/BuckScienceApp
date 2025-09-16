@@ -355,9 +355,6 @@ BuckLens.Charts = {
             return;
         }
 
-        // Check if this is a moon phase chart to add icons
-        const isMoonPhaseChart = chartData.title.includes('Moon Phase');
-        
         const chartConfig = {
             type: 'bar',
             data: {
@@ -382,23 +379,7 @@ BuckLens.Charts = {
                         color: this.colors.dark
                     },
                     legend: {
-                        display: isMoonPhaseChart,
-                        position: 'bottom',
-                        labels: isMoonPhaseChart ? {
-                            generateLabels: (chart) => {
-                                return chartData.dataPoints.map((point, index) => {
-                                    const iconHtml = this.moonPhaseIcons[point.label] || '🌙';
-                                    return {
-                                        text: `${iconHtml} ${point.label}`,
-                                        fillStyle: this.colorSchemes.greenShades[index % this.colorSchemes.greenShades.length],
-                                        strokeStyle: this.colors.primary,
-                                        lineWidth: 1,
-                                        hidden: false,
-                                        index: index
-                                    };
-                                });
-                            }
-                        } : undefined
+                        display: false
                     }
                 },
                 scales: {
