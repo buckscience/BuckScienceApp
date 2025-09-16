@@ -690,7 +690,7 @@ BuckLens.Charts = {
                 mapboxgl.accessToken = token;
                 const map = new mapboxgl.Map({
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+                    style: 'mapbox://styles/mapbox/light-v11', // Lighter style for better heatmap visibility
                     bounds: bounds,
                     fitBoundsOptions: {
                         padding: 20
@@ -748,6 +748,7 @@ BuckLens.Charts = {
                     }
                     
                     console.log('Mapbox map loaded successfully');
+                    console.log('Location data for heatmap:', locationData);
                     
                     // Convert location data to GeoJSON format for heatmap
                     const geojsonData = {
@@ -775,59 +776,71 @@ BuckLens.Charts = {
                         data: geojsonData
                     });
 
-                    // Add heatmap layer
+                    console.log('Added data source with', geojsonData.features.length, 'features');
+
+                    // Add heatmap layer - make more visible for small datasets
                     map.addLayer({
                         id: 'sightings-heatmap',
                         type: 'heatmap',
                         source: 'sightings',
-                        maxzoom: 16,
+                        maxzoom: 15,
                         paint: {
-                            // Increase weight as diameter increases
-                            'heatmap-weight': 1,
-                            // Color ramp from green to red (consistent with app theme)
+                            // Increase weight to make heatmap more visible
+                            'heatmap-weight': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                0, 1,
+                                9, 3
+                            ],
+                            // Color ramp - make more vibrant and visible
                             'heatmap-color': [
                                 'interpolate',
                                 ['linear'],
                                 ['heatmap-density'],
-                                0, 'rgba(82, 122, 82, 0)',      // Transparent at low density
-                                0.1, 'rgba(82, 122, 82, 0.1)',  // Primary green, low opacity
-                                0.3, 'rgba(82, 122, 82, 0.3)',  // Primary green, medium opacity
-                                0.5, 'rgba(107, 142, 107, 0.5)', // Lighter green
-                                0.7, 'rgba(140, 175, 140, 0.7)', // Even lighter green
-                                1, 'rgba(78, 115, 78, 0.9)'      // Darker green for hotspots
+                                0, 'rgba(82, 122, 82, 0)',        // Transparent at low density
+                                0.2, 'rgba(82, 122, 82, 0.4)',   // Primary green, higher opacity  
+                                0.4, 'rgba(107, 142, 107, 0.6)', // Lighter green
+                                0.6, 'rgba(140, 175, 140, 0.8)', // Even lighter green
+                                0.8, 'rgba(78, 115, 78, 0.9)',   // Darker green
+                                1, 'rgba(60, 90, 60, 1)'         // Very dark green for hotspots
                             ],
-                            // Adjust the heatmap radius based on zoom level
+                            // Increase heatmap radius to make it more visible
                             'heatmap-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                0, 20,
-                                16, 40
+                                0, 30,   // Larger radius at low zoom
+                                9, 50,   // Even larger radius
+                                16, 80   // Much larger radius at high zoom
                             ],
-                            // Adjust the heatmap opacity based on zoom level
+                            // Adjust the heatmap opacity
                             'heatmap-opacity': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                7, 1,
-                                16, 0.8
+                                7, 0.9,
+                                15, 0.7
                             ]
                         }
                     });
 
-                    // Add individual points for higher zoom levels
+                    console.log('Added heatmap layer');
+
+                    // Add individual points - always visible for small datasets
                     map.addLayer({
                         id: 'sightings-points',
                         type: 'circle',
                         source: 'sightings',
-                        minzoom: 10,
+                        maxzoom: 15, // Show points up to zoom level 15, then let heatmap take over
                         paint: {
                             'circle-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                10, 3,
-                                16, 8
+                                5, 6,    // Larger at low zoom
+                                10, 10,  // Even larger at medium zoom
+                                15, 15   // Large at high zoom
                             ],
                             'circle-color': '#527A52',
                             'circle-stroke-width': 2,
@@ -835,6 +848,8 @@ BuckLens.Charts = {
                             'circle-opacity': 0.8
                         }
                     });
+
+                    console.log('Added circle points layer');
 
                     // Add popup on click
                     map.on('click', 'sightings-points', (e) => {
