@@ -58,8 +58,8 @@ public class StripeService : IStripeService
                 Mode = "subscription",
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
-                // Add configuration to prevent checkout issues (avoid 'auto' locale that may cause issues)
-                Locale = "en", // Use explicit locale instead of 'auto' to prevent encoding issues
+                // Remove explicit locale setting to prevent "Cannot find module './en'" errors
+                // Let Stripe use automatic locale detection based on user's browser settings
                 AllowPromotionCodes = false,
                 BillingAddressCollection = "required",
                 // Configure subscription settings for auto-renewal
