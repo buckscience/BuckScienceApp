@@ -52,7 +52,35 @@ builder.Services.AddAuthentication(options =>
 .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureADB2C"));
 
 // Enrich identity with app_user_id at sign-in (applies to your default OIDC handler)
-builder.Services.PostConfigureAll<OpenIdConnectOptions>(OidcClaimsEnricher.Configure);
+builder.Services.PostConfigureAll<OpenIdConnectOptions>(options =>
+{
+    // Apply claims enricher
+    OidcClaimsEnricher.Configure(options);
+    
+    // Add event handlers to prevent unwanted authentication challenges for subscription routes
+    var priorRedirectToIdentityProvider = options.Events.OnRedirectToIdentityProvider;
+    
+    options.Events.OnRedirectToIdentityProvider = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetService<ILogger<Program>>();
+        logger?.LogWarning("OIDC: Redirecting to identity provider for {Method} {Path} - User.IsAuthenticated: {IsAuth}", 
+            context.Request.Method, context.Request.Path, context.HttpContext.User.Identity?.IsAuthenticated);
+        
+        // For subscription routes, don't redirect to B2C - return 401 instead
+        if (context.Request.Path.StartsWithSegments("/subscription", StringComparison.OrdinalIgnoreCase) ||
+            context.Request.Path.StartsWithSegments("/Subscription", StringComparison.OrdinalIgnoreCase))
+        {
+            logger?.LogWarning("OIDC: BLOCKING B2C redirect for subscription path {Path} - returning 401 instead", context.Request.Path);
+            context.Response.StatusCode = 401;
+            context.Response.Headers["X-Auth-Bypass"] = "subscription-route-oidc";
+            context.HandleResponse();
+            return Task.CompletedTask;
+        }
+        
+        logger?.LogInformation("OIDC: Proceeding with B2C redirect for {Path}", context.Request.Path);
+        return priorRedirectToIdentityProvider?.Invoke(context) ?? Task.CompletedTask;
+    };
+});
 
 builder.Services.Configure<CookieAuthenticationOptions>(
     CookieAuthenticationDefaults.AuthenticationScheme,
@@ -126,6 +154,12 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .AddRequirements(new SubscriptionRouteBypassRequirement())
         .Build();
+        
+    // Also add explicit policy for subscription routes that allows anonymous access
+    options.AddPolicy("SubscriptionAnonymous", policy =>
+    {
+        policy.RequireAssertion(context => true); // Always allow
+    });
 });
 
 // Register the custom authorization handler for subscription route bypass
@@ -182,6 +216,31 @@ app.Use(async (ctx, next) =>
 
 app.UseSession();
 app.UseAuthentication();
+
+// Add debugging middleware to track authorization challenges
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetService<ILogger<Program>>();
+    var path = context.Request.Path.Value ?? string.Empty;
+    
+    if (path.StartsWith("/subscription", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/Subscription", StringComparison.OrdinalIgnoreCase))
+    {
+        logger?.LogInformation("AuthDebug: Before authorization - {Method} {Path}, User.IsAuthenticated: {IsAuth}, Endpoint: {Endpoint}", 
+            context.Request.Method, path, context.User.Identity?.IsAuthenticated, 
+            context.GetEndpoint()?.DisplayName ?? "no-endpoint");
+    }
+    
+    await next();
+    
+    if (path.StartsWith("/subscription", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/Subscription", StringComparison.OrdinalIgnoreCase))
+    {
+        logger?.LogInformation("AuthDebug: After pipeline - {Method} {Path}, StatusCode: {StatusCode}", 
+            context.Request.Method, path, context.Response.StatusCode);
+    }
+});
+
 app.UseAuthorization();
 
 // Resolve DB user id once per request (must be BEFORE SetupFlow)

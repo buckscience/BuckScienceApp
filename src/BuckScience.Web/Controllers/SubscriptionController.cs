@@ -44,7 +44,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
-    [AllowAnonymous] // Allow access for Stripe redirects - handle auth manually
+    [Authorize(Policy = "SubscriptionAnonymous")] // Use explicit anonymous policy to override fallback policy
     public async Task<IActionResult> Index()
     {
         _logger.LogInformation("Subscription Index accessed - User.IsAuthenticated: {IsAuth}, HasUserId: {HasId}", 
@@ -160,7 +160,7 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
-    [AllowAnonymous] // Prevent auth challenges - handle authentication manually
+    [Authorize(Policy = "SubscriptionAnonymous")] // Use explicit anonymous policy
     [IgnoreAntiforgeryToken] // Prevent anti-forgery validation conflicts
     public async Task<IActionResult> Subscribe(SubscriptionTier tier)
     {
@@ -169,7 +169,7 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [SkipSetupCheck] // Allow subscription changes for users that need provisioning
-    [AllowAnonymous] // Prevent auth challenges - handle authentication manually
+    [Authorize(Policy = "SubscriptionAnonymous")] // Use explicit anonymous policy
     [IgnoreAntiforgeryToken] // Prevent anti-forgery validation conflicts
     public async Task<IActionResult> Update(SubscriptionTier newTier)
     {
@@ -373,7 +373,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
-    [AllowAnonymous] // Allow Stripe to redirect back without auth challenges
+    [Authorize(Policy = "SubscriptionAnonymous")] // Allow Stripe to redirect back without auth challenges
     public IActionResult Success()
     {
         TempData["Success"] = "Your subscription has been successfully processed!";
@@ -381,7 +381,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpGet]
-    [AllowAnonymous] // Allow Stripe to redirect back without auth challenges
+    [Authorize(Policy = "SubscriptionAnonymous")] // Allow Stripe to redirect back without auth challenges
     public IActionResult Cancel()
     {
         TempData["Info"] = "Subscription process was cancelled.";
@@ -389,7 +389,7 @@ public class SubscriptionController : Controller
     }
 
     [HttpPost]
-    [AllowAnonymous]
+    [Authorize(Policy = "SubscriptionAnonymous")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> Webhook()
     {
