@@ -671,8 +671,37 @@ BuckLens.Charts = {
         }
 
         try {
-            console.log('Creating heatmap with location data:', locationData);
+            console.log('=== HEATMAP DATA DEBUGGING ===');
+            console.log('Raw API response:', locationData);
             console.log('Data type:', typeof locationData, 'Is array:', Array.isArray(locationData));
+            console.log('Data length:', locationData ? locationData.length : 'null/undefined');
+
+            // Add debugging about the actual data content
+            if (locationData && Array.isArray(locationData)) {
+                console.log('=== RAW COORDINATE ANALYSIS ===');
+                console.log(`Found ${locationData.length} sightings from API:`);
+                locationData.forEach((point, index) => {
+                    console.log(`Sighting ${index + 1}:`, {
+                        photoId: point.photoId,
+                        camera: point.cameraName,
+                        dateTaken: point.dateTaken,
+                        rawLat: point.latitude,
+                        rawLng: point.longitude,
+                        latType: typeof point.latitude,
+                        lngType: typeof point.longitude
+                    });
+                });
+                
+                // Count unique cameras
+                const uniqueCameras = [...new Set(locationData.map(d => d.cameraName))];
+                console.log(`Unique cameras: ${uniqueCameras.length}`, uniqueCameras);
+                
+                // Count cameras with actual coordinates (not null/0)
+                const camerasWithCoords = locationData.filter(d => d.latitude != null && d.longitude != null && d.latitude !== 0 && d.longitude !== 0);
+                console.log(`Sightings with non-zero coordinates: ${camerasWithCoords.length}`);
+            }
+
+            console.log('Creating heatmap with location data:', locationData);
             
             // Check if we have any location data
             if (!locationData || locationData.length === 0) {
@@ -711,7 +740,10 @@ BuckLens.Charts = {
                 // Check for invalid latitude (must be -90 to +90)
                 latIsPhysicallyValid: hasLat ? (point.latitude >= -90 && point.latitude <= 90) : false,
                 // Check for invalid longitude (must be -180 to +180) 
-                lngIsPhysicallyValid: hasLng ? (point.longitude >= -180 && point.longitude <= 180) : false
+                lngIsPhysicallyValid: hasLng ? (point.longitude >= -180 && point.longitude <= 180) : false,
+                // Add more debugging info
+                isZeroCoord: point.latitude === 0 && point.longitude === 0,
+                isNullCoord: point.latitude === null || point.longitude === null
             });
             
             // Check for physically impossible coordinates

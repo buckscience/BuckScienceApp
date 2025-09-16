@@ -45,12 +45,12 @@ public class BuckLensAnalyticsService
                 Latitude = pc.c.PlacementHistories
                     .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Latitude)
+                    .Select(ph => (double?)ph.Latitude)
                     .FirstOrDefault(),
                 Longitude = pc.c.PlacementHistories
                     .Where(ph => ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken)
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken)
-                    .Select(ph => ph.Longitude)
+                    .Select(ph => (double?)ph.Longitude)
                     .FirstOrDefault(),
                 WeatherId = pc.p.WeatherId,
                 Temperature = pc.p.Weather != null ? pc.p.Weather.Temperature : (double?)null,
