@@ -777,13 +777,28 @@ BuckLens.Charts = {
                 // Get Mapbox token
                 const token = this.getMapboxToken();
                 if (!token) {
-                    console.warn('Mapbox token not found for heatmap');
+                    console.warn('Mapbox token not found for heatmap - showing fallback display');
+                    // Show sighting locations as cards instead of map
                     container.innerHTML = `
-                        <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
-                            <div>
-                                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
-                                <p class="text-muted mb-0">Map configuration error</p>
-                                <small class="text-muted">Mapbox token not found</small>
+                        <div class="p-4" style="min-height: 250px;">
+                            <div class="text-center mb-3">
+                                <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                                <p class="text-muted mb-2">Map unavailable - showing locations as list</p>
+                                <small class="text-muted">Mapbox configuration needed for map display</small>
+                            </div>
+                            <div class="row g-2">
+                                ${validLocations.map(point => `
+                                    <div class="col-md-6">
+                                        <div class="card card-body text-start">
+                                            <strong class="text-success">${point.cameraName}</strong>
+                                            <small class="text-muted">${point.dateTaken}</small>
+                                            ${point.latitude && point.longitude ? `<small class="text-muted">📍 ${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}</small>` : ''}
+                                            ${point.temperature ? `<small class="text-muted">🌡️ ${point.temperature}°F</small>` : ''}
+                                            ${point.windDirection ? `<small class="text-muted">💨 ${point.windDirection}</small>` : ''}
+                                            ${point.moonPhase ? `<small class="text-muted">🌙 ${point.moonPhase}</small>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
                             </div>
                         </div>
                     `;
