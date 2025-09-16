@@ -77,7 +77,8 @@ BuckLens.Charts = {
                 this.loadTimeOfDayChart(profileId),
                 this.loadMoonPhaseChart(profileId),
                 this.loadWindDirectionChart(profileId),
-                this.loadTemperatureChart(profileId)
+                this.loadTemperatureChart(profileId),
+                this.loadSightingHeatmap(profileId)
             ]);
 
             // Hide loading state
@@ -267,6 +268,15 @@ BuckLens.Charts = {
         
         const chartData = await response.json();
         this.createBarChart('temperatureChart', chartData);
+    },
+
+    // Load sighting heatmap
+    async loadSightingHeatmap(profileId) {
+        const response = await fetch(`/profiles/${profileId}/analytics/sightings/locations`);
+        if (!response.ok) throw new Error('Failed to load sighting locations');
+        
+        const locationData = await response.json();
+        this.createSightingHeatmap(locationData);
     },
 
     // Create bar chart with optional moon phase icons
@@ -597,6 +607,236 @@ BuckLens.Charts = {
         container.appendChild(legendContainer);
     },
 
+    // Create sighting heatmap using Mapbox
+    createSightingHeatmap(locationData) {
+        const container = document.getElementById('sightingHeatmap');
+        if (!container) {
+            console.error('Sighting heatmap container not found');
+            return;
+        }
+
+        try {
+            // Check if we have any location data
+            if (!locationData || locationData.length === 0) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                        <div>
+                            <i class="fas fa-map-marked-alt text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">No location data available</p>
+                            <small class="text-muted">Sightings need camera location data to appear on the heatmap</small>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create a unique map container ID to avoid conflicts
+            const mapId = 'heatmap-' + Date.now();
+            container.innerHTML = `<div id="${mapId}" style="width: 100%; height: 250px; border-radius: 8px;"></div>`;
+
+            // Wait for the container to be in the DOM
+            setTimeout(() => {
+                const mapContainer = document.getElementById(mapId);
+                if (!mapContainer) return;
+
+                // Calculate bounds from the data
+                const lats = locationData.map(d => d.latitude);
+                const lngs = locationData.map(d => d.longitude);
+                const bounds = [
+                    [Math.min(...lngs), Math.min(...lats)], // Southwest corner
+                    [Math.max(...lngs), Math.max(...lats)]  // Northeast corner
+                ];
+
+                // Add padding to bounds
+                const latRange = Math.max(...lats) - Math.min(...lats);
+                const lngRange = Math.max(...lngs) - Math.min(...lngs);
+                const padding = Math.max(latRange, lngRange) * 0.1; // 10% padding
+
+                bounds[0][0] -= padding; // West
+                bounds[0][1] -= padding; // South
+                bounds[1][0] += padding; // East
+                bounds[1][1] += padding; // North
+
+                // Get Mapbox token
+                const token = this.getMapboxToken();
+                if (!token) {
+                    container.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                            <div>
+                                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                                <p class="text-muted mb-0">Map configuration error</p>
+                                <small class="text-muted">Mapbox token not found</small>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Initialize Mapbox map
+                mapboxgl.accessToken = token;
+                const map = new mapboxgl.Map({
+                    container: mapId,
+                    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+                    bounds: bounds,
+                    fitBoundsOptions: {
+                        padding: 20
+                    }
+                });
+
+                map.on('load', () => {
+                    // Convert location data to GeoJSON format for heatmap
+                    const geojsonData = {
+                        type: 'FeatureCollection',
+                        features: locationData.map(point => ({
+                            type: 'Feature',
+                            properties: {
+                                photoId: point.photoId,
+                                dateTaken: point.dateTaken,
+                                cameraName: point.cameraName,
+                                temperature: point.temperature,
+                                windDirection: point.windDirection,
+                                moonPhase: point.moonPhase
+                            },
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [point.longitude, point.latitude]
+                            }
+                        }))
+                    };
+
+                    // Add the data source
+                    map.addSource('sightings', {
+                        type: 'geojson',
+                        data: geojsonData
+                    });
+
+                    // Add heatmap layer
+                    map.addLayer({
+                        id: 'sightings-heatmap',
+                        type: 'heatmap',
+                        source: 'sightings',
+                        maxzoom: 16,
+                        paint: {
+                            // Increase weight as diameter increases
+                            'heatmap-weight': 1,
+                            // Color ramp from green to red (consistent with app theme)
+                            'heatmap-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['heatmap-density'],
+                                0, 'rgba(82, 122, 82, 0)',      // Transparent at low density
+                                0.1, 'rgba(82, 122, 82, 0.1)',  // Primary green, low opacity
+                                0.3, 'rgba(82, 122, 82, 0.3)',  // Primary green, medium opacity
+                                0.5, 'rgba(107, 142, 107, 0.5)', // Lighter green
+                                0.7, 'rgba(140, 175, 140, 0.7)', // Even lighter green
+                                1, 'rgba(78, 115, 78, 0.9)'      // Darker green for hotspots
+                            ],
+                            // Adjust the heatmap radius based on zoom level
+                            'heatmap-radius': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                0, 20,
+                                16, 40
+                            ],
+                            // Adjust the heatmap opacity based on zoom level
+                            'heatmap-opacity': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                7, 1,
+                                16, 0.8
+                            ]
+                        }
+                    });
+
+                    // Add individual points for higher zoom levels
+                    map.addLayer({
+                        id: 'sightings-points',
+                        type: 'circle',
+                        source: 'sightings',
+                        minzoom: 10,
+                        paint: {
+                            'circle-radius': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                10, 3,
+                                16, 8
+                            ],
+                            'circle-color': '#527A52',
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#ffffff',
+                            'circle-opacity': 0.8
+                        }
+                    });
+
+                    // Add popup on click
+                    map.on('click', 'sightings-points', (e) => {
+                        const properties = e.features[0].properties;
+                        const popup = new mapboxgl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(`
+                                <div class="p-2">
+                                    <h6 class="mb-1">${properties.cameraName}</h6>
+                                    <small class="text-muted d-block">${properties.dateTaken}</small>
+                                    ${properties.temperature ? `<small class="text-muted d-block">Temperature: ${properties.temperature}°F</small>` : ''}
+                                    ${properties.windDirection ? `<small class="text-muted d-block">Wind: ${properties.windDirection}</small>` : ''}
+                                    ${properties.moonPhase ? `<small class="text-muted d-block">Moon: ${properties.moonPhase}</small>` : ''}
+                                </div>
+                            `)
+                            .addTo(map);
+                    });
+
+                    // Change cursor on hover
+                    map.on('mouseenter', 'sightings-points', () => {
+                        map.getCanvas().style.cursor = 'pointer';
+                    });
+
+                    map.on('mouseleave', 'sightings-points', () => {
+                        map.getCanvas().style.cursor = '';
+                    });
+                });
+
+                // Store the map instance for cleanup
+                if (!this.mapInstances) {
+                    this.mapInstances = {};
+                }
+                this.mapInstances[mapId] = map;
+
+            }, 100);
+
+        } catch (error) {
+            console.error('Error creating sighting heatmap:', error);
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center text-center p-4" style="min-height: 250px;">
+                    <div>
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                        <p class="text-muted mb-0">Failed to load heatmap</p>
+                        <small class="text-muted">${error.message}</small>
+                    </div>
+                </div>
+            `;
+        }
+    },
+
+    // Get Mapbox token from various sources
+    getMapboxToken() {
+        // Try meta tag first
+        const meta = document.querySelector('meta[name="mapbox-token"]');
+        if (meta?.content) return meta.content;
+
+        // Try global variable
+        if (window.__MAPBOX_TOKEN) return window.__MAPBOX_TOKEN;
+
+        // Try existing mapbox instance
+        if (typeof mapboxgl !== 'undefined' && mapboxgl.accessToken) {
+            return mapboxgl.accessToken;
+        }
+
+        return null;
+    },
+
     // Handle chart click events for drilldown
     handleChartClick(chartType, dataPoint) {
         console.log('Chart clicked:', chartType, dataPoint);
@@ -758,6 +998,14 @@ BuckLens.Charts = {
             if (chart) chart.destroy();
         });
         this.chartInstances = {};
+        
+        // Cleanup map instances
+        if (this.mapInstances) {
+            Object.values(this.mapInstances).forEach(map => {
+                if (map) map.remove();
+            });
+            this.mapInstances = {};
+        }
     }
 };
 
