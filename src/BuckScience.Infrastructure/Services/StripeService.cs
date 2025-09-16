@@ -58,10 +58,9 @@ public class StripeService : IStripeService
                 Mode = "subscription",
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
-                // Remove explicit locale setting to prevent "Cannot find module './en'" errors
-                // Let Stripe use automatic locale detection based on user's browser settings
                 AllowPromotionCodes = false,
                 BillingAddressCollection = "required",
+                Locale = "en-US",
                 // Configure subscription settings for auto-renewal
                 SubscriptionData = new SessionSubscriptionDataOptions
                 {
