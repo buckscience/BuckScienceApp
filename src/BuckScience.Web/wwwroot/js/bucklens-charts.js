@@ -851,13 +851,15 @@ BuckLens.Charts = {
                 
                 let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/light-v11' // Light style for better heatmap visibility
+                    style: 'mapbox://styles/mapbox/light-v11', // Light style for better heatmap visibility
+                    maxZoom: 18, // Set maximum zoom to prevent layers from disappearing
+                    minZoom: 8   // Set minimum zoom to keep reasonable view
                 };
                 
                 if (validLocations.length === 1) {
-                    // For single point, center on the location with better zoom level
+                    // For single point, center on the location with appropriate zoom level
                     mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
-                    mapConfig.zoom = 14; // Closer zoom for single points
+                    mapConfig.zoom = 12; // More conservative zoom for single points to show context
                     console.log('Single point detected, centering map at:', mapConfig.center);
                     console.log(`Single point details: Camera=${validLocations[0].cameraName}, Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}`);
                     console.log(`Expected location for Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}:`);
@@ -869,9 +871,13 @@ BuckLens.Charts = {
                         console.log(`  Longitude ${validLocations[0].longitude} ${validLocations[0].longitude > -125 && validLocations[0].longitude < -66 ? '✅' : '❌'} (US range: -125.0 to -66.9)`);
                     }
                 } else {
-                    // For multiple points, use bounds
+                    // For multiple points, use bounds with better zoom control
                     mapConfig.bounds = bounds;
-                    mapConfig.fitBoundsOptions = { padding: 20 };
+                    mapConfig.fitBoundsOptions = { 
+                        padding: 50,      // More padding for better visibility
+                        maxZoom: 16,      // Prevent over-zooming on bounds fit
+                        animate: false    // Faster initial load
+                    };
                     console.log('Multiple points detected, using bounds:', bounds);
                     console.log(`Bounds breakdown: SW=[${bounds[0][0]}, ${bounds[0][1]}], NE=[${bounds[1][0]}, ${bounds[1][1]}]`);
                 }
@@ -969,12 +975,13 @@ BuckLens.Charts = {
                         console.log(`  ${location.cameraName}: ${location.sightingCount} sightings (weight: ${location.sightingCount})`);
                     });
 
-                    // Add heatmap layer - make more visible for small datasets
+                    // Add heatmap layer - visible across all zoom levels
                     map.addLayer({
                         id: 'sightings-heatmap',
                         type: 'heatmap',
                         source: 'sightings',
-                        maxzoom: 15,
+                        minzoom: 8,  // Start showing heatmap at reasonable zoom level
+                        maxzoom: 22, // Keep heatmap visible at high zoom levels
                         paint: {
                             // Use sighting count as weight for heatmap intensity
                             'heatmap-weight': [
@@ -999,34 +1006,38 @@ BuckLens.Charts = {
                                 0.8, 'rgba(239, 138, 98, 0.9)',  // Orange
                                 1, 'rgba(178, 24, 43, 1)'        // Red for hotspots
                             ],
-                            // Smaller, more appropriate radius for camera locations
+                            // Better radius scaling for camera locations across zoom levels
                             'heatmap-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                0, 15,   // Reasonable radius at low zoom
-                                9, 25,   // Medium radius
-                                16, 40   // Larger radius at high zoom
+                                8, 20,   // Larger radius at low zoom for visibility
+                                12, 30,  // Medium radius
+                                16, 40,  // Good radius at medium-high zoom
+                                22, 60   // Larger radius at high zoom for detail
                             ],
-                            // Adjust the heatmap opacity
+                            // Improved opacity scaling across zoom levels
                             'heatmap-opacity': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                7, 0.9,
-                                15, 0.7
+                                8, 0.8,   // Good visibility at low zoom
+                                12, 0.9,  // High visibility at medium zoom
+                                16, 0.7,  // Slightly reduced at high zoom
+                                22, 0.6   // Allow points to be more visible at very high zoom
                             ]
                         }
                     });
 
                     console.log('Added heatmap layer');
 
-                    // Add individual points - always visible for small datasets
+                    // Add individual points - always visible for precise location identification
                     map.addLayer({
                         id: 'sightings-points',
                         type: 'circle',
                         source: 'sightings',
-                        maxzoom: 15, // Show points up to zoom level 15, then let heatmap take over
+                        minzoom: 10, // Start showing points at medium zoom level
+                        maxzoom: 22, // Keep points visible at high zoom levels
                         paint: {
                             // Scale circle size based on sighting count
                             'circle-radius': [
