@@ -851,7 +851,7 @@ BuckLens.Charts = {
                 
                 let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/light-v11', // Light style for better heatmap visibility
+                    style: 'mapbox://styles/mapbox/satellite-v9', // Light style for better heatmap visibility
                     maxZoom: 18, // Set maximum zoom to prevent layers from disappearing
                     minZoom: 8   // Set minimum zoom to keep reasonable view
                 };
