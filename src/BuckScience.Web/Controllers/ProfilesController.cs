@@ -495,7 +495,9 @@ public class ProfilesController : Controller
                     firstSighting = g.Min(s => s.DateTaken).ToString("yyyy-MM-dd HH:mm"),
                     lastSighting = g.Max(s => s.DateTaken).ToString("yyyy-MM-dd HH:mm"),
                     // Average environmental conditions for this camera
-                    avgTemperature = g.Where(s => s.Temperature.HasValue).Select(s => s.Temperature!.Value).DefaultIfEmpty().Average(),
+                    avgTemperature = g.Where(s => s.Temperature.HasValue).Any() 
+                        ? g.Where(s => s.Temperature.HasValue).Average(s => s.Temperature!.Value)
+                        : (double?)null,
                     // Most common wind direction and moon phase
                     commonWindDirection = g.GroupBy(s => s.WindDirectionText)
                         .Where(grp => !string.IsNullOrEmpty(grp.Key))
