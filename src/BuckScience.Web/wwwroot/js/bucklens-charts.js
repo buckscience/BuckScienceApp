@@ -917,13 +917,13 @@ BuckLens.Charts = {
                 
                 let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/satellite-streets-v12' // Lighter style for better heatmap visibility
+                    style: 'mapbox://styles/mapbox/light-v11' // Light style for better heatmap visibility
                 };
                 
                 if (validLocations.length === 1) {
-                    // For single point, center on the location with a reasonable zoom
+                    // For single point, center on the location with better zoom level
                     mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
-                    mapConfig.zoom = 12;
+                    mapConfig.zoom = 14; // Closer zoom for single points
                     console.log('Single point detected, centering map at:', mapConfig.center);
                     console.log(`Single point details: Camera=${validLocations[0].cameraName}, Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}`);
                     console.log(`Expected location for Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}:`);
@@ -1040,26 +1040,26 @@ BuckLens.Charts = {
                                 0, 1,
                                 9, 3
                             ],
-                            // Color ramp - make more vibrant and visible
+                            // Color ramp - standard heatmap colors (blue to red)
                             'heatmap-color': [
                                 'interpolate',
                                 ['linear'],
                                 ['heatmap-density'],
-                                0, 'rgba(82, 122, 82, 0)',        // Transparent at low density
-                                0.2, 'rgba(82, 122, 82, 0.4)',   // Primary green, higher opacity  
-                                0.4, 'rgba(107, 142, 107, 0.6)', // Lighter green
-                                0.6, 'rgba(140, 175, 140, 0.8)', // Even lighter green
-                                0.8, 'rgba(78, 115, 78, 0.9)',   // Darker green
-                                1, 'rgba(60, 90, 60, 1)'         // Very dark green for hotspots
+                                0, 'rgba(33, 102, 172, 0)',      // Transparent at low density
+                                0.2, 'rgba(103, 169, 207, 0.5)', // Light blue
+                                0.4, 'rgba(209, 229, 240, 0.7)', // Very light blue
+                                0.6, 'rgba(253, 219, 199, 0.8)', // Light orange
+                                0.8, 'rgba(239, 138, 98, 0.9)',  // Orange
+                                1, 'rgba(178, 24, 43, 1)'        // Red for hotspots
                             ],
-                            // Increase heatmap radius to make it more visible
+                            // Smaller, more appropriate radius for camera locations
                             'heatmap-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                0, 30,   // Larger radius at low zoom
-                                9, 50,   // Even larger radius
-                                16, 80   // Much larger radius at high zoom
+                                0, 15,   // Reasonable radius at low zoom
+                                9, 25,   // Medium radius
+                                16, 40   // Larger radius at high zoom
                             ],
                             // Adjust the heatmap opacity
                             'heatmap-opacity': [
@@ -1081,13 +1081,14 @@ BuckLens.Charts = {
                         source: 'sightings',
                         maxzoom: 15, // Show points up to zoom level 15, then let heatmap take over
                         paint: {
+                            // Smaller, more appropriate circle size for camera locations
                             'circle-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                5, 8,    // Larger at low zoom
-                                10, 15,  // Even larger at medium zoom
-                                15, 25   // Very large at high zoom
+                                5, 4,    // Small at low zoom
+                                10, 8,   // Medium at medium zoom
+                                15, 12   // Reasonable size at high zoom
                             ],
                             'circle-color': '#527A52',
                             'circle-stroke-width': 3,
