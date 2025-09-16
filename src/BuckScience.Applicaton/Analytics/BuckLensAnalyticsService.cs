@@ -44,15 +44,13 @@ public class BuckLensAnalyticsService
                     .FirstOrDefault(ln => !string.IsNullOrWhiteSpace(ln)) ?? $"{pc.c.Brand} {pc.c.Model}".Trim(),
                 Latitude = pc.c.PlacementHistories
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken && (ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken))
-                    .Where(ph => ph.Latitude != null && ph.Latitude != 0)
                     .OrderByDescending(ph => ph.StartDateTime)
-                    .Select(ph => (double?)ph.Latitude)
+                    .Select(ph => ph.Latitude)
                     .FirstOrDefault(),
                 Longitude = pc.c.PlacementHistories
                     .Where(ph => ph.StartDateTime <= pc.p.DateTaken && (ph.EndDateTime == null || ph.EndDateTime > pc.p.DateTaken))
-                    .Where(ph => ph.Longitude != null && ph.Longitude != 0)
                     .OrderByDescending(ph => ph.StartDateTime)
-                    .Select(ph => (double?)ph.Longitude)
+                    .Select(ph => ph.Longitude)
                     .FirstOrDefault(),
                 WeatherId = pc.p.WeatherId,
                 Temperature = pc.p.Weather != null ? pc.p.Weather.Temperature : (double?)null,

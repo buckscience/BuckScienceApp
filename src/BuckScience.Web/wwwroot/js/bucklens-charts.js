@@ -672,34 +672,37 @@ BuckLens.Charts = {
 
         try {
             console.log('=== HEATMAP DATA DEBUGGING ===');
-            console.log('Raw API response:', locationData);
-            console.log('Data type:', typeof locationData, 'Is array:', Array.isArray(locationData));
-            console.log('Data length:', locationData ? locationData.length : 'null/undefined');
-
-            // Add debugging about the actual data content
+            // Enhanced debugging - log raw response first
+            console.log('=== HEATMAP DEBUG START ===');
+            console.log('Raw API response:', JSON.stringify(locationData, null, 2));
+            
             if (locationData && Array.isArray(locationData)) {
-                console.log('=== RAW COORDINATE ANALYSIS ===');
-                console.log(`Found ${locationData.length} sightings from API:`);
                 locationData.forEach((point, index) => {
-                    console.log(`Sighting ${index + 1}:`, {
+                    console.log(`Point ${index + 1}:`, {
                         photoId: point.photoId,
                         camera: point.cameraName,
-                        dateTaken: point.dateTaken,
-                        rawLat: point.latitude,
-                        rawLng: point.longitude,
+                        date: point.dateTaken,
+                        lat: point.latitude,
+                        lng: point.longitude,
                         latType: typeof point.latitude,
                         lngType: typeof point.longitude
                     });
+                    
+                    // Special detection for user's coordinate
+                    if (point.latitude === 31.44147 && point.longitude === -93.438233) {
+                        console.log('🎯 FOUND USER COORDINATE: Louisiana location detected!');
+                    }
+                    
+                    // Check for 0,0 coordinates
+                    if (point.latitude === 0 && point.longitude === 0) {
+                        console.warn('⚠️ Found 0,0 coordinate for camera:', point.cameraName);
+                    }
                 });
                 
-                // Count unique cameras
-                const uniqueCameras = [...new Set(locationData.map(d => d.cameraName))];
-                console.log(`Unique cameras: ${uniqueCameras.length}`, uniqueCameras);
-                
-                // Count cameras with actual coordinates (not null/0)
-                const camerasWithCoords = locationData.filter(d => d.latitude != null && d.longitude != null && d.latitude !== 0 && d.longitude !== 0);
-                console.log(`Sightings with non-zero coordinates: ${camerasWithCoords.length}`);
+                const validCoords = locationData.filter(d => d.latitude != null && d.longitude != null && d.latitude !== 0 && d.longitude !== 0);
+                console.log(`Valid coordinates found: ${validCoords.length} of ${locationData.length}`);
             }
+            console.log('=== HEATMAP DEBUG END ===');
 
             console.log('Creating heatmap with location data:', locationData);
             
