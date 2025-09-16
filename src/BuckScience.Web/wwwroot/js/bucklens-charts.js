@@ -382,7 +382,23 @@ BuckLens.Charts = {
                         color: this.colors.dark
                     },
                     legend: {
-                        display: false
+                        display: isMoonPhaseChart,
+                        position: 'bottom',
+                        labels: isMoonPhaseChart ? {
+                            generateLabels: (chart) => {
+                                return chartData.dataPoints.map((point, index) => {
+                                    const iconHtml = this.moonPhaseIcons[point.label] || '🌙';
+                                    return {
+                                        text: `${iconHtml} ${point.label}`,
+                                        fillStyle: this.colorSchemes.greenShades[index % this.colorSchemes.greenShades.length],
+                                        strokeStyle: this.colors.primary,
+                                        lineWidth: 1,
+                                        hidden: false,
+                                        index: index
+                                    };
+                                });
+                            }
+                        } : undefined
                     }
                 },
                 scales: {
@@ -395,9 +411,7 @@ BuckLens.Charts = {
                     x: {
                         ticks: {
                             maxRotation: 45,
-                            minRotation: 0,
-                            // Hide x-axis labels for moon phase chart since icons below will serve as labels
-                            display: !isMoonPhaseChart
+                            minRotation: 0
                         }
                     }
                 },
@@ -413,55 +427,10 @@ BuckLens.Charts = {
 
         try {
             this.chartInstances[canvasId] = new Chart(ctx, chartConfig);
-            
-            // For moon phase chart, also add icons below the canvas using DOM manipulation
-            if (isMoonPhaseChart) {
-                setTimeout(() => this.addMoonPhaseIconsBelow(canvasId, chartData), 100);
-            }
         } catch (error) {
             console.error(`Error creating bar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
-    },
-
-    // Add unified moon phase icons with labels below the canvas
-    addMoonPhaseIconsBelow(canvasId, chartData) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const container = canvas.closest('.bucklens-chart-container');
-        if (!container) return;
-        
-        // Add moon-phase-chart class for special styling
-        container.classList.add('moon-phase-chart');
-        
-        // Remove existing icon container
-        const existingIcons = container.querySelector('.moon-phase-icons');
-        if (existingIcons) {
-            existingIcons.remove();
-        }
-        
-        // Create unified icon container
-        const iconContainer = document.createElement('div');
-        iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-3 pt-2';
-        iconContainer.style.fontSize = '28px'; // Larger icons for better visibility
-        
-        // Add icons for each data point
-        chartData.dataPoints.forEach(point => {
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'text-center';
-            iconDiv.style.color = this.colors.primary;
-            
-            const iconHtml = this.moonPhaseIcons[point.label] || '<i class="wi wi-moon-alt"></i>';
-            iconDiv.innerHTML = `
-                <div style="margin-bottom: 4px;">${iconHtml}</div>
-                <div class="text-muted" style="font-size: 8px; line-height: 1; font-weight: 500;">${point.label}</div>
-            `;
-            
-            iconContainer.appendChild(iconDiv);
-        });
-        
-        container.appendChild(iconContainer);
     },
 
     // Create pie chart
@@ -577,7 +546,31 @@ BuckLens.Charts = {
                             color: this.colors.dark
                         },
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                generateLabels: () => {
+                                    // Create wind speed legend items
+                                    const speedRanges = [
+                                        { label: '< 1 mph', color: '#D4E6D4' },
+                                        { label: '1-4 mph', color: '#B8D6B8' },
+                                        { label: '4-8 mph', color: '#9CC29C' },
+                                        { label: '8-12 mph', color: '#8CAF8C' },
+                                        { label: '12-16 mph', color: '#6B8E6B' },
+                                        { label: '16-20 mph', color: '#527A52' },
+                                        { label: '> 20 mph', color: '#3E5A3E' }
+                                    ];
+                                    
+                                    return speedRanges.map((range, index) => ({
+                                        text: range.label,
+                                        fillStyle: range.color,
+                                        strokeStyle: range.color,
+                                        lineWidth: 1,
+                                        hidden: false,
+                                        index: index
+                                    }));
+                                }
+                            }
                         },
                         tooltip: {
                             callbacks: {
@@ -609,57 +602,10 @@ BuckLens.Charts = {
                     }
                 }
             });
-
-            // Add wind speed legend below the chart
-            setTimeout(() => this.addWindSpeedLegend(canvasId, chartData), 100);
         } catch (error) {
             console.error(`Error creating radar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
-    },
-
-    // Add wind speed legend below the wind direction chart
-    addWindSpeedLegend(canvasId, chartData) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const container = canvas.closest('.bucklens-chart-container');
-        if (!container) return;
-        
-        // Remove existing legend
-        const existingLegend = container.querySelector('.wind-speed-legend');
-        if (existingLegend) {
-            existingLegend.remove();
-        }
-        
-        // Create legend showing wind speed ranges
-        const legendContainer = document.createElement('div');
-        legendContainer.className = 'wind-speed-legend mt-2 pt-2 border-top';
-        
-        // Create speed range indicators
-        const speedRanges = [
-            { label: '< 1 mph', color: '#D4E6D4' },
-            { label: '1-4 mph', color: '#B8D6B8' },
-            { label: '4-8 mph', color: '#9CC29C' },
-            { label: '8-12 mph', color: '#8CAF8C' },
-            { label: '12-16 mph', color: '#6B8E6B' },
-            { label: '16-20 mph', color: '#527A52' },
-            { label: '> 20 mph', color: '#3E5A3E' }
-        ];
-        
-        let legendHtml = '<div class="d-flex flex-wrap justify-content-center gap-2">';
-        speedRanges.forEach(range => {
-            legendHtml += `
-                <div class="d-flex align-items-center">
-                    <div class="me-1" style="width: 12px; height: 12px; background-color: ${range.color}; border-radius: 2px;"></div>
-                    <small class="text-muted">${range.label}</small>
-                </div>
-            `;
-        });
-        legendHtml += '</div>';
-        
-        legendContainer.innerHTML = legendHtml;
-        container.appendChild(legendContainer);
     },
 
     // Create sighting heatmap using Mapbox
