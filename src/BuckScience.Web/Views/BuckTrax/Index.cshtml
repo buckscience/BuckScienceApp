@@ -233,6 +233,9 @@
                     if (window.App && window.App.displayFeaturesOnMap) {
                         console.log('Using existing displayFeaturesOnMap for', features.length, 'features');
                         window.App.displayFeaturesOnMap(features);
+                        
+                        // Track the feature layer IDs created by displayFeaturesOnMap for visibility control
+                        bucktraxLayers.features = ['property-features-fill', 'property-features-line', 'property-features-points'];
                     } else {
                         console.warn('displayFeaturesOnMap not available from properties.js');
                     }
@@ -685,6 +688,15 @@
                     }
                 }
             });
+
+            // Also clear property features source if it exists (managed by properties.js)
+            if (map.getSource('property-features')) {
+                try {
+                    map.removeSource('property-features');
+                } catch (e) {
+                    console.warn('Error removing property-features source:', e);
+                }
+            }
 
             // Clear tracking arrays
             bucktraxLayers.corridors = [];
