@@ -689,15 +689,6 @@
                 }
             });
 
-            // Also clear property features source if it exists (managed by properties.js)
-            if (map.getSource('property-features')) {
-                try {
-                    map.removeSource('property-features');
-                } catch (e) {
-                    console.warn('Error removing property-features source:', e);
-                }
-            }
-
             // Clear tracking arrays
             bucktraxLayers.corridors = [];
             bucktraxLayers.zones = [];
