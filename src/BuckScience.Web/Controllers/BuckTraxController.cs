@@ -636,8 +636,10 @@ public class BuckTraxController : Controller
         return patterns.Any() ? string.Join(", ", patterns) : "All Day";
     }
 
-    private GeometryType GetGeometryType(Geometry geometry)
+    private GeometryType GetGeometryType(Geometry? geometry)
     {
+        if (geometry == null) return GeometryType.Point;
+        
         return geometry switch
         {
             Point => GeometryType.Point,
@@ -650,8 +652,10 @@ public class BuckTraxController : Controller
         };
     }
 
-    private double GetLatitudeFromGeometry(Geometry geometry)
+    private double GetLatitudeFromGeometry(Geometry? geometry)
     {
+        if (geometry == null) return 0;
+        
         return geometry switch
         {
             Point point => point.Y,
@@ -659,8 +663,10 @@ public class BuckTraxController : Controller
         };
     }
 
-    private double GetLongitudeFromGeometry(Geometry geometry)
+    private double GetLongitudeFromGeometry(Geometry? geometry)
     {
+        if (geometry == null) return 0;
+        
         return geometry switch
         {
             Point point => point.X,
@@ -700,7 +706,7 @@ public class BuckTraxController : Controller
 
         var features = await _db.PropertyFeatures
             .AsNoTracking()
-            .Where(f => f.PropertyId == propertyId)
+            .Where(f => f.PropertyId == propertyId && f.Geometry != null)
             .Select(f => new
             {
                 f.Id,

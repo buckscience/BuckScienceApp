@@ -112,7 +112,7 @@ namespace BuckScience.Tests.Web.Controllers
             var expectedScore = 5 * (0.8f + 0.6f) / 2; // 5 * 0.7 = 3.5
             corridor.CorridorScore = corridor.TransitionCount * (corridor.StartFeatureWeight + corridor.EndFeatureWeight) / 2;
 
-            Assert.Equal(3.5, corridor.CorridorScore, 1);
+            Assert.Equal(expectedScore, corridor.CorridorScore, 1);
         }
 
         [Fact]
