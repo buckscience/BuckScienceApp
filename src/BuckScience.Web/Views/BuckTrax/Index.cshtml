@@ -755,6 +755,8 @@
 
         function formatTimeRange(start, end) {
             const formatHour = (hour) => {
+                // Normalize hour to 0-23 range (handle 24 as 0)
+                hour = hour % 24;
                 if (hour === 0) return '12:00 AM';
                 if (hour === 12) return '12:00 PM';
                 if (hour < 12) return hour + ':00 AM';
@@ -762,9 +764,11 @@
             };
 
             if (start <= end) {
+                // Normal case: same day (e.g., 9:00 AM - 5:00 PM)
                 return formatHour(start) + ' - ' + formatHour(end);
             } else {
-                return formatHour(start) + ' - ' + formatHour(end + 24);
+                // Cross-midnight case: start is PM, end is AM next day (e.g., 8:00 PM - 6:00 AM)
+                return formatHour(start) + ' - ' + formatHour(end) + ' (+1 day)';
             }
         }
 
