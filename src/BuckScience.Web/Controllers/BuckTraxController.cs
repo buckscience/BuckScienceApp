@@ -143,15 +143,39 @@ public class BuckTraxController : Controller
         var isLimitedData = sightings.Count < config.MinimumSightingsThreshold || 
                            movementCorridors.Count < config.MinimumTransitionsThreshold;
 
-        // Time segments for prediction
+        // Calculate time segments based on property's daylight hours
+        var dayStart = profile.Property.DayHour;
+        var dayEnd = profile.Property.NightHour;
+        
+        // Calculate daylight span and split into thirds
+        int daylightSpan;
+        if (dayEnd > dayStart)
+        {
+            daylightSpan = dayEnd - dayStart;
+        }
+        else
+        {
+            // Handle case where night hour is next day (e.g., day=6, night=20 means 6AM-8PM = 14 hours)
+            daylightSpan = (24 - dayStart) + dayEnd;
+        }
+        
+        var thirdSpan = (double)daylightSpan / 3.0;
+        
+        // Calculate time segment boundaries
+        var morningStart = dayStart;
+        var morningEnd = (int)Math.Round(dayStart + thirdSpan) % 24;
+        var afternoonStart = morningEnd;
+        var afternoonEnd = (int)Math.Round(dayStart + (2 * thirdSpan)) % 24;
+        var eveningStart = afternoonEnd;
+        var eveningEnd = dayEnd;
+
+        // Time segments for prediction based on property daylight hours
         var timeSegments = new[]
         {
-            new { Name = "Early Morning", Start = 5, End = 8 },
-            new { Name = "Morning", Start = 8, End = 11 },
-            new { Name = "Midday", Start = 11, End = 14 },
-            new { Name = "Afternoon", Start = 14, End = 17 },
-            new { Name = "Evening", Start = 17, End = 20 },
-            new { Name = "Night", Start = 20, End = 5 }
+            new { Name = "Morning", Start = morningStart, End = morningEnd },
+            new { Name = "Afternoon", Start = afternoonStart, End = afternoonEnd },
+            new { Name = "Evening", Start = eveningStart, End = eveningEnd },
+            new { Name = "Night", Start = dayEnd, End = dayStart }
         };
 
         var predictions = new List<BuckTraxTimeSegmentPrediction>();

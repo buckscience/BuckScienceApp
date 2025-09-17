@@ -100,7 +100,7 @@
                 <div class="row g-2 mb-3" id="summary-stats">
                     <div class="col-4">
                         <div class="card text-center">
-                            <div class="card-body py-2">
+                            <div class="card-body px-2 py-2">
                                 <div class="h6 text-primary mb-0" id="total-sightings">0</div>
                                 <small class="text-muted">Sightings</small>
                             </div>
@@ -108,7 +108,7 @@
                     </div>
                     <div class="col-4">
                         <div class="card text-center">
-                            <div class="card-body py-2">
+                            <div class="card-body px-2 py-2">
                                 <div class="h6 text-success mb-0" id="total-transitions">0</div>
                                 <small class="text-muted">Transitions</small>
                             </div>
@@ -116,7 +116,7 @@
                     </div>
                     <div class="col-4">
                         <div class="card text-center">
-                            <div class="card-body py-2">
+                            <div class="card-body px-2 py-2">
                                 <div class="h6 text-info mb-0" id="active-periods">0</div>
                                 <small class="text-muted">Periods</small>
                             </div>
@@ -191,12 +191,21 @@
             $('#property-selector').on('change', function() {
                 selectedPropertyId = $(this).val();
                 if (selectedPropertyId) {
+                    // Clear existing property features before loading new ones
+                    clearFeatureLayers();
+                    
                     loadPropertyProfiles(selectedPropertyId);
                     loadPropertyFeatures(selectedPropertyId);
+                    
+                    // Trigger map layer update - same as Properties Details
+                    if (window.App && window.App.triggerMapLayerUpdate) {
+                        window.App.triggerMapLayerUpdate({ propertyId: selectedPropertyId });
+                    }
+                    
                     showProfileSection();
                 } else {
                     hideProfileSection();
-                    clearMapLayers();
+                    clearAllLayers(); // Clear everything when no property selected
                 }
             });
 
@@ -224,22 +233,16 @@
         }
 
         function loadPropertyFeatures(propertyId) {
-            // Use existing properties features API endpoint instead of custom BuckTrax one
-            $.get('/properties/' + propertyId + '/features')
-                .done(function(features) {
-                    currentPropertyFeatures = features;
-                    
-                    // Use the existing feature rendering system from properties.js
-                    if (window.App && window.App.displayFeaturesOnMap) {
-                        console.log('Using existing displayFeaturesOnMap for', features.length, 'features');
-                        window.App.displayFeaturesOnMap(features);
-                    } else {
-                        console.warn('displayFeaturesOnMap not available from properties.js');
-                    }
-                })
-                .fail(function() {
-                    console.warn('Failed to load property features');
-                });
+            // Use the EXACT same approach as Properties Details view
+            if (window.App && window.App.initializePropertyFeatures) {
+                console.log('Using properties.js initializePropertyFeatures for property:', propertyId);
+                window.App.initializePropertyFeatures(propertyId);
+                
+                // Track the feature layer IDs created by initializePropertyFeatures for visibility control
+                bucktraxLayers.features = ['property-features-fill', 'property-features-line', 'property-features-points'];
+            } else {
+                console.warn('initializePropertyFeatures not available from properties.js');
+            }
         }
 
         // REMOVED: Custom displayPropertyFeatures function
@@ -665,8 +668,8 @@
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            // Remove all BuckTrax layers and sources
-            [...bucktraxLayers.corridors, ...bucktraxLayers.zones, ...bucktraxLayers.features].forEach(layerId => {
+            // Remove only BuckTrax-specific layers (corridors and zones), NOT property features
+            [...bucktraxLayers.corridors, ...bucktraxLayers.zones].forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     try {
                         map.removeLayer(layerId);
@@ -686,17 +689,18 @@
                 }
             });
 
-            // Clear tracking arrays
+            // Clear tracking arrays for BuckTrax layers only (keep features)
             bucktraxLayers.corridors = [];
             bucktraxLayers.zones = [];
-            bucktraxLayers.features = [];
             bucktraxLayers.sources = [];
+            // Note: bucktraxLayers.features is NOT cleared - property features should remain
         }
 
         function clearFeatureLayers() {
             const map = window.App?.getMap?.();
             if (!map) return;
 
+            // Only clear property features when switching properties
             bucktraxLayers.features.forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     try {
@@ -706,6 +710,15 @@
                     }
                 }
             });
+
+            // Also remove the property-features source managed by properties.js
+            if (map.getSource('property-features')) {
+                try {
+                    map.removeSource('property-features');
+                } catch (e) {
+                    console.warn('Error removing property-features source:', e);
+                }
+            }
 
             bucktraxLayers.features = [];
         }
@@ -742,6 +755,8 @@
 
         function formatTimeRange(start, end) {
             const formatHour = (hour) => {
+                // Normalize hour to 0-23 range (handle 24 as 0)
+                hour = hour % 24;
                 if (hour === 0) return '12:00 AM';
                 if (hour === 12) return '12:00 PM';
                 if (hour < 12) return hour + ':00 AM';
@@ -749,9 +764,11 @@
             };
 
             if (start <= end) {
+                // Normal case: same day (e.g., 9:00 AM - 5:00 PM)
                 return formatHour(start) + ' - ' + formatHour(end);
             } else {
-                return formatHour(start) + ' - ' + formatHour(end + 24);
+                // Cross-midnight case: start is PM, end is AM next day (e.g., 8:00 PM - 6:00 AM)
+                return formatHour(start) + ' - ' + formatHour(end) + ' (+1 day)';
             }
         }
 
@@ -772,9 +789,50 @@
             clearMapLayers();
         }
 
+        function clearAllLayers() {
+            const map = window.App?.getMap?.();
+            if (!map) return;
+
+            // Remove ALL layers (both BuckTrax and property features) - used for cleanup
+            [...bucktraxLayers.corridors, ...bucktraxLayers.zones, ...bucktraxLayers.features].forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    try {
+                        map.removeLayer(layerId);
+                    } catch (e) {
+                        console.warn('Error removing layer:', layerId, e);
+                    }
+                }
+            });
+
+            bucktraxLayers.sources.forEach(sourceId => {
+                if (map.getSource(sourceId)) {
+                    try {
+                        map.removeSource(sourceId);
+                    } catch (e) {
+                        console.warn('Error removing source:', sourceId, e);
+                    }
+                }
+            });
+
+            // Also remove the property-features source managed by properties.js
+            if (map.getSource('property-features')) {
+                try {
+                    map.removeSource('property-features');
+                } catch (e) {
+                    console.warn('Error removing property-features source:', e);
+                }
+            }
+
+            // Clear all tracking arrays
+            bucktraxLayers.corridors = [];
+            bucktraxLayers.zones = [];
+            bucktraxLayers.features = [];
+            bucktraxLayers.sources = [];
+        }
+
         // Clean up when leaving the page
         $(window).on('beforeunload', function() {
-            clearMapLayers();
+            clearAllLayers();
         });
     </script>
 }
