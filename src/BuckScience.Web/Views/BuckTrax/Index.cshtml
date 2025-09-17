@@ -106,13 +106,18 @@
                 </div>
 
                 <!-- Predictions Display -->
-                <div class="flex-grow-1 p-4" id="predictions-display">
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                        <div class="text-center">
-                            <i class="fas fa-route fa-4x mb-3"></i>
-                            <h4>Welcome to BuckTrax</h4>
-                            <p>Select a property and profile to start predicting movement patterns.</p>
+                <div class="flex-grow-1 d-flex" id="predictions-display">
+                    <div class="col-6 p-4" id="predictions-content">
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <div class="text-center">
+                                <i class="fas fa-route fa-4x mb-3"></i>
+                                <h4>Welcome to BuckTrax</h4>
+                                <p>Select a property and profile to start predicting movement patterns.</p>
+                            </div>
                         </div>
+                    </div>
+                    <div class="col-6 p-0" id="prediction-map-container">
+                        <div id="prediction-map" style="height: 100%; width: 100%;"></div>
                     </div>
                 </div>
 
@@ -130,10 +135,31 @@
         let selectedPropertyId = null;
         let selectedProfileId = null;
         let currentPredictions = null;
+        let predictionMap = null;
 
         $(document).ready(function() {
             initializeBuckTrax();
+            initializePredictionMap();
         });
+
+        function initializePredictionMap() {
+            // Initialize map for predictions
+            const mapboxToken = $('meta[name="mapbox-token"]').attr('content');
+            if (!mapboxToken) {
+                console.warn('Mapbox token not found - map will not be initialized');
+                return;
+            }
+
+            mapboxgl.accessToken = mapboxToken;
+            predictionMap = new mapboxgl.Map({
+                container: 'prediction-map',
+                style: 'mapbox://styles/mapbox/outdoors-v12',
+                center: [-95, 40], // Center of US
+                zoom: 4
+            });
+
+            predictionMap.addControl(new mapboxgl.NavigationControl());
+        }
 
         function initializeBuckTrax() {
             // Property selection handler
@@ -267,6 +293,149 @@
 
             // Update main display
             updatePredictionsDisplay(predictions);
+
+            // Update map with predictions
+            updatePredictionMap(predictions);
+        }
+
+        function updatePredictionMap(predictions) {
+            if (!predictionMap) return;
+
+            // Clear existing layers
+            clearMapLayers();
+
+            // Get all zones from all time segments
+            const allZones = [];
+            predictions.timeSegments.forEach(segment => {
+                segment.predictedZones.forEach(zone => {
+                    allZones.push({
+                        ...zone,
+                        timeSegment: segment.timeSegment
+                    });
+                });
+            });
+
+            if (allZones.length === 0) return;
+
+            // Create bounds to fit all zones
+            const bounds = new mapboxgl.LngLatBounds();
+            allZones.forEach(zone => {
+                bounds.extend([zone.longitude, zone.latitude]);
+            });
+
+            // Add zones to map
+            const features = allZones.map(zone => ({
+                type: 'Feature',
+                properties: {
+                    locationName: zone.locationName,
+                    probability: zone.probability,
+                    sightingCount: zone.sightingCount,
+                    timeSegment: zone.timeSegment,
+                    isCorridorPrediction: zone.isCorridorPrediction
+                },
+                geometry: {
+                    type: 'Point',
+                    coordinates: [zone.longitude, zone.latitude]
+                }
+            }));
+
+            // Add source
+            predictionMap.addSource('prediction-zones', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: features
+                }
+            });
+
+            // Add circles for prediction zones
+            predictionMap.addLayer({
+                id: 'prediction-zones-circles',
+                type: 'circle',
+                source: 'prediction-zones',
+                paint: {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'probability'],
+                        0, 10,
+                        1, 30
+                    ],
+                    'circle-color': [
+                        'case',
+                        ['get', 'isCorridorPrediction'],
+                        '#ffa500', // Orange for corridors
+                        '#ff4444'  // Red for sighting-based predictions
+                    ],
+                    'circle-opacity': 0.7,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            // Add labels
+            predictionMap.addLayer({
+                id: 'prediction-zones-labels',
+                type: 'symbol',
+                source: 'prediction-zones',
+                layout: {
+                    'text-field': '{locationName}',
+                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                    'text-size': 12,
+                    'text-anchor': 'top',
+                    'text-offset': [0, 1.5]
+                },
+                paint: {
+                    'text-color': '#333333',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2
+                }
+            });
+
+            // Add click handler for zones
+            predictionMap.on('click', 'prediction-zones-circles', (e) => {
+                const properties = e.features[0].properties;
+                
+                new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(`
+                        <div class="p-2">
+                            <h6>${properties.locationName}</h6>
+                            <p class="mb-1"><strong>Probability:</strong> ${Math.round(properties.probability * 100)}%</p>
+                            <p class="mb-1"><strong>Time Segment:</strong> ${properties.timeSegment}</p>
+                            <p class="mb-1"><strong>Sightings:</strong> ${properties.sightingCount}</p>
+                            ${properties.isCorridorPrediction === 'true' ? '<span class="badge bg-info">Corridor Prediction</span>' : '<span class="badge bg-success">Historical Sighting</span>'}
+                        </div>
+                    `)
+                    .addTo(predictionMap);
+            });
+
+            // Change cursor on hover
+            predictionMap.on('mouseenter', 'prediction-zones-circles', () => {
+                predictionMap.getCanvas().style.cursor = 'pointer';
+            });
+
+            predictionMap.on('mouseleave', 'prediction-zones-circles', () => {
+                predictionMap.getCanvas().style.cursor = '';
+            });
+
+            // Fit map to bounds
+            predictionMap.fitBounds(bounds, { padding: 50 });
+        }
+
+        function clearMapLayers() {
+            if (!predictionMap) return;
+
+            // Remove existing layers and sources
+            if (predictionMap.getLayer('prediction-zones-circles')) {
+                predictionMap.removeLayer('prediction-zones-circles');
+            }
+            if (predictionMap.getLayer('prediction-zones-labels')) {
+                predictionMap.removeLayer('prediction-zones-labels');
+            }
+            if (predictionMap.getSource('prediction-zones')) {
+                predictionMap.removeSource('prediction-zones');
+            }
         }
 
         function displayResultsSummary(predictions) {
@@ -402,13 +571,31 @@
         }
 
         function updatePredictionsDisplay(predictions) {
-            $('#predictions-display').html(`
-                <div class="text-center">
-                    <h4 class="mb-3">${predictions.profileName} Movement Predictions</h4>
-                    <p class="text-muted">${predictions.propertyName}</p>
-                    <div class="alert alert-info">
+            $('#predictions-content').html(`
+                <div class="h-100 d-flex flex-column">
+                    <div class="text-center mb-4">
+                        <h4 class="mb-3">${predictions.profileName} Movement Predictions</h4>
+                        <p class="text-muted">${predictions.propertyName}</p>
+                    </div>
+                    <div class="alert alert-info mb-4">
                         <i class="fas fa-info-circle me-2"></i>
                         Click on the time segment tabs above to view detailed predictions for each period.
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5>Map Legend</h5>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3" style="width: 20px; height: 20px; background-color: #ff4444; border-radius: 50%;"></div>
+                                    <span>Historical Sighting Zones</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3" style="width: 20px; height: 20px; background-color: #ffa500; border-radius: 50%;"></div>
+                                    <span>Movement Corridor Predictions</span>
+                                </div>
+                                <small class="text-muted">Circle size represents probability</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `);
