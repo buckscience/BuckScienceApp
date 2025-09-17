@@ -355,9 +355,6 @@ BuckLens.Charts = {
             return;
         }
 
-        // Check if this is a moon phase chart to add icons
-        const isMoonPhaseChart = chartData.title.includes('Moon Phase');
-        
         const chartConfig = {
             type: 'bar',
             data: {
@@ -395,9 +392,7 @@ BuckLens.Charts = {
                     x: {
                         ticks: {
                             maxRotation: 45,
-                            minRotation: 0,
-                            // Hide x-axis labels for moon phase chart since icons below will serve as labels
-                            display: !isMoonPhaseChart
+                            minRotation: 0
                         }
                     }
                 },
@@ -413,55 +408,10 @@ BuckLens.Charts = {
 
         try {
             this.chartInstances[canvasId] = new Chart(ctx, chartConfig);
-            
-            // For moon phase chart, also add icons below the canvas using DOM manipulation
-            if (isMoonPhaseChart) {
-                setTimeout(() => this.addMoonPhaseIconsBelow(canvasId, chartData), 100);
-            }
         } catch (error) {
             console.error(`Error creating bar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
-    },
-
-    // Add unified moon phase icons with labels below the canvas
-    addMoonPhaseIconsBelow(canvasId, chartData) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const container = canvas.closest('.bucklens-chart-container');
-        if (!container) return;
-        
-        // Add moon-phase-chart class for special styling
-        container.classList.add('moon-phase-chart');
-        
-        // Remove existing icon container
-        const existingIcons = container.querySelector('.moon-phase-icons');
-        if (existingIcons) {
-            existingIcons.remove();
-        }
-        
-        // Create unified icon container
-        const iconContainer = document.createElement('div');
-        iconContainer.className = 'moon-phase-icons d-flex justify-content-around align-items-center mt-3 pt-2';
-        iconContainer.style.fontSize = '28px'; // Larger icons for better visibility
-        
-        // Add icons for each data point
-        chartData.dataPoints.forEach(point => {
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'text-center';
-            iconDiv.style.color = this.colors.primary;
-            
-            const iconHtml = this.moonPhaseIcons[point.label] || '<i class="wi wi-moon-alt"></i>';
-            iconDiv.innerHTML = `
-                <div style="margin-bottom: 4px;">${iconHtml}</div>
-                <div class="text-muted" style="font-size: 8px; line-height: 1; font-weight: 500;">${point.label}</div>
-            `;
-            
-            iconContainer.appendChild(iconDiv);
-        });
-        
-        container.appendChild(iconContainer);
     },
 
     // Create pie chart
@@ -577,7 +527,31 @@ BuckLens.Charts = {
                             color: this.colors.dark
                         },
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                generateLabels: () => {
+                                    // Create wind speed legend items
+                                    const speedRanges = [
+                                        { label: '< 1 mph', color: '#D4E6D4' },
+                                        { label: '1-4 mph', color: '#B8D6B8' },
+                                        { label: '4-8 mph', color: '#9CC29C' },
+                                        { label: '8-12 mph', color: '#8CAF8C' },
+                                        { label: '12-16 mph', color: '#6B8E6B' },
+                                        { label: '16-20 mph', color: '#527A52' },
+                                        { label: '> 20 mph', color: '#3E5A3E' }
+                                    ];
+                                    
+                                    return speedRanges.map((range, index) => ({
+                                        text: range.label,
+                                        fillStyle: range.color,
+                                        strokeStyle: range.color,
+                                        lineWidth: 1,
+                                        hidden: false,
+                                        index: index
+                                    }));
+                                }
+                            }
                         },
                         tooltip: {
                             callbacks: {
@@ -609,57 +583,10 @@ BuckLens.Charts = {
                     }
                 }
             });
-
-            // Add wind speed legend below the chart
-            setTimeout(() => this.addWindSpeedLegend(canvasId, chartData), 100);
         } catch (error) {
             console.error(`Error creating radar chart '${canvasId}':`, error);
             this.showChartError(canvasId, `Failed to render chart`);
         }
-    },
-
-    // Add wind speed legend below the wind direction chart
-    addWindSpeedLegend(canvasId, chartData) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const container = canvas.closest('.bucklens-chart-container');
-        if (!container) return;
-        
-        // Remove existing legend
-        const existingLegend = container.querySelector('.wind-speed-legend');
-        if (existingLegend) {
-            existingLegend.remove();
-        }
-        
-        // Create legend showing wind speed ranges
-        const legendContainer = document.createElement('div');
-        legendContainer.className = 'wind-speed-legend mt-2 pt-2 border-top';
-        
-        // Create speed range indicators
-        const speedRanges = [
-            { label: '< 1 mph', color: '#D4E6D4' },
-            { label: '1-4 mph', color: '#B8D6B8' },
-            { label: '4-8 mph', color: '#9CC29C' },
-            { label: '8-12 mph', color: '#8CAF8C' },
-            { label: '12-16 mph', color: '#6B8E6B' },
-            { label: '16-20 mph', color: '#527A52' },
-            { label: '> 20 mph', color: '#3E5A3E' }
-        ];
-        
-        let legendHtml = '<div class="d-flex flex-wrap justify-content-center gap-2">';
-        speedRanges.forEach(range => {
-            legendHtml += `
-                <div class="d-flex align-items-center">
-                    <div class="me-1" style="width: 12px; height: 12px; background-color: ${range.color}; border-radius: 2px;"></div>
-                    <small class="text-muted">${range.label}</small>
-                </div>
-            `;
-        });
-        legendHtml += '</div>';
-        
-        legendContainer.innerHTML = legendHtml;
-        container.appendChild(legendContainer);
     },
 
     // Create sighting heatmap using Mapbox
@@ -678,14 +605,19 @@ BuckLens.Charts = {
             
             if (locationData && Array.isArray(locationData)) {
                 locationData.forEach((point, index) => {
-                    console.log(`Point ${index + 1}:`, {
-                        photoId: point.photoId,
+                    console.log(`Camera Location ${index + 1}:`, {
+                        cameraId: point.cameraId,
                         camera: point.cameraName,
-                        date: point.dateTaken,
+                        sightingCount: point.sightingCount,
+                        firstSighting: point.firstSighting,
+                        lastSighting: point.lastSighting,
                         lat: point.latitude,
                         lng: point.longitude,
                         latType: typeof point.latitude,
-                        lngType: typeof point.longitude
+                        lngType: typeof point.longitude,
+                        avgTemp: point.avgTemperature,
+                        commonWind: point.commonWindDirection,
+                        commonMoon: point.commonMoonPhase
                     });
                     
                     // Special detection for user's coordinate
@@ -728,8 +660,9 @@ BuckLens.Charts = {
                 const isValid = hasLat && hasLng;
                 
             // Enhanced coordinate debugging
-            console.log(`Location ${index}:`, {
+            console.log(`Camera Location ${index}:`, {
                 camera: point.cameraName,
+                sightingCount: point.sightingCount,
                 lat: point.latitude,
                 lng: point.longitude,
                 latType: typeof point.latitude,
@@ -896,11 +829,12 @@ BuckLens.Charts = {
                                     <div class="col-md-6">
                                         <div class="card card-body text-start">
                                             <strong class="text-success">${point.cameraName}</strong>
-                                            <small class="text-muted">${point.dateTaken}</small>
+                                            <span class="badge bg-primary ms-2">${point.sightingCount} sighting${point.sightingCount !== 1 ? 's' : ''}</span>
+                                            <small class="text-muted">${point.firstSighting}${point.firstSighting !== point.lastSighting ? ` to ${point.lastSighting}` : ''}</small>
                                             ${point.latitude && point.longitude ? `<small class="text-muted">📍 Lat: ${point.latitude.toFixed(6)}, Lng: ${point.longitude.toFixed(6)}</small>` : ''}
-                                            ${point.temperature ? `<small class="text-muted">🌡️ ${point.temperature}°F</small>` : ''}
-                                            ${point.windDirection ? `<small class="text-muted">💨 ${point.windDirection}</small>` : ''}
-                                            ${point.moonPhase ? `<small class="text-muted">🌙 ${point.moonPhase}</small>` : ''}
+                                            ${point.avgTemperature ? `<small class="text-muted">🌡️ Avg: ${point.avgTemperature.toFixed(1)}°F</small>` : ''}
+                                            ${point.commonWindDirection ? `<small class="text-muted">💨 Common: ${point.commonWindDirection}</small>` : ''}
+                                            ${point.commonMoonPhase ? `<small class="text-muted">🌙 Common: ${point.commonMoonPhase}</small>` : ''}
                                         </div>
                                     </div>
                                 `).join('')}
@@ -917,13 +851,15 @@ BuckLens.Charts = {
                 
                 let mapConfig = {
                     container: mapId,
-                    style: 'mapbox://styles/mapbox/light-v11' // Light style for better heatmap visibility
+                    style: 'mapbox://styles/mapbox/satellite-v9', // Light style for better heatmap visibility
+                    maxZoom: 18, // Set maximum zoom to prevent layers from disappearing
+                    minZoom: 8   // Set minimum zoom to keep reasonable view
                 };
                 
                 if (validLocations.length === 1) {
-                    // For single point, center on the location with better zoom level
+                    // For single point, center on the location with appropriate zoom level
                     mapConfig.center = [validLocations[0].longitude, validLocations[0].latitude];
-                    mapConfig.zoom = 14; // Closer zoom for single points
+                    mapConfig.zoom = 12; // More conservative zoom for single points to show context
                     console.log('Single point detected, centering map at:', mapConfig.center);
                     console.log(`Single point details: Camera=${validLocations[0].cameraName}, Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}`);
                     console.log(`Expected location for Lat=${validLocations[0].latitude}, Lng=${validLocations[0].longitude}:`);
@@ -935,9 +871,13 @@ BuckLens.Charts = {
                         console.log(`  Longitude ${validLocations[0].longitude} ${validLocations[0].longitude > -125 && validLocations[0].longitude < -66 ? '✅' : '❌'} (US range: -125.0 to -66.9)`);
                     }
                 } else {
-                    // For multiple points, use bounds
+                    // For multiple points, use bounds with better zoom control
                     mapConfig.bounds = bounds;
-                    mapConfig.fitBoundsOptions = { padding: 20 };
+                    mapConfig.fitBoundsOptions = { 
+                        padding: 50,      // More padding for better visibility
+                        maxZoom: 16,      // Prevent over-zooming on bounds fit
+                        animate: false    // Faster initial load
+                    };
                     console.log('Multiple points detected, using bounds:', bounds);
                     console.log(`Bounds breakdown: SW=[${bounds[0][0]}, ${bounds[0][1]}], NE=[${bounds[1][0]}, ${bounds[1][1]}]`);
                 }
@@ -971,10 +911,11 @@ BuckLens.Charts = {
                                     <div class="mt-3">
                                         ${validLocations.map(point => `
                                             <div class="card card-body mb-2 text-start">
-                                                <strong>${point.cameraName}</strong><br>
-                                                <small class="text-muted">${point.dateTaken}</small>
-                                                ${point.temperature ? `<br><small>Temperature: ${point.temperature}°F</small>` : ''}
-                                                ${point.windDirection ? `<br><small>Wind: ${point.windDirection}</small>` : ''}
+                                                <strong>${point.cameraName}</strong>
+                                                <span class="badge bg-primary ms-2">${point.sightingCount} sighting${point.sightingCount !== 1 ? 's' : ''}</span><br>
+                                                <small class="text-muted">${point.firstSighting}${point.firstSighting !== point.lastSighting ? ` to ${point.lastSighting}` : ''}</small>
+                                                ${point.avgTemperature ? `<br><small>Avg Temperature: ${point.avgTemperature.toFixed(1)}°F</small>` : ''}
+                                                ${point.commonWindDirection ? `<br><small>Common Wind: ${point.commonWindDirection}</small>` : ''}
                                             </div>
                                         `).join('')}
                                     </div>
@@ -997,18 +938,21 @@ BuckLens.Charts = {
                     console.log('Mapbox map loaded successfully');
                     console.log('Valid location data for heatmap:', validLocations);
                     
-                    // Convert location data to GeoJSON format for heatmap
+                    // Convert location data to GeoJSON format for heatmap with sighting counts as weights
                     const geojsonData = {
                         type: 'FeatureCollection',
                         features: validLocations.map(point => ({
                             type: 'Feature',
                             properties: {
-                                photoId: point.photoId,
-                                dateTaken: point.dateTaken,
+                                cameraId: point.cameraId,
                                 cameraName: point.cameraName,
-                                temperature: point.temperature,
-                                windDirection: point.windDirection,
-                                moonPhase: point.moonPhase
+                                sightingCount: point.sightingCount,
+                                weight: point.sightingCount, // Use sighting count as heatmap weight
+                                firstSighting: point.firstSighting,
+                                lastSighting: point.lastSighting,
+                                avgTemperature: point.avgTemperature,
+                                commonWindDirection: point.commonWindDirection,
+                                commonMoonPhase: point.commonMoonPhase
                             },
                             geometry: {
                                 type: 'Point',
@@ -1024,21 +968,31 @@ BuckLens.Charts = {
                     });
 
                     console.log('Added data source with', geojsonData.features.length, 'features');
+                    
+                    // Log sighting counts for debugging heatmap weights
+                    console.log('Sighting counts by camera:');
+                    validLocations.forEach(location => {
+                        console.log(`  ${location.cameraName}: ${location.sightingCount} sightings (weight: ${location.sightingCount})`);
+                    });
 
-                    // Add heatmap layer - make more visible for small datasets
+                    // Add heatmap layer - visible across all zoom levels
                     map.addLayer({
                         id: 'sightings-heatmap',
                         type: 'heatmap',
                         source: 'sightings',
-                        maxzoom: 15,
+                        minzoom: 8,  // Start showing heatmap at reasonable zoom level
+                        maxzoom: 22, // Keep heatmap visible at high zoom levels
                         paint: {
-                            // Increase weight to make heatmap more visible
+                            // Use sighting count as weight for heatmap intensity
                             'heatmap-weight': [
                                 'interpolate',
                                 ['linear'],
-                                ['zoom'],
-                                0, 1,
-                                9, 3
+                                ['get', 'weight'],
+                                1, 1,    // Single sighting = base weight
+                                2, 2,    // Two sightings = 2x weight  
+                                5, 4,    // Five sightings = 4x weight
+                                10, 6,   // Ten sightings = 6x weight
+                                20, 8    // Twenty sightings = 8x weight
                             ],
                             // Color ramp - standard heatmap colors (blue to red)
                             'heatmap-color': [
@@ -1052,46 +1006,62 @@ BuckLens.Charts = {
                                 0.8, 'rgba(239, 138, 98, 0.9)',  // Orange
                                 1, 'rgba(178, 24, 43, 1)'        // Red for hotspots
                             ],
-                            // Smaller, more appropriate radius for camera locations
+                            // Better radius scaling for camera locations across zoom levels
                             'heatmap-radius': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                0, 15,   // Reasonable radius at low zoom
-                                9, 25,   // Medium radius
-                                16, 40   // Larger radius at high zoom
+                                8, 20,   // Larger radius at low zoom for visibility
+                                12, 30,  // Medium radius
+                                16, 40,  // Good radius at medium-high zoom
+                                22, 60   // Larger radius at high zoom for detail
                             ],
-                            // Adjust the heatmap opacity
+                            // Improved opacity scaling across zoom levels
                             'heatmap-opacity': [
                                 'interpolate',
                                 ['linear'],
                                 ['zoom'],
-                                7, 0.9,
-                                15, 0.7
+                                8, 0.8,   // Good visibility at low zoom
+                                12, 0.9,  // High visibility at medium zoom
+                                16, 0.7,  // Slightly reduced at high zoom
+                                22, 0.6   // Allow points to be more visible at very high zoom
                             ]
                         }
                     });
 
                     console.log('Added heatmap layer');
 
-                    // Add individual points - always visible for small datasets
+                    // Add individual points - always visible for precise location identification
                     map.addLayer({
                         id: 'sightings-points',
                         type: 'circle',
                         source: 'sightings',
-                        maxzoom: 15, // Show points up to zoom level 15, then let heatmap take over
+                        minzoom: 10, // Start showing points at medium zoom level
+                        maxzoom: 22, // Keep points visible at high zoom levels
                         paint: {
-                            // Smaller, more appropriate circle size for camera locations
+                            // Scale circle size based on sighting count
                             'circle-radius': [
                                 'interpolate',
                                 ['linear'],
-                                ['zoom'],
-                                5, 4,    // Small at low zoom
-                                10, 8,   // Medium at medium zoom
-                                15, 12   // Reasonable size at high zoom
+                                ['get', 'sightingCount'],
+                                1, 6,    // Single sighting = small circle
+                                2, 8,    // Two sightings = medium circle
+                                5, 12,   // Five sightings = larger circle
+                                10, 16,  // Ten sightings = big circle
+                                20, 20   // Twenty+ sightings = largest circle
                             ],
-                            'circle-color': '#527A52',
-                            'circle-stroke-width': 3,
+                            // Color intensity based on sighting count
+                            'circle-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['get', 'sightingCount'],
+                                1, '#8CAF8C',   // Light green for low count
+                                2, '#6B8E6B',   // Medium green
+                                5, '#527A52',   // Standard green
+                                10, '#3E5A3E',  // Dark green for high count
+                                20, '#2A3F2A'   // Darkest green for very high count
+                            ],
+                            'circle-stroke-width': 2,
                             'circle-stroke-color': '#ffffff',
                             'circle-opacity': 1.0  // Full opacity for maximum visibility
                         }
@@ -1107,10 +1077,11 @@ BuckLens.Charts = {
                             .setHTML(`
                                 <div class="p-2">
                                     <h6 class="mb-1">${properties.cameraName}</h6>
-                                    <small class="text-muted d-block">${properties.dateTaken}</small>
-                                    ${properties.temperature ? `<small class="text-muted d-block">Temperature: ${properties.temperature}°F</small>` : ''}
-                                    ${properties.windDirection ? `<small class="text-muted d-block">Wind: ${properties.windDirection}</small>` : ''}
-                                    ${properties.moonPhase ? `<small class="text-muted d-block">Moon: ${properties.moonPhase}</small>` : ''}
+                                    <span class="badge bg-primary mb-2">${properties.sightingCount} sighting${properties.sightingCount !== 1 ? 's' : ''}</span>
+                                    <small class="text-muted d-block">${properties.firstSighting}${properties.firstSighting !== properties.lastSighting ? ` to ${properties.lastSighting}` : ''}</small>
+                                    ${properties.avgTemperature ? `<small class="text-muted d-block">Avg Temperature: ${properties.avgTemperature.toFixed(1)}°F</small>` : ''}
+                                    ${properties.commonWindDirection ? `<small class="text-muted d-block">Common Wind: ${properties.commonWindDirection}</small>` : ''}
+                                    ${properties.commonMoonPhase ? `<small class="text-muted d-block">Common Moon: ${properties.commonMoonPhase}</small>` : ''}
                                 </div>
                             `)
                             .addTo(map);

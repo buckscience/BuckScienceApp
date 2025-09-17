@@ -477,19 +477,38 @@ public class ProfilesController : Controller
         try
         {
             var data = await _analyticsService.GetProfileAnalyticsAsync(id, _currentUser.Id.Value, ct);
+            
+            // Group sightings by camera location to aggregate counts for heatmap intensity
             var locations = data.Sightings
                 .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
-                .Select(s => new
+                .GroupBy(s => new { s.CameraId, s.CameraName, s.Latitude, s.Longitude })
+                .Select(g => new
                 {
-                    photoId = s.PhotoId,
-                    dateTaken = s.DateTaken.ToString("yyyy-MM-dd HH:mm"),
-                    cameraName = s.CameraName,
-                    latitude = s.Latitude!.Value,
-                    longitude = s.Longitude!.Value,
-                    temperature = s.Temperature,
-                    windDirection = s.WindDirectionText,
-                    moonPhase = s.MoonPhaseText
+                    cameraId = g.Key.CameraId,
+                    cameraName = g.Key.CameraName,
+                    latitude = g.Key.Latitude!.Value,
+                    longitude = g.Key.Longitude!.Value,
+                    sightingCount = g.Count(),
+                    // Include metadata from the most recent sighting
+                    mostRecentSighting = g.OrderByDescending(s => s.DateTaken).First(),
+                    // Include date range for this camera
+                    firstSighting = g.Min(s => s.DateTaken).ToString("yyyy-MM-dd HH:mm"),
+                    lastSighting = g.Max(s => s.DateTaken).ToString("yyyy-MM-dd HH:mm"),
+                    // Average environmental conditions for this camera
+                    avgTemperature = g.Where(s => s.Temperature.HasValue).Any() 
+                        ? g.Where(s => s.Temperature.HasValue).Average(s => s.Temperature!.Value)
+                        : (double?)null,
+                    // Most common wind direction and moon phase
+                    commonWindDirection = g.GroupBy(s => s.WindDirectionText)
+                        .Where(grp => !string.IsNullOrEmpty(grp.Key))
+                        .OrderByDescending(grp => grp.Count())
+                        .FirstOrDefault()?.Key,
+                    commonMoonPhase = g.GroupBy(s => s.MoonPhaseText)
+                        .Where(grp => !string.IsNullOrEmpty(grp.Key))
+                        .OrderByDescending(grp => grp.Count())
+                        .FirstOrDefault()?.Key
                 })
+                .OrderByDescending(l => l.sightingCount)
                 .ToList();
 
             return Json(locations);
