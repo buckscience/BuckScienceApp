@@ -212,6 +212,11 @@
             $('#show-property-features, #show-prediction-zones, #show-movement-corridors').on('change', function() {
                 updateLayerVisibility();
             });
+
+            // Ensure all checkboxes are checked by default for better UX
+            $('#show-property-features').prop('checked', true);
+            $('#show-prediction-zones').prop('checked', true);
+            $('#show-movement-corridors').prop('checked', true);
         }
 
         function loadPropertyFeatures(propertyId) {
@@ -258,10 +263,16 @@
                 data: featureData
             });
 
+            // Determine initial visibility based on checkbox state
+            const showFeatures = $('#show-property-features').is(':checked');
+
             map.addLayer({
                 id: layerId,
                 type: 'circle',
                 source: sourceId,
+                layout: {
+                    'visibility': showFeatures ? 'visible' : 'none'
+                },
                 paint: {
                     'circle-radius': 8,
                     'circle-color': [
@@ -576,11 +587,18 @@
                 data: { type: 'FeatureCollection', features: features }
             });
 
+            // Check initial visibility state
+            const showCorridors = $('#show-movement-corridors').is(':checked');
+
             map.addLayer({
                 id: layerId,
                 type: 'line',
                 source: sourceId,
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                layout: { 
+                    'line-join': 'round', 
+                    'line-cap': 'round',
+                    'visibility': showCorridors ? 'visible' : 'none'
+                },
                 paint: {
                     'line-color': '#00aa00',
                     'line-width': ['interpolate', ['linear'], ['get', 'score'], 0, 2, 10, 6],
@@ -633,10 +651,16 @@
                 data: { type: 'FeatureCollection', features: features }
             });
 
+            // Check initial visibility state
+            const showZones = $('#show-prediction-zones').is(':checked');
+
             map.addLayer({
                 id: layerId,
                 type: 'circle',
                 source: sourceId,
+                layout: {
+                    'visibility': showZones ? 'visible' : 'none'
+                },
                 paint: {
                     'circle-radius': ['interpolate', ['linear'], ['get', 'probability'], 0, 8, 1, 20],
                     'circle-color': [
