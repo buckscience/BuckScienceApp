@@ -174,7 +174,8 @@ public class BuckTraxController : Controller
         {
             new { Name = "Morning", Start = morningStart, End = morningEnd },
             new { Name = "Afternoon", Start = afternoonStart, End = afternoonEnd },
-            new { Name = "Evening", Start = eveningStart, End = eveningEnd }
+            new { Name = "Evening", Start = eveningStart, End = eveningEnd },
+            new { Name = "Night", Start = dayEnd, End = dayStart }
         };
 
         var predictions = new List<BuckTraxTimeSegmentPrediction>();
