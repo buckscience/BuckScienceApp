@@ -744,47 +744,9 @@ public class BuckTraxController : Controller
         return degrees * Math.PI / 180;
     }
 
-    // API: Get property features for map display
-    [HttpGet]
-    [Route("/bucktrax/api/properties/{propertyId}/features")]
-    public async Task<IActionResult> GetPropertyFeatures(int propertyId, CancellationToken ct)
-    {
-        if (_currentUser.Id is null) return Forbid();
-
-        // Verify user owns the property
-        var propertyExists = await _db.Properties
-            .AnyAsync(p => p.Id == propertyId && p.ApplicationUserId == _currentUser.Id.Value, ct);
-
-        if (!propertyExists) return NotFound();
-
-        // First, fetch the raw data from database
-        var rawFeatures = await _db.PropertyFeatures
-            .AsNoTracking()
-            .Where(f => f.PropertyId == propertyId && f.Geometry != null)
-            .Select(f => new
-            {
-                f.Id,
-                f.Name,
-                f.ClassificationType,
-                f.Geometry
-            })
-            .ToListAsync(ct);
-
-        // Then process the geometry data in memory
-        var features = rawFeatures.Select(f => new
-        {
-            f.Id,
-            f.Name,
-            ClassificationType = (int)f.ClassificationType,
-            ClassificationName = f.ClassificationType.ToString(),
-            GeometryType = GetGeometryType(f.Geometry),
-            Latitude = GetLatitudeFromGeometry(f.Geometry),
-            Longitude = GetLongitudeFromGeometry(f.Geometry),
-            Geometry = f.Geometry?.ToString() ?? ""
-        }).ToList();
-
-        return Json(features);
-    }
+    // REMOVED: Custom BuckTrax features API endpoint 
+    // Now using standard /properties/{propertyId}/features endpoint instead
+    // to avoid reinventing the wheel and ensure consistency
 
     private BuckTraxConfiguration GetConfiguration()
     {

@@ -224,95 +224,26 @@
         }
 
         function loadPropertyFeatures(propertyId) {
-            $.get('/bucktrax/api/properties/' + propertyId + '/features')
+            // Use existing properties features API endpoint instead of custom BuckTrax one
+            $.get('/properties/' + propertyId + '/features')
                 .done(function(features) {
                     currentPropertyFeatures = features;
-                    displayPropertyFeatures(features);
+                    
+                    // Use the existing feature rendering system from properties.js
+                    if (window.App && window.App.displayFeaturesOnMap) {
+                        console.log('Using existing displayFeaturesOnMap for', features.length, 'features');
+                        window.App.displayFeaturesOnMap(features);
+                    } else {
+                        console.warn('displayFeaturesOnMap not available from properties.js');
+                    }
                 })
                 .fail(function() {
                     console.warn('Failed to load property features');
                 });
         }
 
-        function displayPropertyFeatures(features) {
-            const map = window.App?.getMap?.();
-            if (!map || !features.length) return;
-
-            // Clear existing features
-            clearFeatureLayers();
-
-            // Create feature source
-            const featureData = {
-                type: 'FeatureCollection',
-                features: features.map(feature => ({
-                    type: 'Feature',
-                    properties: {
-                        id: feature.id,
-                        name: feature.name || 'Unnamed Feature',
-                        type: feature.classificationName,
-                        classification: feature.classificationType
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [feature.longitude, feature.latitude]
-                    }
-                }))
-            };
-
-            const sourceId = 'bucktrax-property-features';
-            const layerId = 'bucktrax-property-features-points';
-
-            map.addSource(sourceId, {
-                type: 'geojson',
-                data: featureData
-            });
-
-            // Determine initial visibility based on checkbox state
-            const showFeatures = $('#show-property-features').is(':checked');
-
-            map.addLayer({
-                id: layerId,
-                type: 'circle',
-                source: sourceId,
-                layout: {
-                    'visibility': showFeatures ? 'visible' : 'none'
-                },
-                paint: {
-                    'circle-radius': 8,
-                    'circle-color': [
-                        'case',
-                        ['<=', ['get', 'classification'], 10], '#8B4513', // Topographical - brown
-                        ['<=', ['get', 'classification'], 30], '#228B22', // Food - green
-                        ['<=', ['get', 'classification'], 60], '#1E90FF', // Water - blue
-                        ['<=', ['get', 'classification'], 80], '#228B22', // Bedding - green
-                        '#9370DB' // Other - purple
-                    ],
-                    'circle-stroke-color': '#ffffff',
-                    'circle-stroke-width': 2,
-                    'circle-opacity': 0.8
-                }
-            });
-
-            bucktraxLayers.features.push(layerId);
-            bucktraxLayers.sources.push(sourceId);
-
-            // Add click handler for features
-            map.on('click', layerId, (e) => {
-                const props = e.features[0].properties;
-                new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(`
-                        <div class="p-2">
-                            <div class="fw-bold">${props.name}</div>
-                            <div class="text-muted">${props.type}</div>
-                        </div>
-                    `)
-                    .addTo(map);
-            });
-
-            map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
-            map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
-        }
+        // REMOVED: Custom displayPropertyFeatures function
+        // Now using the standard displayFeaturesOnMap from properties.js instead
         function loadPropertyProfiles(propertyId) {
             $.get('/bucktrax/api/properties/' + propertyId + '/profiles')
                 .done(function(profiles) {

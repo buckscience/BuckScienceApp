@@ -2584,4 +2584,7 @@ window.App = window.App || {};
 
     // Expose wireCameraForm function
     window.App.wireCameraForm = wireCameraForm;
+    
+    // Expose feature rendering function for BuckTrax compatibility
+    window.App.displayFeaturesOnMap = displayFeaturesOnMap;
 })();
