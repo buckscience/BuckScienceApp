@@ -2176,15 +2176,15 @@ window.App = window.App || {};
                     throw new Error('POINT must have at least 2 coordinates');
                 }
                 
-                const lat = parseFloat(coords[0]);
-                const lng = parseFloat(coords[1]);
+                const lng = parseFloat(coords[0]);
+                const lat = parseFloat(coords[1]);
                 
                 if (isNaN(lng) || isNaN(lat)) {
                     console.error('POINT invalid coordinate values:', coords);
                     throw new Error('POINT coordinates must be valid numbers');
                 }
                 
-                console.log('Parsed POINT (lat, lng):', [lat, lng], '-> GeoJSON [lng, lat]:', [lng, lat]);
+                console.log('Parsed POINT:', [lng, lat]);
                 return {
                     type: 'Point',
                     coordinates: [lng, lat]
@@ -2206,8 +2206,8 @@ window.App = window.App || {};
                         console.error('LINESTRING invalid coordinate pair:', pair);
                         throw new Error('Each coordinate pair must have at least 2 values');
                     }
-                    const lat = parseFloat(coords[0]);
-                    const lng = parseFloat(coords[1]);
+                    const lng = parseFloat(coords[0]);
+                    const lat = parseFloat(coords[1]);
                     if (isNaN(lng) || isNaN(lat)) {
                         console.error('LINESTRING invalid coordinate values:', coords);
                         throw new Error('Coordinate values must be valid numbers');
@@ -2250,8 +2250,8 @@ window.App = window.App || {};
                         console.error('POLYGON invalid coordinate pair:', pair);
                         throw new Error('Each coordinate pair must have at least 2 values');
                     }
-                    const lat = parseFloat(coords[0]);
-                    const lng = parseFloat(coords[1]);
+                    const lng = parseFloat(coords[0]);
+                    const lat = parseFloat(coords[1]);
                     if (isNaN(lng) || isNaN(lat)) {
                         console.error('POLYGON invalid coordinate values:', coords);
                         throw new Error('Coordinate values must be valid numbers');
@@ -2290,15 +2290,12 @@ window.App = window.App || {};
 
     function geometryToWKT(geometry) {
         if (geometry.type === 'Point') {
-            // GeoJSON format is [lng, lat], WKT format is lat lng  
-            return `POINT(${geometry.coordinates[1]} ${geometry.coordinates[0]})`;
+            return `POINT(${geometry.coordinates[0]} ${geometry.coordinates[1]})`;
         } else if (geometry.type === 'LineString') {
-            // Convert [lng, lat] to lat lng for each coordinate pair
-            const coords = geometry.coordinates.map(coord => `${coord[1]} ${coord[0]}`).join(',');
+            const coords = geometry.coordinates.map(coord => `${coord[0]} ${coord[1]}`).join(',');
             return `LINESTRING(${coords})`;
         } else if (geometry.type === 'Polygon') {
-            // Convert [lng, lat] to lat lng for each coordinate pair
-            const coords = geometry.coordinates[0].map(coord => `${coord[1]} ${coord[0]}`).join(',');
+            const coords = geometry.coordinates[0].map(coord => `${coord[0]} ${coord[1]}`).join(',');
             return `POLYGON((${coords}))`;
         }
         throw new Error('Unsupported geometry type: ' + geometry.type);
