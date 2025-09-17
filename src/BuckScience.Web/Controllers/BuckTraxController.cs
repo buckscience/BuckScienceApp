@@ -704,21 +704,31 @@ public class BuckTraxController : Controller
 
         if (!propertyExists) return NotFound();
 
-        var features = await _db.PropertyFeatures
+        // First, fetch the raw data from database
+        var rawFeatures = await _db.PropertyFeatures
             .AsNoTracking()
             .Where(f => f.PropertyId == propertyId && f.Geometry != null)
             .Select(f => new
             {
                 f.Id,
                 f.Name,
-                ClassificationType = (int)f.ClassificationType,
-                ClassificationName = f.ClassificationType.ToString(),
-                GeometryType = GetGeometryType(f.Geometry),
-                Latitude = GetLatitudeFromGeometry(f.Geometry),
-                Longitude = GetLongitudeFromGeometry(f.Geometry),
-                Geometry = f.Geometry.ToString()
+                f.ClassificationType,
+                f.Geometry
             })
             .ToListAsync(ct);
+
+        // Then process the geometry data in memory
+        var features = rawFeatures.Select(f => new
+        {
+            f.Id,
+            f.Name,
+            ClassificationType = (int)f.ClassificationType,
+            ClassificationName = f.ClassificationType.ToString(),
+            GeometryType = GetGeometryType(f.Geometry),
+            Latitude = GetLatitudeFromGeometry(f.Geometry),
+            Longitude = GetLongitudeFromGeometry(f.Geometry),
+            Geometry = f.Geometry?.ToString() ?? ""
+        }).ToList();
 
         return Json(features);
     }
