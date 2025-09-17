@@ -227,7 +227,8 @@ public class BuckTraxController : Controller
 
     private async Task<List<BuckTraxSighting>> GetProfileSightings(int profileId, int tagId, int propertyId, CancellationToken ct)
     {
-        return await _db.Photos
+        // Get all tagged photos first
+        var allTaggedPhotos = await _db.Photos
             .AsNoTracking()
             .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == tagId))
             .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
@@ -251,6 +252,58 @@ public class BuckTraxController : Controller
             })
             .OrderBy(s => s.DateTaken)
             .ToListAsync(ct);
+
+        // Group photos into sightings: photos within 15 minutes at the same camera = one sighting
+        return GroupPhotosIntoSightings(allTaggedPhotos);
+    }
+
+    /// <summary>
+    /// Groups photos into sightings based on camera location and time proximity.
+    /// Photos taken at the same camera within 15 minutes of each other are considered one sighting.
+    /// </summary>
+    private List<BuckTraxSighting> GroupPhotosIntoSightings(List<BuckTraxSighting> allPhotos)
+    {
+        var sightings = new List<BuckTraxSighting>();
+        
+        // Group by camera first
+        var photosByCamera = allPhotos.GroupBy(p => p.CameraId);
+        
+        foreach (var cameraGroup in photosByCamera)
+        {
+            // Sort photos by time for this camera
+            var sortedPhotos = cameraGroup.OrderBy(p => p.DateTaken).ToList();
+            
+            if (!sortedPhotos.Any()) continue;
+            
+            // Start first sighting with first photo
+            var currentSighting = sortedPhotos[0];
+            var currentSightingStartTime = currentSighting.DateTaken;
+            
+            for (int i = 1; i < sortedPhotos.Count; i++)
+            {
+                var photo = sortedPhotos[i];
+                var timeDiff = photo.DateTaken - currentSightingStartTime;
+                
+                // If more than 15 minutes have passed, this is a new sighting
+                if (timeDiff.TotalMinutes > 15)
+                {
+                    // Add the current sighting to results
+                    sightings.Add(currentSighting);
+                    
+                    // Start new sighting with this photo
+                    currentSighting = photo;
+                    currentSightingStartTime = photo.DateTaken;
+                }
+                // else: this photo is part of the current sighting, no action needed
+                // (we keep the first photo of the sighting as the representative)
+            }
+            
+            // Don't forget to add the last sighting for this camera
+            sightings.Add(currentSighting);
+        }
+        
+        // Sort all sightings by date (most recent first) for consistent display
+        return sightings.OrderBy(s => s.DateTaken).ToList();
     }
 
     private async Task<List<BuckTraxFeature>> GetPropertyFeaturesWithWeights(int propertyId, Season? season, CancellationToken ct)
