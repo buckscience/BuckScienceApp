@@ -25,6 +25,8 @@ public class BuckTraxProfileVm
 public class BuckTraxPredictionRequest
 {
     public int ProfileId { get; set; }
+    public Season? Season { get; set; }
+    public int? TimeOfDayFilter { get; set; } // 0-23 hour filter
 }
 
 public class BuckTraxPredictionResult
@@ -33,8 +35,13 @@ public class BuckTraxPredictionResult
     public string ProfileName { get; set; } = string.Empty;
     public string PropertyName { get; set; } = string.Empty;
     public int TotalSightings { get; set; }
+    public int TotalTransitions { get; set; }
     public DateTime PredictionDate { get; set; }
+    public bool IsLimitedData { get; set; }
+    public string? LimitedDataMessage { get; set; }
     public List<BuckTraxTimeSegmentPrediction> TimeSegments { get; set; } = new();
+    public List<BuckTraxMovementCorridor> MovementCorridors { get; set; } = new();
+    public BuckTraxConfiguration Configuration { get; set; } = new();
 }
 
 public class BuckTraxTimeSegmentPrediction
@@ -45,6 +52,7 @@ public class BuckTraxTimeSegmentPrediction
     public int SightingCount { get; set; }
     public double ConfidenceScore { get; set; }
     public List<BuckTraxPredictionZone> PredictedZones { get; set; } = new();
+    public List<BuckTraxMovementCorridor> TimeSegmentCorridors { get; set; } = new();
 }
 
 public class BuckTraxPredictionZone
@@ -56,6 +64,31 @@ public class BuckTraxPredictionZone
     public int SightingCount { get; set; }
     public double RadiusMeters { get; set; }
     public bool IsCorridorPrediction { get; set; }
+    public int? AssociatedFeatureId { get; set; }
+    public string? FeatureType { get; set; }
+    public float? FeatureWeight { get; set; }
+}
+
+public class BuckTraxMovementCorridor
+{
+    public string Name { get; set; } = string.Empty;
+    public int StartFeatureId { get; set; }
+    public int EndFeatureId { get; set; }
+    public string StartFeatureName { get; set; } = string.Empty;
+    public string EndFeatureName { get; set; } = string.Empty;
+    public string StartFeatureType { get; set; } = string.Empty;
+    public string EndFeatureType { get; set; } = string.Empty;
+    public double StartLatitude { get; set; }
+    public double StartLongitude { get; set; }
+    public double EndLatitude { get; set; }
+    public double EndLongitude { get; set; }
+    public int TransitionCount { get; set; }
+    public double CorridorScore { get; set; }
+    public float StartFeatureWeight { get; set; }
+    public float EndFeatureWeight { get; set; }
+    public double Distance { get; set; }
+    public double AverageTimeSpan { get; set; }
+    public string TimeOfDayPattern { get; set; } = string.Empty;
 }
 
 public class BuckTraxSighting
@@ -66,6 +99,8 @@ public class BuckTraxSighting
     public string CameraName { get; set; } = string.Empty;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+    public int? AssociatedFeatureId { get; set; }
+    public string? AssociatedFeatureName { get; set; } = string.Empty;
 }
 
 public class BuckTraxFeature
@@ -73,6 +108,20 @@ public class BuckTraxFeature
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int ClassificationType { get; set; }
+    public string ClassificationName { get; set; } = string.Empty;
     public GeometryType GeometryType { get; set; }
     public string Coordinates { get; set; } = string.Empty;
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public float EffectiveWeight { get; set; }
+}
+
+public class BuckTraxConfiguration
+{
+    public int MovementTimeWindowMinutes { get; set; } = 480; // 8 hours
+    public double MaxMovementDistanceMeters { get; set; } = 5000; // 5 km
+    public double CameraFeatureProximityMeters { get; set; } = 100; // 100 meters
+    public int MinimumSightingsThreshold { get; set; } = 10;
+    public int MinimumTransitionsThreshold { get; set; } = 3;
+    public bool ShowLimitedDataWarning { get; set; } = true;
 }

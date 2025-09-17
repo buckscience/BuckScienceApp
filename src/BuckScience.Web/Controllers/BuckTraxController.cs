@@ -1,11 +1,13 @@
 using BuckScience.Application.Abstractions;
 using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.FeatureWeights;
 using BuckScience.Application.Profiles;
 using BuckScience.Domain.Enums;
 using BuckScience.Web.ViewModels.BuckTrax;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 
 namespace BuckScience.Web.Controllers;
 
@@ -76,6 +78,17 @@ public class BuckTraxController : Controller
         }
     }
 
+    // API: GET /bucktrax/api/configuration
+    [HttpGet]
+    [Route("/bucktrax/api/configuration")]
+    public async Task<IActionResult> GetConfiguration(CancellationToken ct)
+    {
+        if (_currentUser.Id is null) return Forbid();
+
+        var config = GetConfiguration();
+        return Json(config);
+    }
+
     // API: POST /bucktrax/api/predict
     [HttpPost]
     [Route("/bucktrax/api/predict")]
@@ -89,9 +102,8 @@ public class BuckTraxController : Controller
             var profile = await GetProfile.HandleAsync(request.ProfileId, _db, _currentUser.Id.Value, ct);
             if (profile == null) return NotFound("Profile not found");
 
-            // For now, implement a basic movement prediction
-            // This is where the "secret sauce" logic would go
-            var predictions = await GenerateMovementPredictions(request.ProfileId, ct);
+            // Generate movement predictions with corridor analysis
+            var predictions = await GenerateMovementPredictions(request.ProfileId, request.Season, ct);
 
             return Json(predictions);
         }
@@ -105,20 +117,121 @@ public class BuckTraxController : Controller
         }
     }
 
-    private async Task<BuckTraxPredictionResult> GenerateMovementPredictions(int profileId, CancellationToken ct)
+    private async Task<BuckTraxPredictionResult> GenerateMovementPredictions(int profileId, Season? season, CancellationToken ct)
     {
+        var config = GetConfiguration();
+        
         // Get profile data including sightings and property features
         var profile = await _db.Profiles
             .AsNoTracking()
             .Include(p => p.Property)
             .FirstAsync(p => p.Id == profileId, ct);
 
-        // Get tagged photos (sightings) with camera location data
-        var sightings = await _db.Photos
+        // Get all sightings for this profile, ordered chronologically
+        var sightings = await GetProfileSightings(profileId, profile.TagId, profile.PropertyId, ct);
+        
+        // Get property features with effective weights
+        var features = await GetPropertyFeaturesWithWeights(profile.PropertyId, season, ct);
+        
+        // Associate each sighting with its nearest feature
+        var sightingsWithFeatures = AssociateSightingsWithFeatures(sightings, features, config.CameraFeatureProximityMeters);
+        
+        // Analyze movement corridors from sequential sightings
+        var movementCorridors = AnalyzeMovementCorridors(sightingsWithFeatures, features, config);
+        
+        // Check if we have sufficient data
+        var isLimitedData = sightings.Count < config.MinimumSightingsThreshold || 
+                           movementCorridors.Count < config.MinimumTransitionsThreshold;
+
+        // Time segments for prediction
+        var timeSegments = new[]
+        {
+            new { Name = "Early Morning", Start = 5, End = 8 },
+            new { Name = "Morning", Start = 8, End = 11 },
+            new { Name = "Midday", Start = 11, End = 14 },
+            new { Name = "Afternoon", Start = 14, End = 17 },
+            new { Name = "Evening", Start = 17, End = 20 },
+            new { Name = "Night", Start = 20, End = 5 }
+        };
+
+        var predictions = new List<BuckTraxTimeSegmentPrediction>();
+
+        foreach (var segment in timeSegments)
+        {
+            // Filter sightings for this time segment
+            var segmentSightings = sightingsWithFeatures.Where(s => 
+            {
+                var hour = s.DateTaken.Hour;
+                if (segment.Start <= segment.End)
+                {
+                    return hour >= segment.Start && hour < segment.End;
+                }
+                else // Night segment spans midnight
+                {
+                    return hour >= segment.Start || hour < segment.End;
+                }
+            }).ToList();
+
+            // Filter corridors for this time segment
+            var segmentCorridors = movementCorridors.Where(c => 
+                IsCorridorActiveInTimeSegment(c, segment.Start, segment.End)).ToList();
+
+            if (segmentSightings.Any() || segmentCorridors.Any())
+            {
+                // Calculate probability zones based on historical sightings and corridors
+                var zones = CalculateEnhancedPredictionZones(segmentSightings, segmentCorridors, features);
+                
+                predictions.Add(new BuckTraxTimeSegmentPrediction
+                {
+                    TimeSegment = segment.Name,
+                    StartHour = segment.Start,
+                    EndHour = segment.End,
+                    SightingCount = segmentSightings.Count,
+                    PredictedZones = zones,
+                    TimeSegmentCorridors = segmentCorridors,
+                    ConfidenceScore = CalculateConfidenceScore(segmentSightings.Count, sightings.Count, segmentCorridors.Count)
+                });
+            }
+            else
+            {
+                predictions.Add(new BuckTraxTimeSegmentPrediction
+                {
+                    TimeSegment = segment.Name,
+                    StartHour = segment.Start,
+                    EndHour = segment.End,
+                    SightingCount = 0,
+                    PredictedZones = new List<BuckTraxPredictionZone>(),
+                    TimeSegmentCorridors = new List<BuckTraxMovementCorridor>(),
+                    ConfidenceScore = 0
+                });
+            }
+        }
+
+        return new BuckTraxPredictionResult
+        {
+            ProfileId = profileId,
+            ProfileName = profile.Name,
+            PropertyName = profile.Property.Name,
+            TotalSightings = sightings.Count,
+            TotalTransitions = movementCorridors.Sum(c => c.TransitionCount),
+            PredictionDate = DateTime.UtcNow,
+            IsLimitedData = isLimitedData,
+            LimitedDataMessage = isLimitedData && config.ShowLimitedDataWarning 
+                ? "Due to limited data, the predictive model is extremely limited." 
+                : null,
+            TimeSegments = predictions,
+            MovementCorridors = movementCorridors,
+            Configuration = config
+        };
+    }
+
+    private async Task<List<BuckTraxSighting>> GetProfileSightings(int profileId, int tagId, int propertyId, CancellationToken ct)
+    {
+        return await _db.Photos
             .AsNoTracking()
-            .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == profile.TagId))
+            .Where(p => _db.PhotoTags.Any(pt => pt.PhotoId == p.Id && pt.TagId == tagId))
             .Join(_db.Cameras, p => p.CameraId, c => c.Id, (p, c) => new { p, c })
-            .Where(pc => pc.c.PropertyId == profile.PropertyId)
+            .Where(pc => pc.c.PropertyId == propertyId)
             .Select(pc => new { 
                 Photo = pc.p, 
                 Camera = pc.c,
@@ -138,103 +251,179 @@ public class BuckTraxController : Controller
             })
             .OrderBy(s => s.DateTaken)
             .ToListAsync(ct);
+    }
 
-        // Get property features for movement corridors
+    private async Task<List<BuckTraxFeature>> GetPropertyFeaturesWithWeights(int propertyId, Season? season, CancellationToken ct)
+    {
+        // Get all property features with their weights
+        var featureWeights = await GetEffectiveFeatureWeight.GetAllPropertyFeatureWeightsAsync(_db, propertyId, season, ct);
+        
         var features = await _db.PropertyFeatures
             .AsNoTracking()
-            .Where(f => f.PropertyId == profile.PropertyId)
-            .Select(f => new BuckTraxFeature
-            {
-                Id = f.Id,
-                Name = f.Name ?? "",
-                ClassificationType = (int)f.ClassificationType,
-                GeometryType = GeometryType.Point, // Simplified for now
-                Coordinates = f.Geometry.ToString() ?? ""
-            })
+            .Where(f => f.PropertyId == propertyId)
             .ToListAsync(ct);
 
-        // Time segments for prediction (Early Morning, Morning, Midday, Afternoon, Evening, Night)
-        var timeSegments = new[]
+        return features.Select(f => new BuckTraxFeature
         {
-            new { Name = "Early Morning", Start = 5, End = 8 },
-            new { Name = "Morning", Start = 8, End = 11 },
-            new { Name = "Midday", Start = 11, End = 14 },
-            new { Name = "Afternoon", Start = 14, End = 17 },
-            new { Name = "Evening", Start = 17, End = 20 },
-            new { Name = "Night", Start = 20, End = 5 }
-        };
+            Id = f.Id,
+            Name = f.Name ?? "",
+            ClassificationType = (int)f.ClassificationType,
+            ClassificationName = f.ClassificationType.ToString(),
+            GeometryType = GetGeometryType(f.Geometry),
+            Coordinates = f.Geometry.ToString() ?? "",
+            Latitude = GetLatitudeFromGeometry(f.Geometry),
+            Longitude = GetLongitudeFromGeometry(f.Geometry),
+            EffectiveWeight = featureWeights.GetValueOrDefault(f.Id, 0.5f)
+        }).ToList();
+    }
 
-        var predictions = new List<BuckTraxTimeSegmentPrediction>();
-
-        foreach (var segment in timeSegments)
+    private List<BuckTraxSighting> AssociateSightingsWithFeatures(
+        List<BuckTraxSighting> sightings, 
+        List<BuckTraxFeature> features, 
+        double proximityThreshold)
+    {
+        foreach (var sighting in sightings)
         {
-            // Filter sightings for this time segment
-            var segmentSightings = sightings.Where(s => 
-            {
-                var hour = s.DateTaken.Hour;
-                if (segment.Start <= segment.End)
-                {
-                    return hour >= segment.Start && hour < segment.End;
-                }
-                else // Night segment spans midnight
-                {
-                    return hour >= segment.Start || hour < segment.End;
-                }
-            }).ToList();
+            var nearestFeature = features
+                .Select(f => new { 
+                    Feature = f, 
+                    Distance = CalculateDistance(sighting.Latitude, sighting.Longitude, f.Latitude, f.Longitude) 
+                })
+                .Where(x => x.Distance <= proximityThreshold)
+                .OrderBy(x => x.Distance)
+                .FirstOrDefault();
 
-            if (segmentSightings.Any())
+            if (nearestFeature != null)
             {
-                // Calculate probability zones based on historical sightings
-                var zones = CalculatePredictionZones(segmentSightings, features);
-                
-                predictions.Add(new BuckTraxTimeSegmentPrediction
-                {
-                    TimeSegment = segment.Name,
-                    StartHour = segment.Start,
-                    EndHour = segment.End,
-                    SightingCount = segmentSightings.Count,
-                    PredictedZones = zones,
-                    ConfidenceScore = CalculateConfidenceScore(segmentSightings.Count, sightings.Count)
-                });
-            }
-            else
-            {
-                predictions.Add(new BuckTraxTimeSegmentPrediction
-                {
-                    TimeSegment = segment.Name,
-                    StartHour = segment.Start,
-                    EndHour = segment.End,
-                    SightingCount = 0,
-                    PredictedZones = new List<BuckTraxPredictionZone>(),
-                    ConfidenceScore = 0
-                });
+                sighting.AssociatedFeatureId = nearestFeature.Feature.Id;
+                sighting.AssociatedFeatureName = nearestFeature.Feature.Name;
             }
         }
 
-        return new BuckTraxPredictionResult
-        {
-            ProfileId = profileId,
-            ProfileName = profile.Name,
-            PropertyName = profile.Property.Name,
-            TotalSightings = sightings.Count,
-            PredictionDate = DateTime.UtcNow,
-            TimeSegments = predictions
-        };
+        return sightings;
     }
 
-    private List<BuckTraxPredictionZone> CalculatePredictionZones(List<BuckTraxSighting> sightings, List<BuckTraxFeature> features)
+    private List<BuckTraxMovementCorridor> AnalyzeMovementCorridors(
+        List<BuckTraxSighting> sightings, 
+        List<BuckTraxFeature> features, 
+        BuckTraxConfiguration config)
+    {
+        var corridors = new Dictionary<string, BuckTraxMovementCorridor>();
+        var featureLookup = features.ToDictionary(f => f.Id, f => f);
+
+        // Analyze sequential sightings for movement patterns
+        for (int i = 0; i < sightings.Count - 1; i++)
+        {
+            var currentSighting = sightings[i];
+            var nextSighting = sightings[i + 1];
+
+            // Check if both sightings are associated with features
+            if (!currentSighting.AssociatedFeatureId.HasValue || !nextSighting.AssociatedFeatureId.HasValue)
+                continue;
+
+            // Check time window constraint
+            var timeDiff = nextSighting.DateTaken - currentSighting.DateTaken;
+            if (timeDiff.TotalMinutes > config.MovementTimeWindowMinutes)
+                continue;
+
+            // Check distance constraint
+            var distance = CalculateDistance(
+                currentSighting.Latitude, currentSighting.Longitude,
+                nextSighting.Latitude, nextSighting.Longitude);
+            
+            if (distance > config.MaxMovementDistanceMeters)
+                continue;
+
+            // Skip same feature transitions
+            if (currentSighting.AssociatedFeatureId == nextSighting.AssociatedFeatureId)
+                continue;
+
+            // Create corridor key
+            var startFeatureId = currentSighting.AssociatedFeatureId.Value;
+            var endFeatureId = nextSighting.AssociatedFeatureId.Value;
+            var corridorKey = $"{Math.Min(startFeatureId, endFeatureId)}-{Math.Max(startFeatureId, endFeatureId)}";
+
+            if (!corridors.ContainsKey(corridorKey))
+            {
+                var startFeature = featureLookup[startFeatureId];
+                var endFeature = featureLookup[endFeatureId];
+
+                corridors[corridorKey] = new BuckTraxMovementCorridor
+                {
+                    Name = $"{startFeature.Name} → {endFeature.Name}",
+                    StartFeatureId = startFeatureId,
+                    EndFeatureId = endFeatureId,
+                    StartFeatureName = startFeature.Name,
+                    EndFeatureName = endFeature.Name,
+                    StartFeatureType = startFeature.ClassificationName,
+                    EndFeatureType = endFeature.ClassificationName,
+                    StartLatitude = startFeature.Latitude,
+                    StartLongitude = startFeature.Longitude,
+                    EndLatitude = endFeature.Latitude,
+                    EndLongitude = endFeature.Longitude,
+                    TransitionCount = 0,
+                    StartFeatureWeight = startFeature.EffectiveWeight,
+                    EndFeatureWeight = endFeature.EffectiveWeight,
+                    Distance = distance,
+                    AverageTimeSpan = 0,
+                    TimeOfDayPattern = ""
+                };
+            }
+
+            // Update corridor statistics
+            var corridor = corridors[corridorKey];
+            corridor.TransitionCount++;
+            
+            // Update average time span
+            var totalTime = corridor.AverageTimeSpan * (corridor.TransitionCount - 1) + timeDiff.TotalHours;
+            corridor.AverageTimeSpan = totalTime / corridor.TransitionCount;
+
+            // Calculate corridor score using feature weights
+            corridor.CorridorScore = corridor.TransitionCount * (corridor.StartFeatureWeight + corridor.EndFeatureWeight) / 2;
+        }
+
+        // Calculate time of day patterns for each corridor
+        foreach (var corridor in corridors.Values)
+        {
+            var transitionTimes = new List<int>();
+            
+            for (int i = 0; i < sightings.Count - 1; i++)
+            {
+                var currentSighting = sightings[i];
+                var nextSighting = sightings[i + 1];
+
+                if (currentSighting.AssociatedFeatureId == corridor.StartFeatureId &&
+                    nextSighting.AssociatedFeatureId == corridor.EndFeatureId)
+                {
+                    transitionTimes.Add(currentSighting.DateTaken.Hour);
+                }
+            }
+
+            corridor.TimeOfDayPattern = GetTimeOfDayPattern(transitionTimes);
+        }
+
+        return corridors.Values.OrderByDescending(c => c.CorridorScore).ToList();
+    }
+
+    private List<BuckTraxPredictionZone> CalculateEnhancedPredictionZones(
+        List<BuckTraxSighting> sightings, 
+        List<BuckTraxMovementCorridor> corridors,
+        List<BuckTraxFeature> features)
     {
         var zones = new List<BuckTraxPredictionZone>();
 
-        // Group sightings by camera location
+        // Add zones from historical sightings
         var sightingsByLocation = sightings
-            .GroupBy(s => new { s.CameraId, s.CameraName, s.Latitude, s.Longitude })
+            .GroupBy(s => new { s.CameraId, s.CameraName, s.Latitude, s.Longitude, s.AssociatedFeatureId })
             .OrderByDescending(g => g.Count())
             .ToList();
 
         foreach (var locationGroup in sightingsByLocation)
         {
-            var probability = (double)locationGroup.Count() / sightings.Count;
+            var probability = (double)locationGroup.Count() / Math.Max(sightings.Count, 1);
+            var associatedFeature = locationGroup.Key.AssociatedFeatureId.HasValue 
+                ? features.FirstOrDefault(f => f.Id == locationGroup.Key.AssociatedFeatureId.Value) 
+                : null;
             
             zones.Add(new BuckTraxPredictionZone
             {
@@ -243,108 +432,163 @@ public class BuckTraxController : Controller
                 Longitude = locationGroup.Key.Longitude,
                 Probability = probability,
                 SightingCount = locationGroup.Count(),
-                // Add buffer radius based on confidence
-                RadiusMeters = probability > 0.5 ? 100 : probability > 0.25 ? 200 : 300
+                RadiusMeters = probability > 0.5 ? 100 : probability > 0.25 ? 200 : 300,
+                IsCorridorPrediction = false,
+                AssociatedFeatureId = associatedFeature?.Id,
+                FeatureType = associatedFeature?.ClassificationName,
+                FeatureWeight = associatedFeature?.EffectiveWeight
             });
         }
 
-        // Add corridor predictions based on features
-        var corridorFeatures = features.Where(f => IsMovementCorridor(f.ClassificationType)).ToList();
-        foreach (var feature in corridorFeatures.Take(3)) // Top 3 corridor features
+        // Add zones from movement corridors
+        foreach (var corridor in corridors.Take(5)) // Top 5 corridors
         {
-            // Extract centroid from coordinates for visualization
-            if (TryExtractCentroid(feature.Coordinates, out var lat, out var lng))
+            var corridorProbability = Math.Min(corridor.CorridorScore / 10.0, 0.8); // Scale and cap probability
+            
+            // Add start point
+            zones.Add(new BuckTraxPredictionZone
             {
-                zones.Add(new BuckTraxPredictionZone
-                {
-                    LocationName = feature.Name,
-                    Latitude = lat,
-                    Longitude = lng,
-                    Probability = 0.3, // Base probability for corridor features
-                    SightingCount = 0,
-                    RadiusMeters = 150,
-                    IsCorridorPrediction = true
-                });
-            }
+                LocationName = $"{corridor.StartFeatureName} (Corridor Start)",
+                Latitude = corridor.StartLatitude,
+                Longitude = corridor.StartLongitude,
+                Probability = corridorProbability,
+                SightingCount = corridor.TransitionCount,
+                RadiusMeters = 150,
+                IsCorridorPrediction = true,
+                AssociatedFeatureId = corridor.StartFeatureId,
+                FeatureType = corridor.StartFeatureType,
+                FeatureWeight = corridor.StartFeatureWeight
+            });
+
+            // Add end point
+            zones.Add(new BuckTraxPredictionZone
+            {
+                LocationName = $"{corridor.EndFeatureName} (Corridor End)",
+                Latitude = corridor.EndLatitude,
+                Longitude = corridor.EndLongitude,
+                Probability = corridorProbability,
+                SightingCount = corridor.TransitionCount,
+                RadiusMeters = 150,
+                IsCorridorPrediction = true,
+                AssociatedFeatureId = corridor.EndFeatureId,
+                FeatureType = corridor.EndFeatureType,
+                FeatureWeight = corridor.EndFeatureWeight
+            });
         }
 
         return zones.OrderByDescending(z => z.Probability).ToList();
     }
 
-    private double CalculateConfidenceScore(int segmentSightings, int totalSightings)
+    private double CalculateConfidenceScore(int segmentSightings, int totalSightings, int corridorCount = 0)
     {
         if (totalSightings == 0) return 0;
         
         var proportion = (double)segmentSightings / totalSightings;
-        // Confidence increases with more data points and higher proportion
         var dataConfidence = Math.Min(segmentSightings / 10.0, 1.0);
         var proportionConfidence = proportion;
+        var corridorBonus = Math.Min(corridorCount / 5.0, 0.2); // Up to 20% bonus for corridors
         
-        return Math.Round((dataConfidence * 0.6 + proportionConfidence * 0.4) * 100, 1);
+        var baseScore = (dataConfidence * 0.6 + proportionConfidence * 0.4) * 100;
+        return Math.Round(Math.Min(baseScore + (corridorBonus * 100), 100), 1);
     }
 
-    private bool IsMovementCorridor(int classificationType)
+    private bool IsCorridorActiveInTimeSegment(BuckTraxMovementCorridor corridor, int startHour, int endHour)
     {
-        // Based on ClassificationType enum values, these are movement-related features
-        return classificationType switch
+        // Simple pattern matching - could be enhanced with more sophisticated analysis
+        if (string.IsNullOrEmpty(corridor.TimeOfDayPattern))
+            return true;
+
+        // Check if the corridor's primary activity time overlaps with the segment
+        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour >= 6 && endHour <= 12)
+            return true;
+        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour >= 16 && endHour <= 21)
+            return true;
+        if (corridor.TimeOfDayPattern.Contains("Night") && (startHour >= 20 || endHour <= 6))
+            return true;
+
+        return true; // Default to including all corridors
+    }
+
+    private string GetTimeOfDayPattern(List<int> transitionTimes)
+    {
+        if (!transitionTimes.Any())
+            return "Unknown";
+
+        var patterns = new List<string>();
+        
+        if (transitionTimes.Count(t => t >= 5 && t < 8) > transitionTimes.Count * 0.3)
+            patterns.Add("Early Morning");
+        if (transitionTimes.Count(t => t >= 8 && t < 12) > transitionTimes.Count * 0.3)
+            patterns.Add("Morning");
+        if (transitionTimes.Count(t => t >= 12 && t < 17) > transitionTimes.Count * 0.3)
+            patterns.Add("Afternoon");
+        if (transitionTimes.Count(t => t >= 17 && t < 20) > transitionTimes.Count * 0.3)
+            patterns.Add("Evening");
+        if (transitionTimes.Count(t => t >= 20 || t < 5) > transitionTimes.Count * 0.3)
+            patterns.Add("Night");
+
+        return patterns.Any() ? string.Join(", ", patterns) : "All Day";
+    }
+
+    private GeometryType GetGeometryType(Geometry geometry)
+    {
+        return geometry switch
         {
-            6 => true,  // Draw
-            7 => true,  // CreekCrossing
-            11 => true, // FieldEdge
-            15 => true, // PinchPointFunnel
-            16 => true, // TravelCorridor
-            _ => false
+            Point => GeometryType.Point,
+            LineString => GeometryType.Polyline,
+            Polygon => GeometryType.Polygon,
+            MultiPoint => GeometryType.MultiPoint,
+            MultiLineString => GeometryType.MultiPolyline,
+            MultiPolygon => GeometryType.MultiPolygon,
+            _ => GeometryType.Point
         };
     }
 
-    private bool TryExtractCentroid(string geometryString, out double lat, out double lng)
+    private double GetLatitudeFromGeometry(Geometry geometry)
     {
-        lat = 0;
-        lng = 0;
-
-        try
+        return geometry switch
         {
-            // NetTopologySuite geometries are serialized differently
-            // This is a simplified extraction - in practice you'd use proper geometry parsing
-            if (geometryString.Contains("POINT") && geometryString.Contains('(') && geometryString.Contains(')'))
-            {
-                var start = geometryString.IndexOf('(');
-                var end = geometryString.IndexOf(')', start);
-                if (start >= 0 && end > start)
-                {
-                    var coordPart = geometryString.Substring(start + 1, end - start - 1).Trim();
-                    var parts = coordPart.Split(' ');
-                    if (parts.Length >= 2 &&
-                        double.TryParse(parts[0].Trim(), out lng) &&
-                        double.TryParse(parts[1].Trim(), out lat))
-                    {
-                        return true;
-                    }
-                }
-            }
-            else if (geometryString.Contains('[') && geometryString.Contains(']'))
-            {
-                // Fallback for JSON-like coordinates
-                var start = geometryString.IndexOf('[');
-                var end = geometryString.IndexOf(']', start);
-                if (start >= 0 && end > start)
-                {
-                    var coordPart = geometryString.Substring(start + 1, end - start - 1);
-                    var parts = coordPart.Split(',');
-                    if (parts.Length >= 2 &&
-                        double.TryParse(parts[0].Trim(), out lng) &&
-                        double.TryParse(parts[1].Trim(), out lat))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
+            Point point => point.Y,
+            _ => geometry.Centroid?.Y ?? 0
+        };
+    }
 
-        return false;
+    private double GetLongitudeFromGeometry(Geometry geometry)
+    {
+        return geometry switch
+        {
+            Point point => point.X,
+            _ => geometry.Centroid?.X ?? 0
+        };
+    }
+
+    private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371000; // Earth's radius in meters
+        var dLat = ToRadians(lat2 - lat1);
+        var dLon = ToRadians(lon2 - lon1);
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
+    }
+
+    private double ToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180;
+    }
+
+    private BuckTraxConfiguration GetConfiguration()
+    {
+        return new BuckTraxConfiguration
+        {
+            MovementTimeWindowMinutes = 480, // 8 hours
+            MaxMovementDistanceMeters = 5000, // 5 km
+            CameraFeatureProximityMeters = 100, // 100 meters
+            MinimumSightingsThreshold = 10,
+            MinimumTransitionsThreshold = 3,
+            ShowLimitedDataWarning = true
+        };
     }
 }

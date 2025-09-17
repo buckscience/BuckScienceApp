@@ -267,7 +267,11 @@
                 url: '/bucktrax/api/predict',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ profileId: profileId }),
+                data: JSON.stringify({ 
+                    profileId: profileId,
+                    season: null, // Could be enhanced to get current season
+                    timeOfDayFilter: null
+                }),
                 success: function(predictions) {
                     currentPredictions = predictions;
                     displayPredictionResults(predictions);
@@ -315,142 +319,337 @@
                 });
             });
 
-            if (allZones.length === 0) return;
+            if (allZones.length === 0 && predictions.movementCorridors.length === 0) return;
 
-            // Create bounds to fit all zones
+            // Create bounds to fit all zones and corridors
             const bounds = new mapboxgl.LngLatBounds();
+            
+            // Extend bounds for zones
             allZones.forEach(zone => {
                 bounds.extend([zone.longitude, zone.latitude]);
             });
 
-            // Add zones to map
-            const features = allZones.map(zone => ({
-                type: 'Feature',
-                properties: {
-                    locationName: zone.locationName,
-                    probability: zone.probability,
-                    sightingCount: zone.sightingCount,
-                    timeSegment: zone.timeSegment,
-                    isCorridorPrediction: zone.isCorridorPrediction
-                },
-                geometry: {
-                    type: 'Point',
-                    coordinates: [zone.longitude, zone.latitude]
-                }
-            }));
-
-            // Add source
-            predictionMap.addSource('prediction-zones', {
-                type: 'geojson',
-                data: {
-                    type: 'FeatureCollection',
-                    features: features
-                }
+            // Extend bounds for corridors
+            predictions.movementCorridors.forEach(corridor => {
+                bounds.extend([corridor.startLongitude, corridor.startLatitude]);
+                bounds.extend([corridor.endLongitude, corridor.endLatitude]);
             });
 
-            // Add circles for prediction zones
-            predictionMap.addLayer({
-                id: 'prediction-zones-circles',
-                type: 'circle',
-                source: 'prediction-zones',
-                paint: {
-                    'circle-radius': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'probability'],
-                        0, 10,
-                        1, 30
-                    ],
-                    'circle-color': [
-                        'case',
-                        ['get', 'isCorridorPrediction'],
-                        '#ffa500', // Orange for corridors
-                        '#ff4444'  // Red for sighting-based predictions
-                    ],
-                    'circle-opacity': 0.7,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
-                }
-            });
+            // Add zone features
+            if (allZones.length > 0) {
+                const zoneFeatures = allZones.map(zone => ({
+                    type: 'Feature',
+                    properties: {
+                        locationName: zone.locationName,
+                        probability: zone.probability,
+                        sightingCount: zone.sightingCount,
+                        timeSegment: zone.timeSegment,
+                        isCorridorPrediction: zone.isCorridorPrediction,
+                        featureWeight: zone.featureWeight,
+                        featureType: zone.featureType
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [zone.longitude, zone.latitude]
+                    }
+                }));
 
-            // Add labels
-            predictionMap.addLayer({
-                id: 'prediction-zones-labels',
-                type: 'symbol',
-                source: 'prediction-zones',
-                layout: {
-                    'text-field': '{locationName}',
-                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                    'text-size': 12,
-                    'text-anchor': 'top',
-                    'text-offset': [0, 1.5]
-                },
-                paint: {
-                    'text-color': '#333333',
-                    'text-halo-color': '#ffffff',
-                    'text-halo-width': 2
-                }
-            });
+                // Add zones source
+                predictionMap.addSource('prediction-zones', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: zoneFeatures
+                    }
+                });
 
-            // Add click handler for zones
-            predictionMap.on('click', 'prediction-zones-circles', (e) => {
-                const properties = e.features[0].properties;
-                
-                new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(`
-                        <div class="p-2">
-                            <h6>${properties.locationName}</h6>
-                            <p class="mb-1"><strong>Probability:</strong> ${Math.round(properties.probability * 100)}%</p>
-                            <p class="mb-1"><strong>Time Segment:</strong> ${properties.timeSegment}</p>
-                            <p class="mb-1"><strong>Sightings:</strong> ${properties.sightingCount}</p>
-                            ${properties.isCorridorPrediction === 'true' ? '<span class="badge bg-info">Corridor Prediction</span>' : '<span class="badge bg-success">Historical Sighting</span>'}
-                        </div>
-                    `)
-                    .addTo(predictionMap);
-            });
+                // Add circles for prediction zones
+                predictionMap.addLayer({
+                    id: 'prediction-zones-circles',
+                    type: 'circle',
+                    source: 'prediction-zones',
+                    paint: {
+                        'circle-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'probability'],
+                            0, 8,
+                            1, 25
+                        ],
+                        'circle-color': [
+                            'case',
+                            ['get', 'isCorridorPrediction'],
+                            '#ffa500', // Orange for corridors
+                            '#ff4444'  // Red for sighting-based predictions
+                        ],
+                        'circle-opacity': 0.7,
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
 
-            // Change cursor on hover
-            predictionMap.on('mouseenter', 'prediction-zones-circles', () => {
-                predictionMap.getCanvas().style.cursor = 'pointer';
-            });
+                // Add labels for zones
+                predictionMap.addLayer({
+                    id: 'prediction-zones-labels',
+                    type: 'symbol',
+                    source: 'prediction-zones',
+                    layout: {
+                        'text-field': '{locationName}',
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 11,
+                        'text-anchor': 'top',
+                        'text-offset': [0, 1.5]
+                    },
+                    paint: {
+                        'text-color': '#333333',
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 2
+                    }
+                });
+            }
 
-            predictionMap.on('mouseleave', 'prediction-zones-circles', () => {
-                predictionMap.getCanvas().style.cursor = '';
-            });
+            // Add corridor lines
+            if (predictions.movementCorridors.length > 0) {
+                const corridorFeatures = predictions.movementCorridors.map(corridor => ({
+                    type: 'Feature',
+                    properties: {
+                        name: corridor.name,
+                        transitionCount: corridor.transitionCount,
+                        corridorScore: corridor.corridorScore,
+                        startFeatureName: corridor.startFeatureName,
+                        endFeatureName: corridor.endFeatureName,
+                        timeOfDayPattern: corridor.timeOfDayPattern,
+                        distance: corridor.distance
+                    },
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [
+                            [corridor.startLongitude, corridor.startLatitude],
+                            [corridor.endLongitude, corridor.endLatitude]
+                        ]
+                    }
+                }));
+
+                // Add corridors source
+                predictionMap.addSource('movement-corridors', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: corridorFeatures
+                    }
+                });
+
+                // Add corridor lines
+                predictionMap.addLayer({
+                    id: 'movement-corridors-lines',
+                    type: 'line',
+                    source: 'movement-corridors',
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': '#00aa00',
+                        'line-width': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'corridorScore'],
+                            0, 2,
+                            10, 6
+                        ],
+                        'line-opacity': 0.8
+                    }
+                });
+
+                // Add corridor endpoints
+                const endpointFeatures = [];
+                predictions.movementCorridors.forEach(corridor => {
+                    endpointFeatures.push(
+                        {
+                            type: 'Feature',
+                            properties: {
+                                name: corridor.startFeatureName,
+                                type: 'start',
+                                corridorName: corridor.name
+                            },
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [corridor.startLongitude, corridor.startLatitude]
+                            }
+                        },
+                        {
+                            type: 'Feature',
+                            properties: {
+                                name: corridor.endFeatureName,
+                                type: 'end',
+                                corridorName: corridor.name
+                            },
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [corridor.endLongitude, corridor.endLatitude]
+                            }
+                        }
+                    );
+                });
+
+                predictionMap.addSource('corridor-endpoints', {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: endpointFeatures
+                    }
+                });
+
+                predictionMap.addLayer({
+                    id: 'corridor-endpoints',
+                    type: 'circle',
+                    source: 'corridor-endpoints',
+                    paint: {
+                        'circle-radius': 4,
+                        'circle-color': '#00aa00',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
+            }
+
+            // Add click handlers
+            addMapInteractionHandlers(predictions);
 
             // Fit map to bounds
-            predictionMap.fitBounds(bounds, { padding: 50 });
+            if (bounds.isEmpty() === false) {
+                predictionMap.fitBounds(bounds, { padding: 50 });
+            }
+        }
+
+        function addMapInteractionHandlers(predictions) {
+            // Zone click handler
+            if (predictionMap.getLayer('prediction-zones-circles')) {
+                predictionMap.on('click', 'prediction-zones-circles', (e) => {
+                    const properties = e.features[0].properties;
+                    
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <h6>${properties.locationName}</h6>
+                                <p class="mb-1"><strong>Probability:</strong> ${Math.round(properties.probability * 100)}%</p>
+                                <p class="mb-1"><strong>Time Segment:</strong> ${properties.timeSegment}</p>
+                                <p class="mb-1"><strong>Sightings:</strong> ${properties.sightingCount}</p>
+                                ${properties.featureType ? `<p class="mb-1"><strong>Feature Type:</strong> ${properties.featureType}</p>` : ''}
+                                ${properties.featureWeight ? `<p class="mb-1"><strong>Feature Weight:</strong> ${properties.featureWeight.toFixed(2)}</p>` : ''}
+                                ${properties.isCorridorPrediction === 'true' ? '<span class="badge bg-info">Corridor Prediction</span>' : '<span class="badge bg-success">Historical Sighting</span>'}
+                            </div>
+                        `)
+                        .addTo(predictionMap);
+                });
+
+                predictionMap.on('mouseenter', 'prediction-zones-circles', () => {
+                    predictionMap.getCanvas().style.cursor = 'pointer';
+                });
+
+                predictionMap.on('mouseleave', 'prediction-zones-circles', () => {
+                    predictionMap.getCanvas().style.cursor = '';
+                });
+            }
+
+            // Corridor click handler
+            if (predictionMap.getLayer('movement-corridors-lines')) {
+                predictionMap.on('click', 'movement-corridors-lines', (e) => {
+                    const properties = e.features[0].properties;
+                    
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <h6>Movement Corridor</h6>
+                                <p class="mb-1"><strong>Route:</strong> ${properties.name}</p>
+                                <p class="mb-1"><strong>Transitions:</strong> ${properties.transitionCount}</p>
+                                <p class="mb-1"><strong>Score:</strong> ${properties.corridorScore.toFixed(1)}</p>
+                                <p class="mb-1"><strong>Distance:</strong> ${Math.round(properties.distance)}m</p>
+                                <p class="mb-1"><strong>Active Times:</strong> ${properties.timeOfDayPattern}</p>
+                                <span class="badge bg-success">Movement Corridor</span>
+                            </div>
+                        `)
+                        .addTo(predictionMap);
+                });
+
+                predictionMap.on('mouseenter', 'movement-corridors-lines', () => {
+                    predictionMap.getCanvas().style.cursor = 'pointer';
+                });
+
+                predictionMap.on('mouseleave', 'movement-corridors-lines', () => {
+                    predictionMap.getCanvas().style.cursor = '';
+                });
+            }
         }
 
         function clearMapLayers() {
             if (!predictionMap) return;
 
             // Remove existing layers and sources
-            if (predictionMap.getLayer('prediction-zones-circles')) {
-                predictionMap.removeLayer('prediction-zones-circles');
-            }
-            if (predictionMap.getLayer('prediction-zones-labels')) {
-                predictionMap.removeLayer('prediction-zones-labels');
-            }
-            if (predictionMap.getSource('prediction-zones')) {
-                predictionMap.removeSource('prediction-zones');
-            }
+            const layersToRemove = [
+                'prediction-zones-circles', 'prediction-zones-labels',
+                'movement-corridors-lines', 'corridor-endpoints'
+            ];
+            
+            const sourcesToRemove = [
+                'prediction-zones', 'movement-corridors', 'corridor-endpoints'
+            ];
+
+            layersToRemove.forEach(layerId => {
+                if (predictionMap.getLayer(layerId)) {
+                    try {
+                        predictionMap.removeLayer(layerId);
+                    } catch (e) {
+                        console.warn('Error removing layer:', layerId, e);
+                    }
+                }
+            });
+
+            sourcesToRemove.forEach(sourceId => {
+                if (predictionMap.getSource(sourceId)) {
+                    try {
+                        predictionMap.removeSource(sourceId);
+                    } catch (e) {
+                        console.warn('Error removing source:', sourceId, e);
+                    }
+                }
+            });
         }
 
         function displayResultsSummary(predictions) {
             const summary = $('#results-summary');
+            
+            // Check for limited data warning
+            let warningHtml = '';
+            if (predictions.isLimitedData && predictions.limitedDataMessage) {
+                warningHtml = `
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${predictions.limitedDataMessage}
+                    </div>
+                `;
+            }
+            
             summary.html(`
+                ${warningHtml}
                 <div class="row g-3">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="text-center">
                             <div class="h4 text-primary mb-1">${predictions.totalSightings}</div>
                             <small class="text-muted">Total Sightings</small>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="text-center">
-                            <div class="h4 text-success mb-1">${predictions.timeSegments.filter(t => t.sightingCount > 0).length}</div>
+                            <div class="h4 text-success mb-1">${predictions.totalTransitions}</div>
+                            <small class="text-muted">Movement Transitions</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <div class="h4 text-info mb-1">${predictions.timeSegments.filter(t => t.sightingCount > 0).length}</div>
                             <small class="text-muted">Active Periods</small>
                         </div>
                     </div>
@@ -502,12 +701,12 @@
         }
 
         function createTimeSegmentContent(segment) {
-            if (segment.sightingCount === 0) {
+            if (segment.sightingCount === 0 && (!segment.timeSegmentCorridors || segment.timeSegmentCorridors.length === 0)) {
                 return `
                     <div class="p-4 text-center text-muted">
                         <i class="fas fa-eye-slash fa-3x mb-3"></i>
                         <h5>No Historical Activity</h5>
-                        <p>No sightings recorded during ${segment.timeSegment.toLowerCase()} hours (${formatTimeRange(segment.startHour, segment.endHour)}).</p>
+                        <p>No sightings or movement corridors recorded during ${segment.timeSegment.toLowerCase()} hours (${formatTimeRange(segment.startHour, segment.endHour)}).</p>
                     </div>
                 `;
             }
@@ -517,8 +716,10 @@
                     <div>
                         <strong>${zone.locationName}</strong>
                         ${zone.isCorridorPrediction ? '<span class="badge bg-info ms-2">Corridor</span>' : ''}
+                        ${zone.featureType ? `<span class="badge bg-secondary ms-1">${zone.featureType}</span>` : ''}
                         <br>
                         <small class="text-muted">${zone.sightingCount} sightings</small>
+                        ${zone.featureWeight ? `<small class="text-muted ms-2">Weight: ${zone.featureWeight.toFixed(2)}</small>` : ''}
                     </div>
                     <div class="text-end">
                         <div class="h6 mb-0">${Math.round(zone.probability * 100)}%</div>
@@ -526,6 +727,24 @@
                     </div>
                 </div>
             `).join('');
+
+            const corridorsList = segment.timeSegmentCorridors && segment.timeSegmentCorridors.length > 0 ? `
+                <h6 class="mt-3">Movement Corridors</h6>
+                ${segment.timeSegmentCorridors.map(corridor => `
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>${corridor.startFeatureName} → ${corridor.endFeatureName}</strong>
+                            <span class="badge bg-success ms-2">Corridor</span>
+                            <br>
+                            <small class="text-muted">${corridor.transitionCount} transitions, ${Math.round(corridor.distance)}m</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="h6 mb-0">${corridor.corridorScore.toFixed(1)}</div>
+                            <small class="text-muted">score</small>
+                        </div>
+                    </div>
+                `).join('')}
+            ` : '';
 
             return `
                 <div class="p-4">
@@ -551,6 +770,7 @@
                     <div class="predicted-zones">
                         ${zonesList}
                     </div>
+                    ${corridorsList}
                 </div>
             `;
         }
@@ -593,7 +813,11 @@
                                     <div class="me-3" style="width: 20px; height: 20px; background-color: #ffa500; border-radius: 50%;"></div>
                                     <span>Movement Corridor Predictions</span>
                                 </div>
-                                <small class="text-muted">Circle size represents probability</small>
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3" style="width: 20px; height: 3px; background-color: #00aa00;"></div>
+                                    <span>Movement Corridors</span>
+                                </div>
+                                <small class="text-muted">Circle size represents probability, line thickness represents transition frequency</small>
                             </div>
                         </div>
                     </div>

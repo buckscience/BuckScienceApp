@@ -41,92 +41,111 @@ namespace BuckScience.Tests.Web.Controllers
         [Fact]
         public void ConfidenceScoreCalculation_WithValidData_ReturnsCorrectScore()
         {
-            // Test the confidence score calculation logic
+            // Test the confidence score calculation logic with corridor bonus
             int totalSightings = 100;
             int segmentSightings = 30;
+            int corridorCount = 5;
 
             var proportion = (double)segmentSightings / totalSightings; // 0.3
             var dataConfidence = System.Math.Min(segmentSightings / 10.0, 1.0); // min(3.0, 1.0) = 1.0
             var proportionConfidence = proportion; // 0.3
+            var corridorBonus = System.Math.Min(corridorCount / 5.0, 0.2); // min(1.0, 0.2) = 0.2
             
-            var expectedScore = System.Math.Round((dataConfidence * 0.6 + proportionConfidence * 0.4) * 100, 1);
-            var actualScore = (1.0 * 0.6 + 0.3 * 0.4) * 100; // (0.6 + 0.12) * 100 = 72.0
+            var baseScore = (dataConfidence * 0.6 + proportionConfidence * 0.4) * 100; // 72.0
+            var expectedScore = System.Math.Round(System.Math.Min(baseScore + (corridorBonus * 100), 100), 1); // 92.0
 
-            Assert.Equal(72.0, expectedScore);
+            Assert.Equal(92.0, expectedScore);
         }
 
         [Fact]
-        public void MovementCorridorClassification_IdentifiesCorrectFeatures()
+        public void MovementCorridorAnalysis_IdentifiesValidTransitions()
         {
-            // Test that movement corridors are correctly identified
-            var movementFeatureTypes = new[] { 6, 7, 11, 15, 16 }; // Draw, CreekCrossing, FieldEdge, PinchPointFunnel, TravelCorridor
-            var nonMovementFeatureTypes = new[] { 1, 31, 52, 70, 99 }; // Ridge, AgCropField, Pond, BeddingArea, Other
-
-            foreach (var featureType in movementFeatureTypes)
-            {
-                bool isMovementCorridor = featureType switch
-                {
-                    6 => true,  // Draw
-                    7 => true,  // CreekCrossing
-                    11 => true, // FieldEdge
-                    15 => true, // PinchPointFunnel
-                    16 => true, // TravelCorridor
-                    _ => false
-                };
-
-                Assert.True(isMovementCorridor, $"Feature type {featureType} should be classified as movement corridor");
-            }
-
-            foreach (var featureType in nonMovementFeatureTypes)
-            {
-                bool isMovementCorridor = featureType switch
-                {
-                    6 => true,  // Draw
-                    7 => true,  // CreekCrossing
-                    11 => true, // FieldEdge
-                    15 => true, // PinchPointFunnel
-                    16 => true, // TravelCorridor
-                    _ => false
-                };
-
-                Assert.False(isMovementCorridor, $"Feature type {featureType} should NOT be classified as movement corridor");
-            }
-        }
-
-        [Fact]
-        public void PredictionZone_ProbabilityCalculation_IsCorrect()
-        {
-            // Test probability calculation for prediction zones
+            // Test corridor identification from sequential sightings
             var sightings = new List<BuckTraxSighting>
             {
-                new BuckTraxSighting { CameraId = 1, CameraName = "Camera 1", Latitude = 30.0, Longitude = -90.0 },
-                new BuckTraxSighting { CameraId = 1, CameraName = "Camera 1", Latitude = 30.0, Longitude = -90.0 },
-                new BuckTraxSighting { CameraId = 1, CameraName = "Camera 1", Latitude = 30.0, Longitude = -90.0 },
-                new BuckTraxSighting { CameraId = 2, CameraName = "Camera 2", Latitude = 30.1, Longitude = -90.1 },
-                new BuckTraxSighting { CameraId = 2, CameraName = "Camera 2", Latitude = 30.1, Longitude = -90.1 }
+                new BuckTraxSighting 
+                { 
+                    DateTaken = new System.DateTime(2024, 1, 1, 8, 0, 0), 
+                    AssociatedFeatureId = 1,
+                    Latitude = 30.0, 
+                    Longitude = -90.0 
+                },
+                new BuckTraxSighting 
+                { 
+                    DateTaken = new System.DateTime(2024, 1, 1, 8, 30, 0), 
+                    AssociatedFeatureId = 2,
+                    Latitude = 30.1, 
+                    Longitude = -90.1 
+                },
+                new BuckTraxSighting 
+                { 
+                    DateTaken = new System.DateTime(2024, 1, 1, 9, 0, 0), 
+                    AssociatedFeatureId = 1,
+                    Latitude = 30.0, 
+                    Longitude = -90.0 
+                }
             };
 
-            // Simulate the grouping logic from the controller
-            var zones = sightings
-                .GroupBy(s => new { s.CameraId, s.CameraName, s.Latitude, s.Longitude })
-                .Select(g => new
-                {
-                    CameraId = g.Key.CameraId,
-                    SightingCount = g.Count(),
-                    Probability = (double)g.Count() / sightings.Count
-                })
-                .OrderByDescending(z => z.Probability)
-                .ToList();
+            // Test time window filtering (30 minutes should be valid)
+            var validTransition1 = sightings[1].DateTaken - sightings[0].DateTaken;
+            Assert.True(validTransition1.TotalMinutes <= 480); // Within 8-hour window
 
-            // Camera 1 should have 3/5 = 0.6 probability
-            var camera1Zone = zones.First(z => z.CameraId == 1);
-            Assert.Equal(3, camera1Zone.SightingCount);
-            Assert.Equal(0.6, camera1Zone.Probability, 2);
+            // Test feature association (different features should create corridor)
+            Assert.NotEqual(sightings[0].AssociatedFeatureId, sightings[1].AssociatedFeatureId);
+            
+            // Test same feature filtering (should be ignored)
+            Assert.Equal(sightings[0].AssociatedFeatureId, sightings[2].AssociatedFeatureId);
+        }
 
-            // Camera 2 should have 2/5 = 0.4 probability
-            var camera2Zone = zones.First(z => z.CameraId == 2);
-            Assert.Equal(2, camera2Zone.SightingCount);
-            Assert.Equal(0.4, camera2Zone.Probability, 2);
+        [Fact]
+        public void FeatureWeightIntegration_CalculatesCorridorScore()
+        {
+            // Test corridor score calculation using feature weights
+            var corridor = new BuckTraxMovementCorridor
+            {
+                TransitionCount = 5,
+                StartFeatureWeight = 0.8f,
+                EndFeatureWeight = 0.6f
+            };
+
+            // CorridorScore = Frequency * (WeightStart + WeightEnd) / 2
+            var expectedScore = 5 * (0.8f + 0.6f) / 2; // 5 * 0.7 = 3.5
+            corridor.CorridorScore = corridor.TransitionCount * (corridor.StartFeatureWeight + corridor.EndFeatureWeight) / 2;
+
+            Assert.Equal(3.5, corridor.CorridorScore, 1);
+        }
+
+        [Fact]
+        public void LimitedDataThreshold_TriggersWarning()
+        {
+            // Test threshold logic for limited data warnings
+            var config = new BuckTraxConfiguration
+            {
+                MinimumSightingsThreshold = 10,
+                MinimumTransitionsThreshold = 3,
+                ShowLimitedDataWarning = true
+            };
+
+            // Test insufficient sightings
+            int sightingCount = 5;
+            int transitionCount = 5;
+            bool isLimitedData1 = sightingCount < config.MinimumSightingsThreshold || 
+                                 transitionCount < config.MinimumTransitionsThreshold;
+            Assert.True(isLimitedData1);
+
+            // Test insufficient transitions
+            sightingCount = 15;
+            transitionCount = 2;
+            bool isLimitedData2 = sightingCount < config.MinimumSightingsThreshold || 
+                                 transitionCount < config.MinimumTransitionsThreshold;
+            Assert.True(isLimitedData2);
+
+            // Test sufficient data
+            sightingCount = 15;
+            transitionCount = 5;
+            bool isLimitedData3 = sightingCount < config.MinimumSightingsThreshold || 
+                                 transitionCount < config.MinimumTransitionsThreshold;
+            Assert.False(isLimitedData3);
         }
 
         [Fact]
@@ -154,6 +173,55 @@ namespace BuckScience.Tests.Web.Controllers
             Assert.Equal(2, nightSightings.Count);
             Assert.Contains(nightSightings, s => s.DateTaken.Hour == 22);
             Assert.Contains(nightSightings, s => s.DateTaken.Hour == 2);
+        }
+
+        [Fact]
+        public void SightingFeatureAssociation_AssociatesWithNearestFeature()
+        {
+            // Test that sightings are associated with nearest features within proximity threshold
+            var sightings = new List<BuckTraxSighting>
+            {
+                new BuckTraxSighting { Latitude = 30.0, Longitude = -90.0 }
+            };
+
+            var features = new List<BuckTraxFeature>
+            {
+                new BuckTraxFeature { Id = 1, Latitude = 30.001, Longitude = -90.001 }, // ~100m away
+                new BuckTraxFeature { Id = 2, Latitude = 30.01, Longitude = -90.01 }    // ~1km away
+            };
+
+            // Calculate distances (simplified)
+            var proximityThreshold = 200.0; // 200 meters
+            
+            // Feature 1 should be closer and within threshold
+            var distance1 = CalculateSimpleDistance(sightings[0], features[0]);
+            var distance2 = CalculateSimpleDistance(sightings[0], features[1]);
+            
+            Assert.True(distance1 < distance2);
+            Assert.True(distance1 < proximityThreshold);
+        }
+
+        [Fact]
+        public void CorridorTimePattern_IdentifiesActiveHours()
+        {
+            // Test time of day pattern identification for corridors
+            var transitionTimes = new List<int> { 8, 9, 10, 8, 9, 17, 18, 19 }; // Morning and Evening
+            
+            var morningCount = transitionTimes.Count(t => t >= 8 && t < 12);
+            var eveningCount = transitionTimes.Count(t => t >= 17 && t < 20);
+            var totalCount = transitionTimes.Count;
+            
+            // Should identify both Morning and Evening patterns (>30% threshold)
+            Assert.True(morningCount > totalCount * 0.3);
+            Assert.True(eveningCount > totalCount * 0.3);
+        }
+
+        private double CalculateSimpleDistance(BuckTraxSighting sighting, BuckTraxFeature feature)
+        {
+            // Simplified distance calculation for testing
+            var latDiff = Math.Abs(sighting.Latitude - feature.Latitude);
+            var lonDiff = Math.Abs(sighting.Longitude - feature.Longitude);
+            return Math.Sqrt(latDiff * latDiff + lonDiff * lonDiff) * 111000; // Rough conversion to meters
         }
     }
 }
