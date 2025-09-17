@@ -191,6 +191,9 @@
             $('#property-selector').on('change', function() {
                 selectedPropertyId = $(this).val();
                 if (selectedPropertyId) {
+                    // Clear existing property features before loading new ones
+                    clearFeatureLayers();
+                    
                     loadPropertyProfiles(selectedPropertyId);
                     loadPropertyFeatures(selectedPropertyId);
                     
@@ -202,7 +205,7 @@
                     showProfileSection();
                 } else {
                     hideProfileSection();
-                    clearMapLayers();
+                    clearAllLayers(); // Clear everything when no property selected
                 }
             });
 
@@ -665,8 +668,8 @@
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            // Remove all BuckTrax layers and sources
-            [...bucktraxLayers.corridors, ...bucktraxLayers.zones, ...bucktraxLayers.features].forEach(layerId => {
+            // Remove only BuckTrax-specific layers (corridors and zones), NOT property features
+            [...bucktraxLayers.corridors, ...bucktraxLayers.zones].forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     try {
                         map.removeLayer(layerId);
@@ -686,17 +689,18 @@
                 }
             });
 
-            // Clear tracking arrays
+            // Clear tracking arrays for BuckTrax layers only (keep features)
             bucktraxLayers.corridors = [];
             bucktraxLayers.zones = [];
-            bucktraxLayers.features = [];
             bucktraxLayers.sources = [];
+            // Note: bucktraxLayers.features is NOT cleared - property features should remain
         }
 
         function clearFeatureLayers() {
             const map = window.App?.getMap?.();
             if (!map) return;
 
+            // Only clear property features when switching properties
             bucktraxLayers.features.forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     try {
@@ -706,6 +710,15 @@
                     }
                 }
             });
+
+            // Also remove the property-features source managed by properties.js
+            if (map.getSource('property-features')) {
+                try {
+                    map.removeSource('property-features');
+                } catch (e) {
+                    console.warn('Error removing property-features source:', e);
+                }
+            }
 
             bucktraxLayers.features = [];
         }
@@ -772,9 +785,50 @@
             clearMapLayers();
         }
 
+        function clearAllLayers() {
+            const map = window.App?.getMap?.();
+            if (!map) return;
+
+            // Remove ALL layers (both BuckTrax and property features) - used for cleanup
+            [...bucktraxLayers.corridors, ...bucktraxLayers.zones, ...bucktraxLayers.features].forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    try {
+                        map.removeLayer(layerId);
+                    } catch (e) {
+                        console.warn('Error removing layer:', layerId, e);
+                    }
+                }
+            });
+
+            bucktraxLayers.sources.forEach(sourceId => {
+                if (map.getSource(sourceId)) {
+                    try {
+                        map.removeSource(sourceId);
+                    } catch (e) {
+                        console.warn('Error removing source:', sourceId, e);
+                    }
+                }
+            });
+
+            // Also remove the property-features source managed by properties.js
+            if (map.getSource('property-features')) {
+                try {
+                    map.removeSource('property-features');
+                } catch (e) {
+                    console.warn('Error removing property-features source:', e);
+                }
+            }
+
+            // Clear all tracking arrays
+            bucktraxLayers.corridors = [];
+            bucktraxLayers.zones = [];
+            bucktraxLayers.features = [];
+            bucktraxLayers.sources = [];
+        }
+
         // Clean up when leaving the page
         $(window).on('beforeunload', function() {
-            clearMapLayers();
+            clearAllLayers();
         });
     </script>
 }
