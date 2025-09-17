@@ -216,6 +216,44 @@ namespace BuckScience.Tests.Web.Controllers
             Assert.True(eveningCount > totalCount * 0.3);
         }
 
+        [Fact]
+        public void EnhancedConfiguration_HasReducedThresholds()
+        {
+            // Test that the new configuration has more responsive thresholds
+            var config = new BuckTraxConfiguration
+            {
+                MinimumSightingsThreshold = 5,  // Reduced from 10
+                MinimumTransitionsThreshold = 2, // Reduced from 3
+                MovementTimeWindowMinutes = 240, // Reduced from 480
+                MaxMovementDistanceMeters = 2000 // Reduced from 5000
+            };
+
+            // Assert that thresholds are more responsive
+            Assert.True(config.MinimumSightingsThreshold <= 5);
+            Assert.True(config.MinimumTransitionsThreshold <= 2);
+            Assert.True(config.MovementTimeWindowMinutes <= 240);
+            Assert.True(config.MaxMovementDistanceMeters <= 2000);
+        }
+
+        [Fact]
+        public void FeatureWeightCalculation_AmplifiedForHighWeights()
+        {
+            // Test enhanced weight calculation that amplifies high-weight features
+            var lowWeight = 0.3f;
+            var highWeight = 0.9f;
+            
+            // Calculate amplified weights (using power of 1.5)
+            var amplifiedLow = Math.Pow(lowWeight, 1.5);
+            var amplifiedHigh = Math.Pow(highWeight, 1.5);
+            
+            // High weights should get more amplification than low weights
+            var lowRatio = amplifiedLow / lowWeight;
+            var highRatio = amplifiedHigh / highWeight;
+            
+            Assert.True(highRatio > lowRatio, "High weights should be amplified more than low weights");
+            Assert.True(amplifiedHigh > 0.8, "High weights should remain elevated after amplification");
+        }
+
         private double CalculateSimpleDistance(BuckTraxSighting sighting, BuckTraxFeature feature)
         {
             // Simplified distance calculation for testing

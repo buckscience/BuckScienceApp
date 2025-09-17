@@ -69,6 +69,31 @@
                     <span id="limited-data-message"></span>
                 </div>
 
+                <!-- Map Layer Controls -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-layer-group me-2"></i>Map Layers
+                    </label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="show-property-features" checked>
+                        <label class="form-check-label" for="show-property-features">
+                            Property Features
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="show-prediction-zones" checked>
+                        <label class="form-check-label" for="show-prediction-zones">
+                            Prediction Zones
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="show-movement-corridors" checked>
+                        <label class="form-check-label" for="show-movement-corridors">
+                            Movement Corridors
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Summary Stats -->
                 <div class="row g-2 mb-3" id="summary-stats">
                     <div class="col-4">
@@ -145,9 +170,11 @@
         let selectedPropertyId = null;
         let selectedProfileId = null;
         let currentPredictions = null;
+        let currentPropertyFeatures = null;
         let bucktraxLayers = {
             corridors: [],
             zones: [],
+            features: [],
             sources: []
         };
 
@@ -161,6 +188,7 @@
                 selectedPropertyId = $(this).val();
                 if (selectedPropertyId) {
                     loadPropertyProfiles(selectedPropertyId);
+                    loadPropertyFeatures(selectedPropertyId);
                     showProfileSection();
                 } else {
                     hideProfileSection();
@@ -180,11 +208,96 @@
                 clearMapLayers();
             });
 
-            $('#show-corridors, #show-zones').on('change', function() {
+            // Updated layer visibility handlers
+            $('#show-property-features, #show-prediction-zones, #show-movement-corridors').on('change', function() {
                 updateLayerVisibility();
             });
         }
 
+        function loadPropertyFeatures(propertyId) {
+            $.get(`/bucktrax/api/properties/${propertyId}/features`)
+                .done(function(features) {
+                    currentPropertyFeatures = features;
+                    displayPropertyFeatures(features);
+                })
+                .fail(function() {
+                    console.warn('Failed to load property features');
+                });
+        }
+
+        function displayPropertyFeatures(features) {
+            const map = window.App?.getMap?.();
+            if (!map || !features.length) return;
+
+            // Clear existing features
+            clearFeatureLayers();
+
+            // Create feature source
+            const featureData = {
+                type: 'FeatureCollection',
+                features: features.map(feature => ({
+                    type: 'Feature',
+                    properties: {
+                        id: feature.id,
+                        name: feature.name || 'Unnamed Feature',
+                        type: feature.classificationName,
+                        classification: feature.classificationType
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [feature.longitude, feature.latitude]
+                    }
+                }))
+            };
+
+            const sourceId = 'bucktrax-property-features';
+            const layerId = 'bucktrax-property-features-points';
+
+            map.addSource(sourceId, {
+                type: 'geojson',
+                data: featureData
+            });
+
+            map.addLayer({
+                id: layerId,
+                type: 'circle',
+                source: sourceId,
+                paint: {
+                    'circle-radius': 8,
+                    'circle-color': [
+                        'case',
+                        ['<=', ['get', 'classification'], 10], '#8B4513', // Topographical - brown
+                        ['<=', ['get', 'classification'], 30], '#228B22', // Food - green
+                        ['<=', ['get', 'classification'], 60], '#1E90FF', // Water - blue
+                        ['<=', ['get', 'classification'], 80], '#228B22', // Bedding - green
+                        '#9370DB' // Other - purple
+                    ],
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 2,
+                    'circle-opacity': 0.8
+                }
+            });
+
+            bucktraxLayers.features.push(layerId);
+            bucktraxLayers.sources.push(sourceId);
+
+            // Add click handler for features
+            map.on('click', layerId, (e) => {
+                const props = e.features[0].properties;
+                new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(`
+                        <div class="p-2">
+                            <div class="fw-bold">${props.name}</div>
+                            <div class="text-muted">${props.type}</div>
+                        </div>
+                    `)
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
+            map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
+        }
         function loadPropertyProfiles(propertyId) {
             $.get(`/bucktrax/api/properties/${propertyId}/profiles`)
                 .done(function(profiles) {
@@ -193,6 +306,7 @@
                 .fail(function() {
                     window.App?.showModal?.("Error", "Failed to load profiles for this property.", "error");
                 });
+        }
         }
 
         function displayProfiles(profiles) {
@@ -588,7 +702,7 @@
             if (!map) return;
 
             // Remove all BuckTrax layers and sources
-            [...bucktraxLayers.corridors, ...bucktraxLayers.zones].forEach(layerId => {
+            [...bucktraxLayers.corridors, ...bucktraxLayers.zones, ...bucktraxLayers.features].forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     try {
                         map.removeLayer(layerId);
@@ -611,15 +725,34 @@
             // Clear tracking arrays
             bucktraxLayers.corridors = [];
             bucktraxLayers.zones = [];
+            bucktraxLayers.features = [];
             bucktraxLayers.sources = [];
+        }
+
+        function clearFeatureLayers() {
+            const map = window.App?.getMap?.();
+            if (!map) return;
+
+            bucktraxLayers.features.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    try {
+                        map.removeLayer(layerId);
+                    } catch (e) {
+                        console.warn('Error removing feature layer:', layerId, e);
+                    }
+                }
+            });
+
+            bucktraxLayers.features = [];
         }
 
         function updateLayerVisibility() {
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            const showCorridors = $('#show-corridors').is(':checked');
-            const showZones = $('#show-zones').is(':checked');
+            const showCorridors = $('#show-movement-corridors').is(':checked');
+            const showZones = $('#show-prediction-zones').is(':checked');
+            const showFeatures = $('#show-property-features').is(':checked');
 
             bucktraxLayers.corridors.forEach(layerId => {
                 if (map.getLayer(layerId)) {
@@ -630,6 +763,12 @@
             bucktraxLayers.zones.forEach(layerId => {
                 if (map.getLayer(layerId)) {
                     map.setLayoutProperty(layerId, 'visibility', showZones ? 'visible' : 'none');
+                }
+            });
+
+            bucktraxLayers.features.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', showFeatures ? 'visible' : 'none');
                 }
             });
         }
