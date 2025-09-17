@@ -1,0 +1,90 @@
+@{
+    ViewData["Title"] = "Demo Subscription Testing";
+}
+
+<div class="container-fluid h-100 d-flex flex-column">
+    <div class="d-flex flex-column h-100">
+        <h2 class="sidebar-title">Demo Subscription Testing</h2>
+        <hr class="sidebar-title-separator" />
+        
+        <div class="subscription-demo-content flex-grow-1">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Demo Mode:</strong> This page is for testing subscription functionality without live Stripe integration.
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-play me-2"></i>Simulate Subscription
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Test subscription creation without going through Stripe:</p>
+                            <form asp-action="SimulateSubscription" method="post">
+                                <div class="mb-3">
+                                    <label for="tier" class="form-label">Select Tier</label>
+                                    <select name="tier" class="form-select" required>
+                                        <option value="">Choose a tier...</option>
+                                        <option value="Fawn">Fawn Plan ($9.99/month)</option>
+                                        <option value="Doe">Doe Plan ($19.99/month)</option>
+                                        <option value="Buck">Buck Plan ($39.99/month)</option>
+                                        <option value="Trophy">Trophy Plan ($79.99/month)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-rocket me-2"></i>Simulate Subscription
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-check-circle me-2"></i>Test Limits
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Check current subscription limits and usage:</p>
+                            <form asp-action="CheckLimits" method="post">
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-chart-bar me-2"></i>Check Current Limits
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-link me-2"></i>Quick Links
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="/subscription" class="btn btn-outline-primary">
+                                    <i class="fas fa-crown me-2"></i>Subscription Management
+                                </a>
+                                <a href="/properties" class="btn btn-outline-secondary">
+                                    <i class="fas fa-map-marked-alt me-2"></i>Properties
+                                </a>
+                                <a href="/cameras" class="btn btn-outline-secondary">
+                                    <i class="fas fa-camera me-2"></i>Cameras
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

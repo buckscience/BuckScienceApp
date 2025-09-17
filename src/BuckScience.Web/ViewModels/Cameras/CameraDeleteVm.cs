@@ -1,0 +1,16 @@
+﻿namespace BuckScience.Web.ViewModels.Cameras;
+
+public class CameraDeleteVm
+{
+    public int PropertyId { get; set; } // Needed to route back and to enforce scope
+    public string PropertyName { get; set; } = string.Empty;
+
+    public int Id { get; set; }
+
+    public string LocationName { get; set; } = string.Empty;
+    public string Brand { get; set; } = string.Empty;
+    public string? Model { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public bool IsActive { get; set; }
+}

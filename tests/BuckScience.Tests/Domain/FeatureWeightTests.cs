@@ -1,0 +1,357 @@
+using BuckScience.Domain.Entities;
+using BuckScience.Domain.Enums;
+using BuckScience.Domain.Helpers;
+using System.Text.Json;
+using Xunit;
+
+namespace BuckScience.Tests.Domain;
+
+public class FeatureWeightTests
+{
+    [Fact]
+    public void FeatureWeight_Constructor_SetsPropertiesCorrectly()
+    {
+        // Arrange
+        var propertyId = 1;
+        var classificationType = ClassificationType.BeddingArea;
+        var defaultWeight = 0.8f;
+        var userWeight = 0.9f;
+        var seasonalWeights = new Dictionary<Season, float>
+        {
+            { Season.PreRut, 0.7f },
+            { Season.Rut, 0.9f },
+            { Season.PostRut, 0.6f }
+        };
+
+        // Act
+        var featureWeight = new FeatureWeight(propertyId, classificationType, defaultWeight, userWeight, seasonalWeights, isCustom: true);
+
+        // Assert
+        Assert.Equal(propertyId, featureWeight.PropertyId);
+        Assert.Equal(classificationType, featureWeight.ClassificationType);
+        Assert.Equal(defaultWeight, featureWeight.DefaultWeight);
+        Assert.Equal(userWeight, featureWeight.UserWeight);
+        Assert.True(featureWeight.IsCustom);
+        Assert.NotNull(featureWeight.SeasonalWeightsJson);
+        
+        var deserializedWeights = featureWeight.GetSeasonalWeights();
+        Assert.NotNull(deserializedWeights);
+        Assert.Equal(0.7f, deserializedWeights[Season.PreRut]);
+        Assert.Equal(0.9f, deserializedWeights[Season.Rut]);
+        Assert.Equal(0.6f, deserializedWeights[Season.PostRut]);
+    }
+
+    [Fact]
+    public void FeatureWeight_GetEffectiveWeight_ReturnsSeasonalWeightWhenAvailable()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.5f, 0.7f, new Dictionary<Season, float>
+        {
+            { Season.PreRut, 0.8f },
+            { Season.Rut, 0.9f }
+        }, isCustom: true);
+
+        // Act & Assert
+        Assert.Equal(0.8f, featureWeight.GetEffectiveWeight(Season.PreRut));
+        Assert.Equal(0.9f, featureWeight.GetEffectiveWeight(Season.Rut));
+        Assert.Equal(0.7f, featureWeight.GetEffectiveWeight(Season.PostRut)); // Falls back to user weight
+        Assert.Equal(0.7f, featureWeight.GetEffectiveWeight(null)); // Falls back to user weight
+    }
+
+    [Fact]
+    public void FeatureWeight_GetEffectiveWeight_FallsBackToDefaultWeight()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.5f);
+
+        // Act & Assert
+        Assert.Equal(0.5f, featureWeight.GetEffectiveWeight(Season.PreRut));
+        Assert.Equal(0.5f, featureWeight.GetEffectiveWeight(null));
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_UpdatesValueAndTimestamp()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.5f);
+        var originalTimestamp = featureWeight.UpdatedAt;
+
+        // Act
+        Thread.Sleep(10); // Ensure timestamp difference
+        featureWeight.UpdateUserWeight(0.8f);
+
+        // Assert
+        Assert.Equal(0.8f, featureWeight.UserWeight);
+        Assert.True(featureWeight.IsCustom); // Should be set to true when user weight is set
+        Assert.True(featureWeight.UpdatedAt > originalTimestamp);
+    }
+
+    [Fact]
+    public void FeatureWeight_SetSeasonalWeights_ValidatesWeightRange()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.5f);
+        var invalidWeights = new Dictionary<Season, float>
+        {
+            { Season.PreRut, 1.5f } // Invalid: > 1
+        };
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => featureWeight.SetSeasonalWeights(invalidWeights));
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateDefaultWeight_ValidatesWeightRange()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.5f);
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => featureWeight.UpdateDefaultWeight(-0.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => featureWeight.UpdateDefaultWeight(1.1f));
+    }
+
+    [Theory]
+    [InlineData(ClassificationType.BeddingArea, 0.9f)]
+    [InlineData(ClassificationType.PinchPointFunnel, 0.9f)]
+    [InlineData(ClassificationType.AgCropField, 0.8f)]
+    [InlineData(ClassificationType.Waterhole, 0.8f)]
+    [InlineData(ClassificationType.Saddle, 0.8f)]
+    public void FeatureWeightHelper_GetDefaultWeight_ReturnsExpectedValues(ClassificationType type, float expectedWeight)
+    {
+        // Act
+        var actualWeight = FeatureWeightHelper.GetDefaultWeight(type);
+
+        // Assert
+        Assert.Equal(expectedWeight, actualWeight);
+    }
+
+    [Theory]
+    [InlineData(ClassificationType.BeddingArea, FeatureCategory.ResourceBedding)]
+    [InlineData(ClassificationType.AgCropField, FeatureCategory.ResourceFood)]
+    [InlineData(ClassificationType.Creek, FeatureCategory.ResourceWater)]
+    [InlineData(ClassificationType.Ridge, FeatureCategory.Topographical)]
+    public void FeatureWeightHelper_GetCategory_ReturnsCorrectCategory(ClassificationType type, FeatureCategory expectedCategory)
+    {
+        // Act
+        var actualCategory = FeatureWeightHelper.GetCategory(type);
+
+        // Assert
+        Assert.Equal(expectedCategory, actualCategory);
+    }
+
+    [Fact]
+    public void FeatureWeightHelper_GetDisplayName_ReturnsReadableNames()
+    {
+        // Act & Assert
+        Assert.Equal("Bedding Area", FeatureWeightHelper.GetDisplayName(ClassificationType.BeddingArea));
+        Assert.Equal("Agricultural Crop Field", FeatureWeightHelper.GetDisplayName(ClassificationType.AgCropField));
+        Assert.Equal("Pinch Point/Funnel", FeatureWeightHelper.GetDisplayName(ClassificationType.PinchPointFunnel));
+    }
+
+    [Fact]
+    public void FeatureWeight_SeasonalWeights_JsonSerialization_WorksCorrectly()
+    {
+        // Arrange
+        var originalWeights = new Dictionary<Season, float>
+        {
+            { Season.PreRut, 0.7f },
+            { Season.Rut, 0.9f },
+            { Season.PostRut, 0.5f }
+        };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, null, originalWeights, isCustom: true);
+
+        // Act
+        var deserializedWeights = featureWeight.GetSeasonalWeights();
+
+        // Assert
+        Assert.NotNull(deserializedWeights);
+        Assert.Equal(3, deserializedWeights.Count);
+        Assert.Equal(0.7f, deserializedWeights[Season.PreRut]);
+        Assert.Equal(0.9f, deserializedWeights[Season.Rut]);
+        Assert.Equal(0.5f, deserializedWeights[Season.PostRut]);
+    }
+
+    [Fact]
+    public void FeatureWeight_NullSeasonalWeights_ReturnsNullFromGetter()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+
+        // Act
+        var weights = featureWeight.GetSeasonalWeights();
+
+        // Assert
+        Assert.Null(weights);
+    }
+
+    [Fact]
+    public void FeatureWeight_IsCustom_DefaultsToFalse()
+    {
+        // Arrange & Act
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+
+        // Assert
+        Assert.False(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_IsCustom_CanBeSetInConstructor()
+    {
+        // Arrange & Act
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, null, null, isCustom: true);
+
+        // Assert
+        Assert.True(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_SetsIsCustomToTrue()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+        Assert.False(featureWeight.IsCustom); // Verify initial state
+
+        // Act
+        featureWeight.UpdateUserWeight(0.8f);
+
+        // Assert
+        Assert.True(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_WithSameAsDefaultWeight_DoesNotSetIsCustom()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+        Assert.False(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Set UserWeight to the same value as DefaultWeight
+        featureWeight.UpdateUserWeight(0.6f);
+
+        // Assert - Should not be considered custom since it's the same as default
+        Assert.False(featureWeight.IsCustom);
+        Assert.Equal(0.6f, featureWeight.UserWeight);
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_WithSameAsDefaultWeight_StaysCustomIfSeasonalWeightsExist()
+    {
+        // Arrange - Start with seasonal weights
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.7f } };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, null, seasonalWeights, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Set UserWeight to the same value as DefaultWeight
+        featureWeight.UpdateUserWeight(0.6f);
+
+        // Assert - Should still be custom because seasonal weights exist
+        Assert.True(featureWeight.IsCustom);
+        Assert.Equal(0.6f, featureWeight.UserWeight);
+    }
+
+    [Fact]
+    public void FeatureWeight_UpdateUserWeight_WithNullSetsIsCustomToFalse()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, 0.8f, null, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act
+        featureWeight.UpdateUserWeight(null);
+
+        // Assert
+        Assert.False(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_SetSeasonalWeights_SetsIsCustomToTrue()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f);
+        Assert.False(featureWeight.IsCustom); // Verify initial state
+
+        var seasonalWeights = new Dictionary<Season, float>
+        {
+            { Season.PreRut, 0.7f }
+        };
+
+        // Act
+        featureWeight.SetSeasonalWeights(seasonalWeights);
+
+        // Assert
+        Assert.True(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_SetSeasonalWeights_WithNullSetsIsCustomToFalse()
+    {
+        // Arrange
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.7f } };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, null, seasonalWeights, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act
+        featureWeight.SetSeasonalWeights(null);
+
+        // Assert
+        Assert.False(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_SetSeasonalWeights_WithNullStaysCustomIfUserWeightDiffersFromDefault()
+    {
+        // Arrange - Start with custom user weight
+        var seasonalWeights = new Dictionary<Season, float> { { Season.PreRut, 0.7f } };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, 0.8f, seasonalWeights, isCustom: true);
+        Assert.True(featureWeight.IsCustom); // Verify initial state
+
+        // Act - Clear seasonal weights but keep different user weight
+        featureWeight.SetSeasonalWeights(null);
+
+        // Assert - Should still be custom because user weight differs from default
+        Assert.True(featureWeight.IsCustom);
+        Assert.Equal(0.8f, featureWeight.UserWeight);
+        Assert.Null(featureWeight.GetSeasonalWeights());
+    }
+
+    [Fact]
+    public void FeatureWeight_ResetToDefault_ClearsCustomizations()
+    {
+        // Arrange
+        var seasonalWeights = new Dictionary<Season, float>
+        {
+            { Season.PreRut, 0.7f },
+            { Season.Rut, 0.9f }
+        };
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, 0.8f, seasonalWeights, isCustom: true);
+        
+        // Verify initial state
+        Assert.Equal(0.8f, featureWeight.UserWeight);
+        Assert.NotNull(featureWeight.GetSeasonalWeights());
+        Assert.True(featureWeight.IsCustom);
+
+        // Act
+        featureWeight.ResetToDefault();
+
+        // Assert
+        Assert.Null(featureWeight.UserWeight);
+        Assert.Null(featureWeight.GetSeasonalWeights());
+        Assert.False(featureWeight.IsCustom);
+    }
+
+    [Fact]
+    public void FeatureWeight_ResetToDefault_UpdatesTimestamp()
+    {
+        // Arrange
+        var featureWeight = new FeatureWeight(1, ClassificationType.BeddingArea, 0.6f, 0.8f, null, isCustom: true);
+        var originalTimestamp = featureWeight.UpdatedAt;
+
+        // Act
+        Thread.Sleep(10); // Ensure timestamp difference
+        featureWeight.ResetToDefault();
+
+        // Assert
+        Assert.True(featureWeight.UpdatedAt > originalTimestamp);
+    }
+}

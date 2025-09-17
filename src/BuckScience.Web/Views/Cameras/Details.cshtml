@@ -1,0 +1,393 @@
+@model BuckScience.Web.ViewModels.Cameras.CameraDetailsVm
+@{
+    ViewData["Title"] = $"{Model.LocationName} - Camera Details";
+    
+    string GetDirectionName(float degrees)
+    {
+        var directions = new[] { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
+        var index = (int)Math.Round(degrees / 22.5) % 16;
+        return directions[index];
+    }
+    
+    string GetDurationString(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{(int)duration.TotalDays} day{((int)duration.TotalDays == 1 ? "" : "s")}, {duration.Hours}h";
+        else if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        else
+            return $"{(int)duration.TotalMinutes} minute{((int)duration.TotalMinutes == 1 ? "" : "s")}";
+    }
+}
+
+<div class="camera-details">
+    <!-- Header with Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">@Model.LocationName</h2>
+        <a href="/properties/@Model.PropertyId/details" class="btn btn-custom-cancel btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Property
+        </a>
+    </div>
+    <hr class="sidebar-title-separator mb-4" />
+
+    <!-- Camera Summary Card -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-camera fa-lg text-custom-primary me-2"></i>
+                    <h5 class="mb-0">Camera Information</h5>
+                </div>
+                <span class="badge @(Model.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                    @(Model.IsActive ? "Active" : "Inactive")
+                </span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="text-muted small d-block">Location</label>
+                    <p class="mb-0 small">
+                        <i class="fas fa-map-marker-alt text-custom-primary me-1"></i>
+                        @Model.Latitude.ToString("F4"), @Model.Longitude.ToString("F4")
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small d-block">Direction</label>
+                    <p class="mb-0 small">
+                        <i class="fas fa-compass text-custom-primary me-1"></i>
+                        @Model.DirectionDegrees.ToString("F0")° (@GetDirectionName(Model.DirectionDegrees))
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="text-muted small d-block">Brand/Model</label>
+                    <p class="mb-0 small">@Model.Brand/@(string.IsNullOrEmpty(Model.Model) ? "-" : Model.Model)</p>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted small d-block">Time at Current Location</label>
+                    <p class="mb-0 small">
+                        <i class="fas fa-clock text-custom-primary me-1"></i>
+                        @if (Model.TimeAtCurrentLocation.HasValue)
+                        {
+                            @GetDurationString(Model.TimeAtCurrentLocation.Value)
+                        }
+                        else
+                        {
+                            <span class="text-muted">Unknown</span>
+                        }
+                    </p>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-2">
+                <a href="/properties/@Model.PropertyId/cameras/@Model.Id/edit" class="btn btn-sm btn-outline-primary flex-fill">
+                    <i class="fas fa-edit me-1"></i> Edit Camera
+                </a>
+                <a href="/cameras/@Model.Id/upload" class="btn btn-sm btn-custom-primary flex-fill">
+                    <i class="fas fa-upload me-1"></i> Upload Photos
+                </a>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Photos Section -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-images fa-lg text-custom-primary me-2"></i>
+                    <h5 class="mb-0">Photos</h5>
+                </div>
+                <span class="badge badge-custom-primary">@Model.PhotoCount</span>
+            </div>
+
+            @if (Model.PhotoCount == 0)
+            {
+                <div class="text-center py-3">
+                    <p class="text-muted">No photos uploaded to this camera yet.</p>
+                    <a href="/cameras/@Model.Id/upload" class="btn btn-custom-primary btn-sm">Upload First Photos</a>
+                </div>
+            }
+            else
+            {
+                <div class="d-grid">
+                    <a href="/properties/@Model.PropertyId/photos?cameras=@Model.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-images me-2"></i>View All Photos from @Model.LocationName
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Camera Location History -->
+    <div class="accordion mb-4" id="locationHistoryAccordion">
+        <div class="accordion-item border-0 shadow-sm">
+            <h2 class="accordion-header" id="locationHistoryHeading">
+                <button class="accordion-button fs-6 py-3" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#locationHistoryCollapse" aria-expanded="true" aria-controls="locationHistoryCollapse">
+                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-map-marker-alt fa-lg text-custom-primary me-2"></i>
+                            <h5 class="mb-0">Camera Location History</h5>
+                        </div>
+                        <span class="badge badge-custom-primary">@Model.PlacementHistory.Count</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="locationHistoryCollapse" class="accordion-collapse collapse show" 
+                 aria-labelledby="locationHistoryHeading" data-bs-parent="#locationHistoryAccordion">
+                <div class="accordion-body">
+                    @if (!Model.PlacementHistory.Any())
+                    {
+                        <div class="text-center py-3">
+                            <p class="text-muted">No location history recorded for this camera yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row g-3">
+                            @foreach (var placement in Model.PlacementHistory)
+                            {
+                                <div class="col-12">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div class="d-flex align-items-center">
+                                                    @if (placement.IsCurrentPlacement)
+                                                    {
+                                                        <i class="fas fa-map-pin text-success me-2"></i>
+                                                        <span class="fw-bold">Current Location</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-map-marker text-muted me-2"></i>
+                                                        <span>Previous Location</span>
+                                                    }
+                                                </div>
+                                                <small class="text-muted">
+                                                    @placement.StartDateTime.ToString("MMM d, yyyy")
+                                                    @if (placement.Duration.HasValue)
+                                                    {
+                                                        <span>• @GetDurationString(placement.Duration.Value)</span>
+                                                    }
+                                                </small>
+                                            </div>
+
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label class="text-muted small d-block">Coordinates</label>
+                                                    <p class="mb-0 small">
+                                                        <i class="fas fa-map-marker-alt text-custom-primary me-1"></i>
+                                                        @placement.Latitude.ToString("F4"), @placement.Longitude.ToString("F4")
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="text-muted small d-block">Direction</label>
+                                                    <p class="mb-0 small">
+                                                        <i class="fas fa-compass text-custom-primary me-1"></i>
+                                                        @placement.DirectionDegrees.ToString("F0")° (@GetDirectionName(placement.DirectionDegrees))
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="text-muted small d-block">Placed</label>
+                                                    <p class="mb-0 small">
+                                                        <i class="fas fa-calendar text-custom-primary me-1"></i>
+                                                        @placement.StartDateTime.ToString("MMM d, yyyy h:mm tt")
+                                                    </p>
+                                                </div>
+                                                @if (placement.EndDateTime.HasValue)
+                                                {
+                                                    <div class="col-md-6">
+                                                        <label class="text-muted small d-block">Moved</label>
+                                                        <p class="mb-0 small">
+                                                            <i class="fas fa-calendar text-custom-primary me-1"></i>
+                                                            @placement.EndDateTime.Value.ToString("MMM d, yyyy h:mm tt")
+                                                        </p>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="col-md-6">
+                                                        <label class="text-muted small d-block">Status</label>
+                                                        <p class="mb-0 small">
+                                                            <span class="badge badge-custom-success">Currently Active</span>
+                                                        </p>
+                                                    </div>
+                                                }
+                                            </div>
+                                            
+                                            <div class="d-flex gap-2 mt-3">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                        onclick="panToCameraLocation(@placement.Longitude, @placement.Latitude)">
+                                                    <i class="fas fa-eye me-1"></i> Focus on Map
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Options -->
+    <div class="d-flex justify-content-end">
+        <a href="/properties/@Model.PropertyId/cameras/@Model.Id/delete" class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-trash me-1"></i> Delete Camera
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Make panToCameraLocation function available for manual use, but don't auto-call it
+        window.panToCameraLocation = function(lng, lat) {
+            if (window.App && window.App.panToCameraLocation) {
+                window.App.panToCameraLocation(lng, lat);
+            } else {
+                console.log('Pan to camera location:', lng, lat);
+            }
+        };
+
+        // Set up property coordinates for proper map context
+        window.App = window.App || {};
+        window.App.propertyCoords = {
+            lat: @Model.PropertyLatitude,
+            lng: @Model.PropertyLongitude
+        };
+
+        // Camera placement history data for map display
+        window.cameraPlacementHistory = @Html.Raw(Json.Serialize(Model.PlacementHistory.Select(p => new {
+            id = p.Id,
+            latitude = p.Latitude,
+            longitude = p.Longitude,
+            directionDegrees = p.DirectionDegrees,
+            startDateTime = p.StartDateTime,
+            endDateTime = p.EndDateTime,
+            isCurrentPlacement = p.IsCurrentPlacement
+        })));
+
+        // Current camera data
+        window.currentCamera = {
+            id: @Model.Id,
+            name: '@Html.Raw(Json.Serialize(Model.LocationName))',
+            isActive: @Model.IsActive.ToString().ToLower(),
+            propertyId: @Model.PropertyId
+        };
+
+        // Function to initialize camera placement markers with proper timing
+        function initializeCameraPlacementHistory() {
+            console.log('Initializing camera placement history...');
+            
+            // Ensure the map exists and is ready
+            if (!window.App || !window.App.getMap) {
+                console.log('Map not ready, retrying...');
+                setTimeout(initializeCameraPlacementHistory, 100);
+                return;
+            }
+            
+            const map = window.App.getMap();
+            if (!map || !map.isStyleLoaded()) {
+                console.log('Map style not loaded, retrying...');
+                setTimeout(initializeCameraPlacementHistory, 100);
+                return;
+            }
+
+            // First, trigger the normal map layer update for the property context
+            document.dispatchEvent(new CustomEvent('map:updateLayers', { 
+                detail: { 
+                    propertyId: @Model.PropertyId,
+                    cameraId: @Model.Id
+                } 
+            }));
+            
+            // Display camera placement history with slight delay to ensure property context is set
+            if (window.App.displayCameraPlacementHistory) {
+                setTimeout(() => {
+                    console.log('Displaying camera placement history...');
+                    window.App.displayCameraPlacementHistory(window.currentCamera, window.cameraPlacementHistory);
+                    
+                    // After displaying placement history, ensure proper map bounds
+                    setTimeout(() => {
+                        centerMapOnCameraAndHistory();
+                    }, 500);
+                }, 200);
+            }
+        }
+
+        // Function to center map appropriately for camera and placement history
+        function centerMapOnCameraAndHistory() {
+            const map = window.App?.getMap?.();
+            if (!map) return;
+
+            // Create bounds that include property, current camera location, and all placement history
+            let bounds = new mapboxgl.LngLatBounds();
+            
+            // Always include property location
+            bounds.extend([window.App.propertyCoords.lng, window.App.propertyCoords.lat]);
+            
+            // Include current camera location
+            bounds.extend([@Model.Longitude, @Model.Latitude]);
+            
+            // Include all placement history locations
+            if (window.cameraPlacementHistory && window.cameraPlacementHistory.length > 0) {
+                window.cameraPlacementHistory.forEach(placement => {
+                    bounds.extend([placement.longitude, placement.latitude]);
+                });
+            }
+            
+            // Check if we have more than just a single point
+            const boundsArray = bounds.toArray();
+            const hasMultiplePoints = (boundsArray[0][0] !== boundsArray[1][0]) || (boundsArray[0][1] !== boundsArray[1][1]);
+            
+            if (hasMultiplePoints) {
+                // Fit to bounds with all camera locations and property
+                console.log('Fitting map bounds to include all camera placements and property');
+                map.fitBounds(bounds, {
+                    padding: {
+                        top: 60,
+                        bottom: 60,
+                        left: 60,
+                        right: 60
+                    },
+                    maxZoom: 18,
+                    duration: 1500
+                });
+            } else {
+                // If only one location, center on it with reasonable zoom
+                console.log('Centering map on single camera location');
+                map.flyTo({
+                    center: [@Model.Longitude, @Model.Latitude],
+                    zoom: 16,
+                    duration: 1500
+                });
+            }
+        }
+
+        // Initialize when DOM is ready, but with better timing control
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Camera details page loaded');
+            
+            // Wait a bit for the map to initialize before trying to add placement history
+            setTimeout(initializeCameraPlacementHistory, 300);
+        });
+
+        // Also initialize if the map loads after DOM ready
+        if (window.App && window.App.getMap) {
+            const existingMap = window.App.getMap();
+            if (existingMap) {
+                existingMap.on('load', function() {
+                    console.log('Map load event fired');
+                    setTimeout(initializeCameraPlacementHistory, 100);
+                });
+            }
+        }
+    </script>
+}

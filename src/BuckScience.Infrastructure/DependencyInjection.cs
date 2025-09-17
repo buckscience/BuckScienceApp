@@ -1,8 +1,14 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Application.Abstractions.Auth;
+using BuckScience.Application.Abstractions.Services;
+using BuckScience.Infrastructure.Auth;
 using BuckScience.Infrastructure.Persistence;
+using BuckScience.Infrastructure.Services;
+using BuckScience.Shared.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 
@@ -18,10 +24,37 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(conn, sql => sql.UseNetTopologySuite()));
 
+        // Map the interface to the concrete context registered above
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
-        services.AddSingleton<NtsGeometryServices>(_ => NtsGeometryServices.Instance);
-        services.AddSingleton<GeometryFactory>(sp =>
-            sp.GetRequiredService<NtsGeometryServices>().CreateGeometryFactory(srid: 4326));
+
+        // Configuration options
+        services.Configure<WeatherApiSettings>(config.GetSection(WeatherApiSettings.SectionName));
+        services.Configure<WeatherSettings>(config.GetSection(WeatherSettings.SectionName));
+        services.Configure<StripeSettings>(config.GetSection(StripeSettings.SectionName));
+        services.Configure<SubscriptionSettings>(config.GetSection(SubscriptionSettings.SectionName));
+
+        // HTTP client for weather API
+        services.AddHttpClient<WeatherService>();
+
+        // Weather service
+        services.AddScoped<IWeatherService, WeatherService>();
+
+        // Subscription services
+        services.AddScoped<IStripeService, StripeService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
+
+        // If you have IUserProvisioningService in Infrastructure:
+        services.AddScoped<IUserProvisioningService, UserProvisioningService>();
+
+        // NTS GeometryFactory (SRID 4326)
+        services.AddSingleton<GeometryFactory>(_ =>
+            NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
+
+        // Onboarding service
+        services.AddScoped<IOnboardingService, Application.Onboarding.OnboardingService>();
+
+        // Season month mapping service
+        services.AddScoped<ISeasonMonthMappingService, Application.Services.SeasonMonthMappingService>();
 
         return services;
     }

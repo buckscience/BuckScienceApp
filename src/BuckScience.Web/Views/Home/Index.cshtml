@@ -1,0 +1,32 @@
+﻿@{
+    ViewData["Title"] = "Welcome";
+    Layout = "_Landing";
+}
+
+<section class="hero-copy">
+    <span class="eyebrow">Welcome</span>
+    <h1>Sign in to BuckScience</h1>
+    <p>
+        Access your projects, manage properties, and explore your data in one place.
+        Use your organization login to continue.
+    </p>
+    <div class="cta">
+        <a class="btn btn-primary" href="/auth/login" aria-label="Sign in">Sign in</a>
+        <a class="btn btn-ghost" href="#" aria-label="Learn more">Learn more</a>
+    </div>
+</section>
+
+<section>
+    <div class="panel login-card">
+        <h3>Ready to get started?</h3>
+        <p>Sign in to create, manage, and analyze your properties. We’ll add more content here later.</p>
+        <div class="login-actions">
+            <a class="btn btn-primary" href="/auth/login">Continue with your account</a>
+            <a class="btn btn-ghost" href="#">Request access</a>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <!-- Per-page scripts (optional) -->
+}

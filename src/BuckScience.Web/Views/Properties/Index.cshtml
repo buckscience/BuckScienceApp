@@ -3,46 +3,49 @@
     ViewData["Title"] = "Properties";
 }
 
-<h1>Properties</h1>
-
-@if (TempData["DeletedId"] is int did)
-{
-    <div class="alert alert-success">Deleted Property with Id @did</div>
-}
-
-<div class="mb-3">
-    <a asp-action="Create" class="btn btn-primary">Create New Property</a>
+<div class="container-fluid h-100 d-flex flex-column">
+    <div class="d-flex flex-column h-100">
+        <h2 class="sidebar-title">My Hunt Areas</h2>
+        <hr class="sidebar-title-separator" />
+        <div class="property-list property-list-full flex-grow-1 d-flex flex-column">
+            <div class="flex-grow-1">
+                @foreach (var p in Model)
+                {
+                    <div class="property-item mb-4" data-id="@p.Id">
+                        <div class="property-icon"><i class="fas fa-map"></i></div>
+                        <div class="property-info">
+                            <div class="property-name">@p.Name</div>
+                            <div class="property-meta">
+                                Lat: @(p.Latitude.ToString("F4") ?? ""), Lng: @(p.Longitude.ToString("F4") ?? "")
+                            </div>
+                        </div>
+                        <div class="property-actions">
+                            <a href="/properties/@p.Id/details" class="btn btn-outline-primary btn-sm me-1" title="View Details">
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                            <a href="/properties/@p.Id/edit" class="btn btn-custom-cancel btn-sm" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="property-list-actions mt-4">
+                <a href="/properties/add" class="create-btn btn btn-custom-primary property-list-btn w-100">
+                    <i class="fas fa-plus"></i> Add A Property
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<table class="table table-striped align-middle">
-    <thead>
-        <tr>
-            <th>Id</th>
-            <th>Name</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Time Zone</th>
-            <th>Day Hour</th>
-            <th>Night Hour</th>
-            <th class="text-end">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var p in Model)
-        {
-            <tr>
-                <td>@p.Id</td>
-                <td>@p.Name</td>
-                <td>@p.Latitude</td>
-                <td>@p.Longitude</td>
-                <td>@p.TimeZone</td>
-                <td>@p.DayHour</td>
-                <td>@p.NightHour</td>
-                <td class="text-end">
-                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
-                    <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+@section Scripts {
+    <script>
+        // Trigger map layer update when this view loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({});
+            }
+        });
+    </script>
+}

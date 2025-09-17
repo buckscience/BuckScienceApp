@@ -1,12 +1,22 @@
-﻿using BuckScience.Domain.Entities;
+using BuckScience.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 
 namespace BuckScience.Application.Abstractions;
 
 public interface IAppDbContext
 {
+    DbSet<ApplicationUser> ApplicationUsers { get; }
+    DbSet<Camera> Cameras { get; }
+    DbSet<FeatureWeight> FeatureWeights { get; }
+    DbSet<Photo> Photos { get; }
+    DbSet<PhotoTag> PhotoTags { get; }
     DbSet<Property> Properties { get; }
-
+    DbSet<PropertyFeature> PropertyFeatures { get; }
+    DbSet<PropertySeasonMonthsOverride> PropertySeasonMonthsOverrides { get; }
+    DbSet<PropertyTag> PropertyTags { get; }
+    DbSet<Subscription> Subscriptions { get; }
+    DbSet<Tag> Tags { get; }
+    DbSet<Profile> Profiles { get; }
+    DbSet<Weather> Weathers { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

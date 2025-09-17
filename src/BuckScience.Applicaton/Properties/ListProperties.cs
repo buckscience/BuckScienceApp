@@ -19,13 +19,14 @@ public static class ListProperties
         int NightHour
     );
 
-    // In the future, add a userId parameter to filter: e.g., string? userId
     public static async Task<IReadOnlyList<Result>> HandleAsync(
         IAppDbContext db,
+        int userId,
         CancellationToken ct)
     {
         return await db.Properties
             .AsNoTracking()
+            .Where(p => p.ApplicationUserId == userId)
             .OrderBy(p => p.Name)
             .Select(p => new Result(
                 p.Id,

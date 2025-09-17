@@ -1,4 +1,5 @@
 ﻿using BuckScience.Application.Abstractions;
+using BuckScience.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using System.Threading;
@@ -18,28 +19,28 @@ public static class UpdateProperty
         int NightHour,
         MultiPolygon? Boundary = null);
 
-    public static async Task HandleAsync(
+    // Enforce ownership here: only update if the property belongs to userId
+    public static async Task<bool> HandleAsync(
         Command cmd,
         IAppDbContext db,
         GeometryFactory geometryFactory,
+        int userId,
         CancellationToken ct)
     {
-        var entity = await db.Properties.FirstOrDefaultAsync(p => p.Id == cmd.Id, ct);
-        if (entity is null)
-            throw new KeyNotFoundException($"Property {cmd.Id} was not found.");
+        var prop = await db.Properties
+            .FirstOrDefaultAsync(p => p.Id == cmd.Id && p.ApplicationUserId == userId, ct);
 
-        // Apply domain behaviors
-        entity.Rename(cmd.Name);
-        entity.Move(cmd.Latitude, cmd.Longitude);
-        entity.SetBoundary(cmd.Boundary);
-        entity.SetHours(cmd.DayHour, cmd.NightHour);
+        if (prop is null)
+            return false; // or throw new KeyNotFoundException("Property not found.");
 
-        // If you need to update time zone in domain, add a method; for now direct set:
-        // Consider encapsulating this in a SetTimeZone method if rules emerge
-        typeof(BuckScience.Domain.Entities.Property)
-            .GetProperty(nameof(BuckScience.Domain.Entities.Property.TimeZone))!
-            .SetValue(entity, cmd.TimeZone);
+        // Apply updates via domain methods
+        prop.Rename(cmd.Name);
+        var point = geometryFactory.CreatePoint(new Coordinate(cmd.Longitude, cmd.Latitude));
+        prop.SetLocation(point);
+        prop.SetBoundary(cmd.Boundary);
+        prop.SetHours(cmd.DayHour, cmd.NightHour);
 
         await db.SaveChangesAsync(ct);
+        return true;
     }
 }

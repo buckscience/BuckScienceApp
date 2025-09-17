@@ -7,16 +7,29 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\Photos\**" />
+    <Content Remove="Views\Photos\**" />
+    <EmbeddedResource Remove="Views\Photos\**" />
+    <None Remove="Views\Photos\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.13.2" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.13.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BuckScience.Applicaton\BuckScience.Applicaton.csproj" />
     <ProjectReference Include="..\BuckScience.Infrastructure\BuckScience.Infrastructure.csproj" />
     <ProjectReference Include="..\BuckScience.Shared\BuckScience.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
 </Project>

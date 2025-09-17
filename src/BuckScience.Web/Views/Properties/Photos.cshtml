@@ -1,0 +1,886 @@
+@model BuckScience.Web.ViewModels.Photos.PropertyPhotosVm
+@{
+    ViewData["Title"] = $"Photos - {Model.PropertyName}";
+    
+    // Helper function to generate sort URLs that preserve current filters
+    string GetSortUrl(string sortValue)
+    {
+        var query = new List<string> { $"sort={sortValue}" };
+        
+        if (Model.AppliedFilters != null)
+        {
+            if (Model.AppliedFilters.DateTakenFrom.HasValue)
+                query.Add($"dateTakenFrom={Model.AppliedFilters.DateTakenFrom.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateTakenTo.HasValue)
+                query.Add($"dateTakenTo={Model.AppliedFilters.DateTakenTo.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateUploadedFrom.HasValue)
+                query.Add($"dateUploadedFrom={Model.AppliedFilters.DateUploadedFrom.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.DateUploadedTo.HasValue)
+                query.Add($"dateUploadedTo={Model.AppliedFilters.DateUploadedTo.Value:yyyy-MM-dd}");
+            if (Model.AppliedFilters.CameraIds?.Count > 0)
+                query.Add($"cameras={string.Join(",", Model.AppliedFilters.CameraIds)}");
+            if (Model.AppliedFilters.TemperatureMin.HasValue)
+                query.Add($"tempMin={Model.AppliedFilters.TemperatureMin}");
+            if (Model.AppliedFilters.TemperatureMax.HasValue)
+                query.Add($"tempMax={Model.AppliedFilters.TemperatureMax}");
+            if (Model.AppliedFilters.WindSpeedMin.HasValue)
+                query.Add($"windSpeedMin={Model.AppliedFilters.WindSpeedMin}");
+            if (Model.AppliedFilters.WindSpeedMax.HasValue)
+                query.Add($"windSpeedMax={Model.AppliedFilters.WindSpeedMax}");
+            if (Model.AppliedFilters.HumidityMin.HasValue)
+                query.Add($"humidityMin={Model.AppliedFilters.HumidityMin}");
+            if (Model.AppliedFilters.HumidityMax.HasValue)
+                query.Add($"humidityMax={Model.AppliedFilters.HumidityMax}");
+            if (Model.AppliedFilters.PressureMin.HasValue)
+                query.Add($"pressureMin={Model.AppliedFilters.PressureMin}");
+            if (Model.AppliedFilters.PressureMax.HasValue)
+                query.Add($"pressureMax={Model.AppliedFilters.PressureMax}");
+            if (Model.AppliedFilters.VisibilityMin.HasValue)
+                query.Add($"visibilityMin={Model.AppliedFilters.VisibilityMin}");
+            if (Model.AppliedFilters.VisibilityMax.HasValue)
+                query.Add($"visibilityMax={Model.AppliedFilters.VisibilityMax}");
+            if (Model.AppliedFilters.CloudCoverMin.HasValue)
+                query.Add($"cloudCoverMin={Model.AppliedFilters.CloudCoverMin}");
+            if (Model.AppliedFilters.CloudCoverMax.HasValue)
+                query.Add($"cloudCoverMax={Model.AppliedFilters.CloudCoverMax}");
+            if (Model.AppliedFilters.MoonPhaseTexts?.Count > 0)
+                query.Add($"moonPhaseTexts={string.Join(",", Model.AppliedFilters.MoonPhaseTexts)}");
+            if (Model.AppliedFilters.Conditions?.Count > 0)
+                query.Add($"conditions={string.Join(",", Model.AppliedFilters.Conditions)}");
+            if (Model.AppliedFilters.WindDirectionTexts?.Count > 0)
+                query.Add($"windDirections={string.Join(",", Model.AppliedFilters.WindDirectionTexts)}");
+        }
+        
+        return "?" + string.Join("&", query);
+    }
+}
+
+<div style="min-width: 800px; max-width: 1200px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">Photos from @Model.PropertyName</h2>
+        <a href="/properties/@Model.PropertyId/cameras" 
+           class="btn btn-custom-cancel btn-sm">
+            <i class="fas fa-camera me-1"></i>Manage Cameras
+        </a>
+    </div>
+    <hr class="sidebar-title-separator" />
+
+@if (Model.TotalPhotoCount == 0)
+{
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-camera fa-4x text-muted"></i>
+        </div>
+        <h3 class="text-muted">No photos yet</h3>
+        <p class="text-muted mb-4">Upload some photos from your cameras to get started.</p>
+        <a href="/properties/@Model.PropertyId/cameras" 
+           class="btn btn-primary">
+            <i class="fas fa-camera me-2"></i>Manage Cameras
+        </a>
+    </div>
+}
+else
+{
+    <!-- Photo Management Container -->
+    <div class="card mb-4" style="background-color: #f0f7f0; border: 1px solid #8CAF8C;">
+        <div class="card-header" style="background-color: #D7E3B2; border-bottom: 1px solid #8CAF8C;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#filtersPanel" aria-expanded="false" aria-controls="filtersPanel" style="color: #527A52;">
+                        <i class="fas fa-filter me-2"></i>Photo Filters
+                        @if (Model.HasFiltersApplied)
+                        {
+                            <span class="badge bg-success ms-2">Active</span>
+                        }
+                    </button>
+                </h5>
+
+                @if (Model.HasFiltersApplied)
+                {
+                    <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort" class="btn btn-outline-secondary btn-sm ms-auto">
+                        <i class="fas fa-times me-1"></i>Clear All Filters
+                    </a>
+                }
+            </div>
+</div>
+
+        <div class="collapse" id="filtersPanel">
+            <div class="card-body">
+                <form id="photoFiltersForm" method="get">
+                    <input type="hidden" name="sort" value="@Model.CurrentSort" />
+                    
+                    <div class="alert alert-light border-0 py-2 px-3 mb-3" style="background-color: #f8f9fa;">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Filter options are based on data from photos taken on <strong>@Model.PropertyName</strong> only.
+                        </small>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Date Filters -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-calendar me-2"></i>Date Filters</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label for="dateTakenFrom" class="form-label">Date Taken From</label>
+                                    <input type="date" class="form-control" id="dateTakenFrom" name="dateTakenFrom" 
+                                           value="@(Model.AppliedFilters?.DateTakenFrom?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                                <div class="col-6">
+                                    <label for="dateTakenTo" class="form-label">Date Taken To</label>
+                                    <input type="date" class="form-control" id="dateTakenTo" name="dateTakenTo" 
+                                           value="@(Model.AppliedFilters?.DateTakenTo?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <label for="dateUploadedFrom" class="form-label">Date Uploaded From</label>
+                                    <input type="date" class="form-control" id="dateUploadedFrom" name="dateUploadedFrom" 
+                                           value="@(Model.AppliedFilters?.DateUploadedFrom?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                                <div class="col-6">
+                                    <label for="dateUploadedTo" class="form-label">Date Uploaded To</label>
+                                    <input type="date" class="form-control" id="dateUploadedTo" name="dateUploadedTo" 
+                                           value="@(Model.AppliedFilters?.DateUploadedTo?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera Filters -->
+                        <div class="col-md-6 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-camera me-2"></i>Camera Filters</h6>
+                            @if (Model.AvailableCameras.Any())
+                            {
+                                <label for="cameraSelect" class="form-label fw-semibold">Camera Locations</label>
+                                <select class="form-select" id="cameraSelect" multiple size="4">
+                                    @foreach (var camera in Model.AvailableCameras)
+                                    {
+                                        <option value="@camera.Id" data-selected="@(Model.AppliedFilters?.CameraIds?.Contains(camera.Id) == true ? "true" : "false")">@camera.LocationName</option>
+                                    }
+                                </select>
+                                <input type="hidden" name="cameras" id="cameraIds" />
+                                <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple camera locations</small>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No cameras available</p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Weather Filters -->
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-cloud-sun me-2"></i>Weather Filters</h6>
+                            
+                            <!-- Weather Ranges -->
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Temperature (°F)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="tempMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.TemperatureMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="tempMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.TemperatureMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Wind Speed (mph)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="windSpeedMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.WindSpeedMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="windSpeedMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.WindSpeedMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Humidity (%)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="humidityMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.HumidityMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="humidityMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.HumidityMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Pressure (inHg)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="pressureMin" placeholder="Min" step="0.01"
+                                                   value="@Model.AppliedFilters?.PressureMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="pressureMax" placeholder="Max" step="0.01"
+                                                   value="@Model.AppliedFilters?.PressureMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Visibility (miles)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="visibilityMin" placeholder="Min" step="0.1"
+                                                   value="@Model.AppliedFilters?.VisibilityMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="visibilityMax" placeholder="Max" step="0.1"
+                                                   value="@Model.AppliedFilters?.VisibilityMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-semibold">Cloud Cover (%)</label>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="cloudCoverMin" placeholder="Min" step="1" min="0" max="100"
+                                                   value="@Model.AppliedFilters?.CloudCoverMin" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="number" class="form-control" name="cloudCoverMax" placeholder="Max" step="1" min="0" max="100"
+                                                   value="@Model.AppliedFilters?.CloudCoverMax" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="moonPhaseTexts" class="form-label fw-semibold">Moon Phase</label>
+                                    <select class="form-select" name="moonPhaseTexts" id="moonPhaseTexts" multiple>
+                                        @foreach (var moonPhase in Model.AvailableMoonPhases)
+                                        {
+                                            <option value="@moonPhase" selected="@(Model.AppliedFilters?.MoonPhaseTexts?.Contains(moonPhase) == true)">@moonPhase</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="conditions" class="form-label fw-semibold">Weather Conditions</label>
+                                    <select class="form-select" name="conditions" id="conditions" multiple>
+                                        @foreach (var condition in Model.AvailableConditions)
+                                        {
+                                            <option value="@condition" selected="@(Model.AppliedFilters?.Conditions?.Contains(condition) == true)">@condition</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="windDirections" class="form-label fw-semibold">Wind Directions</label>
+                                    <select class="form-select" name="windDirections" id="windDirections" multiple>
+                                        @foreach (var direction in Model.WindDirectionOptions.Where(d => d.IsAvailable))
+                                        {
+                                            <option value="@direction.Value" selected="@(Model.AppliedFilters?.WindDirectionTexts?.Contains(direction.Value) == true)">@direction.DisplayName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                        <button type="submit" class="btn btn-custom-primary">
+                            <i class="fas fa-search me-1"></i>Apply Filters
+                        </button>
+                        @if (Model.HasFiltersApplied)
+                        {
+                            <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear All Filters
+                            </a>
+                        }
+                    </div>
+                </form>
+
+                <hr class="my-4" style="border-color: #8CAF8C;">
+
+                <!-- Bulk Tagging Controls -->
+                <div class="mb-3" id="taggingControls" style="display: none;">
+                    <div class="d-flex align-items-center mb-3">
+                        <h6 class="mb-0" style="color: #527A52;"><i class="fas fa-tags me-2"></i>Tag Selected Photos (<span id="selectedCount">0</span> selected)</h6>
+                    </div>
+                    <div class="row align-items-end g-3">
+                        <div class="col-lg-5 col-md-12">
+                            <label for="tagSelect" class="form-label">Select Tag</label>
+                            <select class="form-select" id="tagSelect">
+                                <option value="">Choose a tag...</option>
+                                @foreach (var tag in Model.AvailableTags)
+                                {
+                                    <option value="@tag.Id">@tag.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-8">
+                            <label for="newTagInput" class="form-label">Or Add New Tag</label>
+                            <input type="text" class="form-control" id="newTagInput" placeholder="Enter new tag name" />
+                        </div>
+                        <div class="col-lg-3 col-md-4">
+                            <button type="button" class="btn btn-custom-primary w-100" id="addTagBtn">
+                                <i class="fas fa-plus me-1"></i>Add Tag
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary" id="selectAllBtn">
+                            <i class="fas fa-check-square me-1"></i>Select All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="clearSelectionBtn">
+                            <i class="fas fa-square me-1"></i>Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Photo Tagging Instructions -->
+                <div class="alert border-0 mb-0" style="background-color: #D7E3B2; color: #527A52;">
+                    <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-2"></i>Photo Tagging</h6>
+                    <small class="mb-0">
+                        <strong>Bulk Tagging:</strong> Check multiple photos and use the tagging panel above to tag them all at once.<br>
+                        <strong>Individual Tagging:</strong> Click any photo to open details and add/remove tags individually.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results and Sorting Controls -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <span class="text-muted">@Model.TotalPhotoCount total photos</span>
+            @if (Model.HasFiltersApplied)
+            {
+                <span class="text-success ms-2">
+                    <i class="fas fa-filter me-1"></i>Filtered
+                </span>
+            }
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-sort me-1"></i> Sort by
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenDesc" ? "active" : "")" href="@GetSortUrl("DateTakenDesc")">Date Taken (Newest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateTakenAsc" ? "active" : "")" href="@GetSortUrl("DateTakenAsc")">Date Taken (Oldest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedDesc" ? "active" : "")" href="@GetSortUrl("DateUploadedDesc")">Date Uploaded (Newest First)</a></li>
+                <li><a class="dropdown-item @(Model.CurrentSort == "DateUploadedAsc" ? "active" : "")" href="@GetSortUrl("DateUploadedAsc")">Date Uploaded (Oldest First)</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Photos grouped by month/year -->
+    <div class="photo-gallery-container mx-auto">
+        @foreach (var group in Model.PhotoGroups)
+        {
+            <div class="mb-5">
+                <h2 class="mb-4 text-dark border-bottom pb-2">
+                    @group.MonthYear
+                </h2>
+                <div class="row">
+                    @foreach (var photo in group.Photos)
+                    {
+                        <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                            <div class="card photo-card h-100">
+                                <div class="position-relative">
+                                    <input type="checkbox" class="photo-select position-absolute top-0 start-0 m-2" 
+                                           value="@photo.Id" style="z-index: 10;" />
+                                    <img src="@photo.EncodedPhotoUrl" 
+                                         class="card-img-top" 
+                                         alt="Photo from @photo.CameraLocationName" 
+                                         style="height: 250px; object-fit: cover; cursor: pointer;"
+                                         data-bs-toggle="modal" 
+                                         data-bs-target="#photoModal"
+                                         data-photo-id="@photo.Id"
+                                         data-photo-url="@photo.EncodedPhotoUrl"
+                                         data-date-taken="@photo.DateTaken.ToString("MM/dd/yyyy h:mm tt")"
+                                         data-date-uploaded="@photo.DateUploaded.ToString("MM/dd/yyyy h:mm tt")"
+                                         data-camera-name="@photo.CameraLocationName"
+                                         loading="lazy" />
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-dark bg-opacity-75">@photo.CameraLocationName</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="photo-tags-container" data-photo-id="@photo.Id">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-tags me-1"></i>
+                                                    <span class="tags-content">Loading tags...</span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="ms-2">
+                                            <a href="/cameras/@photo.CameraId/details" class="btn btn-outline-primary btn-sm" title="View Camera Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+</div>
+
+<!-- Photo Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalLabel">Photo Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" alt="Photo" class="img-fluid mb-3" style="max-height: 60vh;" />
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <small class="text-muted">
+                            <strong>Camera:</strong><br>
+                            <span id="modalCameraName"></span>
+                        </small>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">
+                            <strong>Date Taken:</strong><br>
+                            <span id="modalDateTaken"></span>
+                        </small>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">
+                            <strong>Date Uploaded:</strong><br>
+                            <span id="modalDateUploaded"></span>
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Photo Tags Section -->
+                <div class="text-start">
+                    <h6><i class="fas fa-tags me-2"></i>Tags</h6>
+                    <div id="photoTags" class="mb-3">
+                        <span class="text-muted">Loading tags...</span>
+                    </div>
+                    
+                    <!-- Add Tag Section -->
+                    <div class="row g-3">
+                        <div class="col-lg-5 col-md-12">
+                            <select class="form-select" id="modalTagSelect">
+                                <option value="">Choose a tag...</option>
+                                @foreach (var tag in Model.AvailableTags)
+                                {
+                                    <option value="@tag.Id">@tag.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-4 col-md-8">
+                            <input type="text" class="form-control" id="modalNewTagInput" placeholder="New tag name" />
+                        </div>
+                        <div class="col-lg-3 col-md-4">
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="modalAddTagBtn">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        @@media (min-width: 768px) {
+            .photo-card {
+                min-width: 280px;
+            }
+            .camera-card {
+                min-width: 280px;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        let currentPhotoId = null;
+        
+        // Move modal to body to ensure it appears above sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoModal = document.getElementById('photoModal');
+            if (photoModal) {
+                document.body.appendChild(photoModal);
+            }
+            
+            initializeTagging();
+        });
+        
+        // Initialize tagging functionality
+        function initializeTagging() {
+            // Load tags for all photos
+            loadAllPhotoTags();
+            
+            // Initialize camera filter
+            initializeCameraFilter();
+            
+            // Bulk selection handlers
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('photo-select')) {
+                    updateBulkControls();
+                }
+            });
+            
+            // Bulk action buttons
+            document.getElementById('selectAllBtn')?.addEventListener('click', selectAllPhotos);
+            document.getElementById('clearSelectionBtn')?.addEventListener('click', clearSelection);
+            document.getElementById('addTagBtn')?.addEventListener('click', addTagToBulk);
+            document.getElementById('modalAddTagBtn')?.addEventListener('click', addTagToSinglePhoto);
+        }
+        
+        // Initialize camera filter handling
+        function initializeCameraFilter() {
+            const cameraSelect = document.getElementById('cameraSelect');
+            const cameraIdsInput = document.getElementById('cameraIds');
+            
+            if (!cameraSelect || !cameraIdsInput) return;
+            
+            // Set initial selections based on applied filters
+            const options = cameraSelect.querySelectorAll('option');
+            options.forEach(option => {
+                if (option.getAttribute('data-selected') === 'true') {
+                    option.selected = true;
+                }
+            });
+            
+            // Update hidden input when selection changes
+            const updateCameraIds = () => {
+                const selectedIds = Array.from(cameraSelect.selectedOptions)
+                    .map(option => option.value)
+                    .filter(id => id && id.trim() !== '');
+                cameraIdsInput.value = selectedIds.join(',');
+            };
+            
+            // Update initial value
+            updateCameraIds();
+            
+            // Listen for changes
+            cameraSelect.addEventListener('change', updateCameraIds);
+            
+            // Also update before form submission
+            const form = document.getElementById('photoFiltersForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    updateCameraIds();
+                });
+            }
+        }
+        
+        // Load tags for all photos on the page
+        async function loadAllPhotoTags() {
+            const photoContainers = document.querySelectorAll('.photo-tags-container');
+            
+            for (const container of photoContainers) {
+                const photoId = container.getAttribute('data-photo-id');
+                if (photoId) {
+                    await loadPhotoTagsForCard(parseInt(photoId), container);
+                }
+            }
+        }
+        
+        // Load tags for a specific photo card
+        async function loadPhotoTagsForCard(photoId, container) {
+            try {
+                const response = await fetch(`/api/tags/photos/${photoId}`);
+                if (response.ok) {
+                    const tags = await response.json();
+                    displayPhotoTagsInCard(tags, container);
+                } else {
+                    const tagsContent = container.querySelector('.tags-content');
+                    if (tagsContent) {
+                        tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading tags for photo:', photoId, error);
+                const tagsContent = container.querySelector('.tags-content');
+                if (tagsContent) {
+                    tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                }
+            }
+        }
+        
+        // Display photo tags in the card footer
+        function displayPhotoTagsInCard(tags, container) {
+            const tagsContent = container.querySelector('.tags-content');
+            if (!tagsContent) return;
+            
+            if (tags.length === 0) {
+                tagsContent.innerHTML = '<span class="text-muted">No tags</span>';
+                return;
+            }
+            
+            const tagElements = tags.map(tag => 
+                `<span class="badge bg-secondary me-1 mb-1">${tag.name}</span>`
+            ).join('');
+            
+            tagsContent.innerHTML = tagElements;
+        }
+        
+        // Update bulk controls visibility and count
+        function updateBulkControls() {
+            const selectedCheckboxes = document.querySelectorAll('.photo-select:checked');
+            const count = selectedCheckboxes.length;
+            const controls = document.getElementById('taggingControls');
+            const countSpan = document.getElementById('selectedCount');
+            
+            if (controls && countSpan) {
+                if (count > 0) {
+                    controls.style.display = 'block';
+                    countSpan.textContent = count;
+                } else {
+                    controls.style.display = 'none';
+                }
+            }
+        }
+        
+        // Select all photos
+        function selectAllPhotos() {
+            const checkboxes = document.querySelectorAll('.photo-select');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateBulkControls();
+        }
+        
+        // Clear selection
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.photo-select');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateBulkControls();
+        }
+        
+        // Add tag to bulk selected photos
+        async function addTagToBulk() {
+            const selectedCheckboxes = document.querySelectorAll('.photo-select:checked');
+            const photoIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            
+            if (photoIds.length === 0) {
+                alert('Please select photos to tag.');
+                return;
+            }
+            
+            const tagSelect = document.getElementById('tagSelect');
+            const newTagInput = document.getElementById('newTagInput');
+            
+            let tagName = '';
+            if (newTagInput.value.trim()) {
+                tagName = newTagInput.value.trim();
+            } else if (tagSelect.value) {
+                tagName = tagSelect.options[tagSelect.selectedIndex].text;
+            }
+            
+            if (!tagName) {
+                alert('Please select a tag or enter a new tag name.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tags/photos/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: photoIds,
+                        tagName: tagName
+                    })
+                });
+                
+                if (response.ok) {
+                    clearSelection();
+                    newTagInput.value = '';
+                    tagSelect.value = '';
+                    // Refresh the page to show updated tags
+                    location.reload();
+                } else {
+                    alert('Error adding tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error adding tag:', error);
+                alert('Error adding tag. Please try again.');
+            }
+        }
+        
+        // Add tag to single photo
+        async function addTagToSinglePhoto() {
+            if (!currentPhotoId) return;
+            
+            const tagSelect = document.getElementById('modalTagSelect');
+            const newTagInput = document.getElementById('modalNewTagInput');
+            
+            let tagName = '';
+            if (newTagInput.value.trim()) {
+                tagName = newTagInput.value.trim();
+            } else if (tagSelect.value) {
+                tagName = tagSelect.options[tagSelect.selectedIndex].text;
+            }
+            
+            if (!tagName) {
+                alert('Please select a tag or enter a new tag name.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tags/photos/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: [currentPhotoId],
+                        tagName: tagName
+                    })
+                });
+                
+                if (response.ok) {
+                    newTagInput.value = '';
+                    tagSelect.value = '';
+                    loadPhotoTags(currentPhotoId);
+                } else {
+                    alert('Error adding tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error adding tag:', error);
+                alert('Error adding tag. Please try again.');
+            }
+        }
+        
+        // Load tags for a specific photo
+        async function loadPhotoTags(photoId) {
+            try {
+                const response = await fetch(`/api/tags/photos/${photoId}`);
+                if (response.ok) {
+                    const tags = await response.json();
+                    displayPhotoTags(tags);
+                } else {
+                    document.getElementById('photoTags').innerHTML = '<span class="text-muted">Unable to load tags</span>';
+                }
+            } catch (error) {
+                console.error('Error loading tags:', error);
+                document.getElementById('photoTags').innerHTML = '<span class="text-muted">Error loading tags</span>';
+            }
+        }
+        
+        // Display photo tags
+        function displayPhotoTags(tags) {
+            const container = document.getElementById('photoTags');
+            if (tags.length === 0) {
+                container.innerHTML = '<span class="text-muted">No tags yet</span>';
+                return;
+            }
+            
+            const tagElements = tags.map(tag => 
+                `<span class="badge bg-secondary me-1 mb-1">
+                    ${tag.name}
+                    <button type="button" class="btn-close btn-close-white ms-1" 
+                            onclick="removeTag(${tag.id})" 
+                            style="font-size: 0.75em;"
+                            title="Remove tag"></button>
+                </span>`
+            ).join('');
+            
+            container.innerHTML = tagElements;
+        }
+        
+        // Remove tag from current photo
+        async function removeTag(tagId) {
+            if (!currentPhotoId) return;
+            
+            try {
+                const response = await fetch('/api/tags/photos/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        photoIds: [currentPhotoId],
+                        tagId: tagId
+                    })
+                });
+                
+                if (response.ok) {
+                    loadPhotoTags(currentPhotoId);
+                } else {
+                    alert('Error removing tag. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error removing tag:', error);
+                alert('Error removing tag. Please try again.');
+            }
+        }
+        
+        // Handle photo modal
+        const photoModal = document.getElementById('photoModal');
+        if (photoModal) {
+            photoModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const photoId = button.getAttribute('data-photo-id');
+                const photoUrl = button.getAttribute('data-photo-url');
+                const dateTaken = button.getAttribute('data-date-taken');
+                const dateUploaded = button.getAttribute('data-date-uploaded');
+                const cameraName = button.getAttribute('data-camera-name');
+                
+                currentPhotoId = parseInt(photoId);
+                
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = photoUrl;
+                    modalPhotoImg.onerror = function() {
+                        console.error('Failed to load photo:', photoUrl);
+                        this.alt = 'Failed to load photo';
+                    };
+                }
+                
+                const modalDateTaken = document.getElementById('modalDateTaken');
+                const modalDateUploaded = document.getElementById('modalDateUploaded');
+                const modalCameraName = document.getElementById('modalCameraName');
+                
+                if (modalDateTaken) modalDateTaken.textContent = dateTaken;
+                if (modalDateUploaded) modalDateUploaded.textContent = dateUploaded;
+                if (modalCameraName) modalCameraName.textContent = cameraName;
+                
+                // Load tags for this photo
+                loadPhotoTags(currentPhotoId);
+            });
+            
+            // Clean up modal when hidden
+            photoModal.addEventListener('hidden.bs.modal', function (event) {
+                const modalPhotoImg = document.getElementById('modalPhoto');
+                if (modalPhotoImg) {
+                    modalPhotoImg.src = '';
+                }
+                currentPhotoId = null;
+            });
+        }
+
+        // Trigger map layer update when this view loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({ propertyId: @Model.PropertyId });
+            }
+        });
+    </script>
+}

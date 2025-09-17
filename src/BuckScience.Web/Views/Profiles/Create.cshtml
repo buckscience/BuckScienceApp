@@ -1,0 +1,76 @@
+@model BuckScience.Web.ViewModels.Profiles.ProfileCreateVm
+@{
+    ViewData["Title"] = "Create Profile";
+}
+
+<div class="container-fluid h-100 d-flex flex-column">
+    <div class="row flex-grow-1">
+        <div class="col-12 d-flex flex-column">
+            <div class="mb-4">
+                <h2>Create New Profile</h2>
+            </div>
+
+            <div class="row flex-grow-1">
+                <div class="col-12 d-flex flex-column">
+                    <div class="card flex-grow-1">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-user-plus me-2"></i>New Profile Details
+                            </h5>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <form asp-action="Create" asp-route-propertyId="@Model.PropertyId" method="post" class="flex-grow-1 d-flex flex-column">
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label">Profile Name</label>
+                                    <input asp-for="Name" class="form-control" placeholder="Enter a name for this profile (e.g., Brutus, Big Buck)" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="TagId" class="form-label">Tag</label>
+                                    <select asp-for="TagId" asp-items="Model.AvailableTags" class="form-select">
+                                        <option value="">Select a tag...</option>
+                                    </select>
+                                    <span asp-validation-for="TagId" class="text-danger"></span>
+                                    <div class="form-text">The profile will show all photos tagged with this tag.</div>
+                                </div>
+
+                                <div class="mb-4 flex-grow-1">
+                                    <label asp-for="ProfileStatus" class="form-label">Status</label>
+                                    <select asp-for="ProfileStatus" asp-items="Model.ProfileStatusOptions" class="form-select">
+                                    </select>
+                                    <span asp-validation-for="ProfileStatus" class="text-danger"></span>
+                                    <div class="form-text">Set the current status of this deer/profile.</div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mt-auto">
+                                    <a href="/properties/@Model.PropertyId/details" class="btn btn-custom-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-custom-primary">
+                                        <i class="fas fa-save me-1"></i>Create Profile
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // Trigger map layer update when this view loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({ propertyId: @Model.PropertyId });
+            }
+        });
+    </script>
+}

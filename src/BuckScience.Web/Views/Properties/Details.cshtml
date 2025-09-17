@@ -1,0 +1,1731 @@
+@model BuckScience.Web.ViewModels.Properties.PropertyDetailsVm
+@using BuckScience.Web.Helpers
+@{
+    ViewData["Title"] = $"{Model.Name} - Details";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="property-details">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="sidebar-title">@Model.Name</h2>
+        <a href="/properties" class="btn btn-custom-cancel btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Properties
+        </a>
+    </div>
+    <hr class="sidebar-title-separator" />
+
+    <div class="accordion" id="propertyDetailsAccordion">
+
+        <!-- Cameras Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header d-flex justify-content-between align-items-center" id="camerasHeading">
+                <button class="accordion-button flex-grow-1 fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#camerasCollapse" aria-expanded="true" aria-controls="camerasCollapse">
+                    <i class="fas fa-camera me-2"></i>
+                    Cameras <span class="badge badge-custom-primary ms-2 fs-7">@Model.Cameras.Count</span>
+                </button>
+            </h2>
+            <div id="camerasCollapse" class="accordion-collapse collapse show" aria-labelledby="camerasHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    @if (Model.Cameras.Any())
+                    {
+                        <!-- Camera Placement History Toggle -->
+                        <div class="mb-3 d-flex align-items-center">
+                            <!-- Toggle on the left -->
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="showHistoricalPlacements" checked>
+                            </div>
+
+                            <!-- Text with exact 30px spacing -->
+                            <label class="mb-0 fs-7" for="showHistoricalPlacements" style="margin-left: 20px;">
+                                <i class="fas fa-history me-1"></i>
+                                Show Historical Camera Placements
+                            </label>
+                        </div>
+
+                        
+                        <div class="container-fluid px-0">
+                            <div class="row g-3">
+                                @foreach (var camera in Model.Cameras)
+                                {
+                                    <div class="col-12">
+    <div class="card camera-card w-100" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
+        <div class="card-body p-3">
+            <!-- Title and Badge -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="card-title mb-0 fs-6">@camera.LocationName</h6>
+                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary") fs-7">
+                    @(camera.IsActive ? "Active" : "Inactive")
+                </span>
+            </div>
+
+            <!-- Camera Brand/Model -->
+            <p class="card-text text-muted mb-2 fs-7">
+                <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
+            </p>
+
+            <!-- Location -->
+            <p class="card-text text-muted mb-2 fs-7">
+                <i class="fas fa-map-marker-alt me-1"></i>
+                @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
+            </p>
+
+            <!-- Direction -->
+            <p class="card-text text-muted mb-2 fs-7">
+                <i class="fas fa-compass me-1"></i>
+                @{
+                    var compassDirection = DirectionHelper.FromFloat(camera.DirectionDegrees);
+                    var compassText = DirectionHelper.GetDisplayName(compassDirection);
+                }
+                @camera.DirectionDegrees.ToString("F0")° (@compassText)
+            </p>
+
+            <!-- Buttons -->
+            <div class="btn-group w-100 mt-2" role="group">
+                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); panToCameraLocation(@camera.Longitude, @camera.Latitude)" title="Focus on map">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)" title="View details">
+                    <i class="fas fa-circle-info"></i>
+                </button>
+                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-primary btn-sm fs-7 d-flex align-items-center justify-content-center" title="View photos" onclick="event.stopPropagation();">
+                    <i class="fas fa-images"></i>
+                </a>
+                <a href="/properties/@Model.Id/cameras/@camera.Id/edit" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="Edit camera" onclick="event.stopPropagation();">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm fs-7 d-flex align-items-center justify-content-center" title="Delete camera" onclick="event.stopPropagation();">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+                                }
+                            </div>
+                        </div>
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" style="min-width:unset; padding:0.25rem 0.75rem;">
+                            <i class="fas fa-plus me-1"></i> Add Camera
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No cameras configured for this property yet.</p>
+                            <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary">Add Camera</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Profiles Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header d-flex justify-content-between align-items-center" id="profilesHeading">
+                <button class="accordion-button collapsed flex-grow-1 fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#profilesCollapse" aria-expanded="false" aria-controls="profilesCollapse">
+                    <i class="fas fa-crosshairs me-2"></i>
+                    Profiles <span class="badge badge-custom-primary ms-2 fs-7">@Model.Profiles.Count</span>
+                </button>
+            </h2>
+            <div id="profilesCollapse" class="accordion-collapse collapse" aria-labelledby="profilesHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    @if (Model.Profiles.Any())
+                    {
+                        <div class="row g-2">
+                            @foreach (var profile in Model.Profiles)
+                            {
+                                <div class="col-12">
+                                    <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" style="cursor:pointer;">
+                                        <div class="position-relative">
+                                            <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover; height: 120px;">
+                                            <div class="position-absolute top-0 end-0 m-1">
+                                                <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus) fs-7">
+                                                    @profile.ProfileStatus
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body text-center mt-auto p-2">
+                                            <h6 class="card-title mb-0 fs-6">@profile.Name</h6>
+                                        </div>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                        <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" onclick="event.stopPropagation();">
+                            <i class="fas fa-plus me-1"></i> Add Profile
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-crosshairs fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No profiles for this property yet.</p>
+                            <a href="/properties/@Model.Id/profiles/create" class="btn btn-custom-primary">Add Profile</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="featuresHeading">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#featuresCollapse" aria-expanded="false" aria-controls="featuresCollapse">
+                    <i class="fas fa-map-marked-alt me-2"></i>
+                    Features <span class="badge badge-custom-primary ms-2 fs-7">@Model.Features.Count</span>
+                </button>
+            </h2>
+            <div id="featuresCollapse" class="accordion-collapse collapse" aria-labelledby="featuresHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    
+                    @if (Model.Features.Any())
+                    {
+                        <!-- Category Filter -->
+                        <div class="mb-3">
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <label class="form-label mb-0 me-2 fs-7">Filter by Category:</label>
+                                <button class="btn btn-outline-secondary btn-sm feature-category-filter active fs-7" data-category="all">
+                                    All (@Model.Features.Count)
+                                </button>
+                                @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                                {
+                                    <button class="btn btn-outline-secondary btn-sm feature-category-filter fs-7" data-category="@((int)categoryGroup.Key)">
+                                        @GetCategoryDisplayName(categoryGroup.Key) (@categoryGroup.Count())
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
+                        <!-- Features grouped by category -->
+                        @foreach (var categoryGroup in Model.Features.GroupBy(f => f.Category).OrderBy(g => g.Key))
+                        {
+                            var categoryId = $"featureCategory{(int)categoryGroup.Key}";
+                            <div class="feature-category-group" data-category="@((int)categoryGroup.Key)">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-muted mb-0 flex-grow-1 fs-6">
+                                        <i class="@GetCategoryIcon(categoryGroup.Key) me-1"></i>
+                                        @GetCategoryDisplayName(categoryGroup.Key) 
+                                        <span class="badge badge-custom-secondary ms-1 fs-7">@categoryGroup.Count()</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-secondary fs-7" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#@categoryId" aria-expanded="true" aria-controls="@categoryId">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div class="collapse show" id="@categoryId">
+                                    <div class="row g-2 mb-3">
+                                        @foreach (var feature in categoryGroup)
+                                        {
+                                            <div class="col-12">
+                                                <div class="card feature-card">
+                                                    <div class="card-body p-3 d-flex align-items-start">
+                                                        <div class="flex-grow-1">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div class="flex-grow-1">
+                                                                    <h6 class="card-title mb-1 fs-6">@feature.Name</h6>
+                                                                    <small class="text-muted fs-7">Type: @feature.TypeName</small>
+                                                                    @if (!string.IsNullOrEmpty(feature.Notes))
+                                                                    {
+                                                                        <p class="card-text text-muted mb-1 mt-1 fs-7">Notes: @feature.Notes</p>
+                                                                    }
+                                                                    @if (feature.CreatedAt.HasValue)
+                                                                    {
+                                                                        <small class="text-muted d-block fs-7">Added: @feature.CreatedAt.Value.ToString("MMM d, yyyy")</small>
+                                                                    }
+                                                                </div>
+                                                                <div class="btn-group" role="group">
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="focusPropertyFeature(@feature.Id)" title="Focus on map">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="mb-3">
+                        <button type="button" class="btn btn-custom-primary btn-sm fs-7 col-12" onclick="startDrawingFeature()">
+                            <i class="fas fa-crosshairs me-1"></i> Add Feature
+                        </button>
+                        <div class="text-center">
+                          <small class="text-muted ms-2 fs-7">Use the drawing tools to add property features</small>
+                        </div>
+
+                    </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No features for this property yet.</p>
+                            <p class="text-muted small">Use the drawing tools on the map to add features like bedding areas, travel corridors, water sources, etc.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Weights Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="featureWeightsHeading">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#featureWeightsCollapse" aria-expanded="false" aria-controls="featureWeightsCollapse">
+                    <i class="fas fa-balance-scale me-2"></i>
+                    Feature Weights & Season Settings
+                </button>
+            </h2>
+            <div id="featureWeightsCollapse" class="accordion-collapse collapse" aria-labelledby="featureWeightsHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    <div id="feature-weights-content">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Loading feature weights...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Season Month Override Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="seasonOverridesHeading">
+                <button class="accordion-button collapsed fs-6 py-2" type="button" data-bs-toggle="collapse" data-bs-target="#seasonOverridesCollapse" aria-expanded="false" aria-controls="seasonOverridesCollapse">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Custom Season Calendars
+                </button>
+            </h2>
+            <div id="seasonOverridesCollapse" class="accordion-collapse collapse" aria-labelledby="seasonOverridesHeading" data-bs-parent="#propertyDetailsAccordion">
+                <div class="accordion-body">
+                    <div id="season-overrides-content">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Loading season overrides...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@functions {
+    private string GetProfileStatusBadgeClass(BuckScience.Domain.Enums.ProfileStatus status)
+    {
+        return status switch
+        {
+            BuckScience.Domain.Enums.ProfileStatus.Watching => "badge-custom-info",
+            BuckScience.Domain.Enums.ProfileStatus.HitList => "badge-custom-warning",
+            BuckScience.Domain.Enums.ProfileStatus.Harvested => "badge-custom-success",
+            _ => "badge-custom-secondary"
+        };
+    }
+
+    private string GetCategoryDisplayName(BuckScience.Domain.Enums.FeatureCategory category)
+    {
+        return category switch
+        {
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "Topographical",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "Food Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "Water Resources",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "Bedding & Cover",
+            BuckScience.Domain.Enums.FeatureCategory.Other => "Other",
+            _ => category.ToString()
+        };
+    }
+
+    private string GetCategoryIcon(BuckScience.Domain.Enums.FeatureCategory category)
+    {
+        return category switch
+        {
+            BuckScience.Domain.Enums.FeatureCategory.Topographical => "fas fa-xl fa-route",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceFood => "fas fa-xl fa-wheat-awn",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceWater => "fas fa-xl fa-water",
+            BuckScience.Domain.Enums.FeatureCategory.ResourceBedding => "fas fa-xl fa-tree",
+            BuckScience.Domain.Enums.FeatureCategory.Other => "fas fa-xl fa-circle-question",
+            _ => "fas fa-circle-question"
+        };
+    }
+}
+
+@section Styles {
+    <style>
+        /* Custom font sizes for compact layout */
+        .fs-7 {
+            font-size: 0.75rem !important;
+        }
+        
+        .fs-6 {
+            font-size: 0.875rem !important;
+        }
+        
+        .camera-card,
+        .profile-card,
+        .feature-card {
+            height: 100%;
+            transition: all 0.15s ease;
+        }
+        
+        .camera-card:hover,
+        .profile-card:hover,
+        .feature-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* Optimize accordion body padding */
+        .accordion-body {
+            padding: 1rem;
+        }
+        
+        /* Optimize card spacing */
+        .card-body {
+            padding: 0.75rem;
+        }
+        
+        /* Fix: Remove padding for single-column camera cards */
+        .property-details .row > .col-12 {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        
+        /* Better responsive card sizing for sidebar */
+        @@media (min-width: 576px) {
+            .col-sm-6 {
+                min-width: 180px; /* Optimal for 400px sidebar */
+            }
+        }
+        
+        /* Tighter spacing for sidebar layout */
+        .property-details .row {
+            margin: 0 -0.5rem;
+        }
+        
+        .property-details .row > * {
+            padding: 0 0.5rem;
+        }
+
+        /* Feature category collapse styling */
+        .feature-category-group .collapse {
+            transition: all 0.3s ease;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] {
+            border: none;
+            background: transparent;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"]:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-category-group button[data-bs-toggle="collapse"] i {
+            transition: transform 0.2s ease;
+        }
+        
+        /* Compact button styling */
+        .btn-sm.fs-7 {
+            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
+        }
+        
+        /* Optimize badge sizing */
+        .badge.fs-7 {
+            font-size: 0.65rem !important;
+            padding: 0.2em 0.4em;
+        }
+
+        /* Feature weights styling */
+        .feature-weights-panel {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .feature-weight-item {
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .weight-slider {
+            margin: 0;
+        }
+
+        .seasonal-weights-panel {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+        }
+
+        .seasonal-weights-panel .form-label {
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .seasonal-weight-display {
+            display: block;
+            text-align: center;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .fs-8 {
+            font-size: 0.7rem !important;
+        }
+
+        .weight-display {
+            font-weight: 600;
+            color: #0d6efd;
+            background-color: #e7f1ff;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .feature-category-weights h6 {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.25rem;
+        }
+
+        .weighting-summary {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .weighting-summary .summary-content p {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .weighting-summary .alert-heading {
+            color: #0d6efd;
+        }
+
+        /* Category collapse styling */
+        .category-header {
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .category-header:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .category-chevron {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        /* Season notice styling */
+        .season-notice {
+            font-size: 0.75rem;
+            padding: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        .alert-sm {
+            padding: 0.375rem 0.75rem;
+        }
+
+        /* Season overrides styling */
+        .month-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .month-checkbox {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem 0.25rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
+            min-height: 36px;
+            position: relative;
+        }
+
+        .month-checkbox input[type="checkbox"] {
+            display: none;
+        }
+
+        .month-checkbox .month-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6c757d;
+            transition: color 0.2s ease;
+        }
+
+        .month-checkbox:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+
+        .month-checkbox.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        .month-checkbox.active .month-label {
+            color: #ffffff;
+        }
+
+        .month-checkbox.default-month {
+            border-color: #28a745;
+            border-width: 2px;
+        }
+
+        .month-checkbox.default-month.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .season-override-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            background-color: #fafafa;
+        }
+
+        .season-summary {
+            border-top: 1px solid #dee2e6;
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .fs-8 {
+            font-size: 0.7rem !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        function navigateToCamera(cameraId) {
+            // Use AJAX navigation to preserve map state
+            const url = `/cameras/${cameraId}/details`;
+            
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed: ${response.status}`);
+                return response.text();
+            })
+            .then(html => {
+                document.getElementById('sidebar-content').innerHTML = html;
+                document.dispatchEvent(new CustomEvent('sidebar:loaded', { detail: { url } }));
+                history.pushState({ url }, '', url);
+            })
+            .catch(error => {
+                console.error('Navigation error:', error);
+                // Fallback to standard navigation
+                window.location.href = url;
+            });
+        }
+
+        function navigateToProfile(profileId) {
+            // Use standard MVC navigation
+            window.location.href = `/profiles/${profileId}`;
+        }
+
+        function startDrawingFeature() {
+            console.log('Start drawing feature');
+            
+            // Check if we have the drawing control available
+            if (window.App && window.App._draw) {
+                // Change to polygon drawing mode by default
+                window.App._draw.changeMode('draw_polygon');
+                
+                // Show instructions
+                const instructionDiv = document.createElement('div');
+                instructionDiv.id = 'drawing-instructions';
+                instructionDiv.className = 'alert alert-info position-fixed';
+                instructionDiv.style.cssText = 'top: 10px; right: 60px; z-index: 1000; max-width: 300px;';
+                instructionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Drawing Mode Active</strong><br>
+                            <small>Click points to draw a polygon. Double-click to finish. You can also use the line or point tools in the map toolbar.</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-sm" onclick="cancelDrawing()"></button>
+                    </div>
+                `;
+                document.body.appendChild(instructionDiv);
+            } else {
+                if (window.App && window.App.showModal) {
+                    window.App.showModal('Error', 'Drawing tools not available. Please refresh the page and try again.', 'error');
+                } else {
+                    alert('Drawing tools not available. Please refresh the page and try again.');
+                }
+            }
+        }
+
+        function focusPropertyFeature(featureId) {
+            if (window.App && window.App.focusPropertyFeature) {
+                window.App.focusPropertyFeature(featureId);
+            } else {
+                console.log('Focus feature function not available:', featureId);
+            }
+        }
+
+        function editFeature(featureId) {
+            if (window.App && window.App.editPropertyFeature) {
+                window.App.editPropertyFeature(featureId);
+            } else {
+                console.log('Edit feature:', featureId);
+            }
+        }
+
+        function deleteFeature(featureId) {
+            if (window.App && window.App.deletePropertyFeature) {
+                window.App.deletePropertyFeature(featureId);
+            } else {
+                console.log('Delete feature:', featureId);
+            }
+        }
+
+        // Initialize property features when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set property coordinates for global access
+            window.App.propertyCoords = {
+                lat: @Model.Latitude,
+                lng: @Model.Longitude
+            };
+            
+            if (window.App && window.App.initializePropertyFeatures) {
+                window.App.initializePropertyFeatures(@Model.Id);
+            }
+            
+            // Trigger map layer update for this property
+            if (window.App && window.App.triggerMapLayerUpdate) {
+                window.App.triggerMapLayerUpdate({ propertyId: @Model.Id });
+            }
+
+            // Initialize camera placement history toggle
+            initializeCameraPlacementHistoryToggle();
+
+            // Initialize feature weights loading
+            initializeFeatureWeights();
+
+            // Initialize season overrides loading
+            initializeSeasonOverrides();
+        });
+
+        // Function to initialize camera placement history toggle functionality
+        function initializeCameraPlacementHistoryToggle() {
+            const toggle = document.getElementById('showHistoricalPlacements');
+            if (!toggle) return;
+
+            // Set initial state
+            window.App._showHistoricalPlacements = toggle.checked;
+
+            // Handle toggle changes
+            toggle.addEventListener('change', function() {
+                const showHistorical = this.checked;
+                window.App._showHistoricalPlacements = showHistorical;
+                
+                console.log('Camera placement history toggle changed:', showHistorical);
+                
+                // Reload camera markers with new setting
+                if (window.App && window.App._currentPropertyId) {
+                    // Force reload by resetting the flag and calling displayCamerasOnMap
+                    window.App._displayingCameras = false;
+                    
+                    // Trigger map layer update which will call displayCamerasOnMap
+                    if (window.App.triggerMapLayerUpdate) {
+                        window.App.triggerMapLayerUpdate({ propertyId: window.App._currentPropertyId });
+                    }
+                }
+            });
+        }
+
+        function cancelDrawing() {
+            // Remove instructions
+            const instructionDiv = document.getElementById('drawing-instructions');
+            if (instructionDiv) {
+                instructionDiv.remove();
+            }
+            
+            // Return to simple select mode
+            if (window.App && window.App._draw) {
+                window.App._draw.changeMode('simple_select');
+            }
+        }
+
+        // Make functions available globally for onclick handlers
+        window.startDrawingFeature = startDrawingFeature;
+        window.cancelDrawing = cancelDrawing;
+        window.focusPropertyFeature = focusPropertyFeature;
+        window.editFeature = editFeature;
+        window.deleteFeature = deleteFeature;
+        window.panToCameraLocation = function(lng, lat) {
+            if (window.App && window.App.panToCameraLocation) {
+                window.App.panToCameraLocation(lng, lat);
+            } else {
+                console.log('Pan to camera location:', lng, lat);
+            }
+        };
+
+        // Feature category filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.feature-category-filter');
+            const categoryGroups = document.querySelectorAll('.feature-category-group');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetCategory = this.getAttribute('data-category');
+                    
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show/hide category groups
+                    if (targetCategory === 'all') {
+                        categoryGroups.forEach(group => group.style.display = 'block');
+                    } else {
+                        categoryGroups.forEach(group => {
+                            const groupCategory = group.getAttribute('data-category');
+                            group.style.display = groupCategory === targetCategory ? 'block' : 'none';
+                        });
+                    }
+                });
+            });
+
+            // Handle collapse button icon rotation for feature category toggles only
+            // (Main accordion buttons are handled automatically by Bootstrap)
+            document.querySelectorAll('.feature-category-group [data-bs-toggle="collapse"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        // Toggle rotation class after a small delay to let Bootstrap process the collapse
+                        setTimeout(() => {
+                            const target = document.querySelector(this.getAttribute('data-bs-target'));
+                            if (target) {
+                                if (target.classList.contains('show')) {
+                                    icon.classList.remove('fa-chevron-down');
+                                    icon.classList.add('fa-chevron-up');
+                                } else {
+                                    icon.classList.remove('fa-chevron-up');
+                                    icon.classList.add('fa-chevron-down');
+                                }
+                            }
+                        }, 200);
+                    }
+                });
+            });
+        });
+
+        // Feature weights functionality
+        function initializeFeatureWeights() {
+            const accordion = document.getElementById('featureWeightsCollapse');
+            if (!accordion) return;
+
+            let featureWeightsLoaded = false;
+
+            // Load feature weights when accordion is shown
+            accordion.addEventListener('shown.bs.collapse', function() {
+                if (!featureWeightsLoaded) {
+                    loadFeatureWeights();
+                    featureWeightsLoaded = true;
+                }
+            });
+        }
+
+        async function loadFeatureWeights() {
+            const contentDiv = document.getElementById('feature-weights-content');
+            if (!contentDiv) return;
+
+            const propertyId = @Model.Id;
+
+            try {
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const featureWeights = await response.json();
+                renderFeatureWeights(featureWeights);
+            } catch (error) {
+                console.error('Error loading feature weights:', error);
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load feature weights. Please try again.
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadFeatureWeights()">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderFeatureWeights(featureWeights) {
+            const contentDiv = document.getElementById('feature-weights-content');
+            if (!contentDiv) return;
+
+            // Group by category
+            const categories = {
+                'ResourceFood': { name: 'Food Resources', icon: 'fas fa-wheat-awn', items: [] },
+                'ResourceWater': { name: 'Water Resources', icon: 'fas fa-water', items: [] },
+                'ResourceBedding': { name: 'Bedding & Cover', icon: 'fas fa-tree', items: [] },
+                'Topographical': { name: 'Topographical', icon: 'fas fa-route', items: [] }
+            };
+
+            featureWeights.forEach(fw => {
+                const categoryKey = fw.category === 1 ? 'Topographical' :
+                                   fw.category === 2 ? 'ResourceFood' :
+                                   fw.category === 3 ? 'ResourceWater' :
+                                   fw.category === 4 ? 'ResourceBedding' : 'Other';
+                
+                if (categories[categoryKey]) {
+                    categories[categoryKey].items.push(fw);
+                }
+            });
+
+            let html = `
+                <div class="feature-weights-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Adjust Feature Importance</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetToDefaults()">
+                                <i class="fas fa-undo me-1"></i> Reset
+                            </button>
+                            <button type="button" class="btn btn-custom-primary" onclick="saveFeatureWeights()">
+                                <i class="fas fa-save me-1"></i> Save
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted small mb-3">
+                        Adjust how much each feature type influences deer movement on your property. 
+                        Higher values mean greater importance. You can also set seasonal overrides.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fs-7 mb-1">Season View:</label>
+                        <select class="form-select form-select-sm" id="seasonSelector" onchange="updateSeasonView()">
+                            <option value="all">All Seasons (Default)</option>
+                            <option value="PreRut">Pre-Rut</option>
+                            <option value="Rut">Rut</option>
+                            <option value="PostRut">Post-Rut</option>
+                        </select>
+                    </div>
+            `;
+
+            Object.entries(categories).forEach(([key, category]) => {
+                if (category.items.length === 0) return;
+
+                const categoryId = `category-${key}`;
+                html += `
+                    <div class="feature-category-weights mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2 category-header" 
+                             data-bs-toggle="collapse" data-bs-target="#${categoryId}" 
+                             aria-expanded="true" aria-controls="${categoryId}" 
+                             style="cursor: pointer;">
+                            <h6 class="text-muted mb-0 fs-6">
+                                <i class="${category.icon} me-1"></i>
+                                ${category.name}
+                                <span class="badge badge-custom-secondary ms-2 fs-7">${category.items.length}</span>
+                            </h6>
+                            <i class="fas fa-chevron-down category-chevron" style="transition: transform 0.2s ease;"></i>
+                        </div>
+                        <div class="collapse show feature-weights-list" id="${categoryId}">
+                `;
+
+                category.items.forEach(fw => {
+                    html += `
+                        <div class="feature-weight-item mb-3" data-classification="${fw.classificationType}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0 fs-7">${fw.classificationName}</label>
+                                <small class="text-muted weight-display">${fw.effectiveWeight.toFixed(2)}</small>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <input type="range" 
+                                           class="form-range weight-slider" 
+                                           min="0" max="1" step="0.1" 
+                                           value="${fw.userWeight ?? fw.defaultWeight}"
+                                           data-classification="${fw.classificationType}"
+                                           data-default="${fw.defaultWeight}"
+                                           data-prerutweight="${fw.seasonalWeights?.PreRut ?? fw.effectiveWeight}"
+                                           data-rutweight="${fw.seasonalWeights?.Rut ?? fw.effectiveWeight}"
+                                           data-postrutweight="${fw.seasonalWeights?.PostRut ?? fw.effectiveWeight}"
+                                           onchange="updateWeightDisplay(this)">
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-outline-secondary btn-sm w-100 fs-7" 
+                                            onclick="toggleSeasonalWeights(${fw.classificationType})">
+                                        <i class="fas fa-calendar-alt me-1"></i> Seasons
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="seasonal-weights-panel mt-2" id="seasonal-${fw.classificationType}" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Pre-Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.PreRut ?? fw.effectiveWeight}"
+                                               data-season="PreRut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.PreRut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.Rut ?? fw.effectiveWeight}"
+                                               data-season="Rut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.Rut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fs-8">Post-Rut</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                               value="${fw.seasonalWeights?.PostRut ?? fw.effectiveWeight}"
+                                               data-season="PostRut" data-classification="${fw.classificationType}"
+                                               onchange="updateSeasonalWeight(this)">
+                                        <small class="seasonal-weight-display">${(fw.seasonalWeights?.PostRut ?? fw.effectiveWeight).toFixed(2)}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            contentDiv.innerHTML = html;
+
+            // Store original data for reset functionality
+            window.originalFeatureWeights = featureWeights;
+            
+            // Initialize category collapse functionality
+            initializeCategoryCollapse();
+        }
+
+        function initializeCategoryCollapse() {
+            // Add click handlers for category headers
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const chevron = this.querySelector('.category-chevron');
+                    const targetId = this.getAttribute('data-bs-target');
+                    const target = document.querySelector(targetId);
+                    
+                    if (target) {
+                        // Toggle chevron rotation
+                        if (target.classList.contains('show')) {
+                            chevron.style.transform = 'rotate(180deg)';
+                        } else {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                });
+            });
+            
+            // Add event listeners for Bootstrap collapse events
+            document.querySelectorAll('.feature-weights-list').forEach(collapse => {
+                collapse.addEventListener('hidden.bs.collapse', function() {
+                    const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
+                    if (header) {
+                        const chevron = header.querySelector('.category-chevron');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                });
+                
+                collapse.addEventListener('shown.bs.collapse', function() {
+                    const header = document.querySelector(`[data-bs-target="#${this.id}"]`);
+                    if (header) {
+                        const chevron = header.querySelector('.category-chevron');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(180deg)';
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateWeightDisplay(slider) {
+            const weightDisplay = slider.closest('.feature-weight-item').querySelector('.weight-display');
+            weightDisplay.textContent = parseFloat(slider.value).toFixed(2);
+        }
+
+        function updateSeasonalWeight(slider) {
+            const weightDisplay = slider.parentNode.querySelector('.seasonal-weight-display');
+            weightDisplay.textContent = parseFloat(slider.value).toFixed(2);
+        }
+
+        function toggleSeasonalWeights(classification) {
+            const panel = document.getElementById(`seasonal-${classification}`);
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function resetToDefaults() {
+            if (!window.originalFeatureWeights) return;
+
+            window.originalFeatureWeights.forEach(fw => {
+                const slider = document.querySelector(`input[data-classification="${fw.classificationType}"].weight-slider`);
+                if (slider) {
+                    slider.value = fw.defaultWeight;
+                    updateWeightDisplay(slider);
+                }
+
+                // Reset seasonal weights
+                ['PreRut', 'Rut', 'PostRut'].forEach(season => {
+                    const seasonalSlider = document.querySelector(`input[data-season="${season}"][data-classification="${fw.classificationType}"]`);
+                    if (seasonalSlider) {
+                        seasonalSlider.value = fw.defaultWeight;
+                        updateSeasonalWeight(seasonalSlider);
+                    }
+                });
+            });
+        }
+
+        async function saveFeatureWeights() {
+            const saveButton = document.querySelector('button[onclick="saveFeatureWeights()"]');
+            const originalText = saveButton.innerHTML;
+            
+            try {
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                saveButton.disabled = true;
+
+                const featureWeights = {};
+
+                // Collect all weight data
+                document.querySelectorAll('.feature-weight-item').forEach(item => {
+                    const classification = parseInt(item.dataset.classification);
+                    const slider = item.querySelector('.weight-slider');
+                    const userWeight = parseFloat(slider.value);
+
+                    // Collect seasonal weights
+                    const seasonalWeights = {};
+                    const seasonalSliders = item.querySelectorAll('input[data-season]');
+                    seasonalSliders.forEach(seasonalSlider => {
+                        const season = seasonalSlider.dataset.season;
+                        seasonalWeights[season] = parseFloat(seasonalSlider.value);
+                    });
+
+                    featureWeights[classification] = {
+                        userWeight: userWeight,
+                        seasonalWeights: Object.keys(seasonalWeights).length > 0 ? seasonalWeights : null
+                    };
+                });
+
+                const propertyId = @Model.Id;
+                const response = await fetch(`/properties/${propertyId}/feature-weights`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({ featureWeights })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Show success message
+                showFeatureWeightsFeedback('success', 'Feature weights saved successfully!');
+                
+                // Generate and show summary
+                setTimeout(() => {
+                    showWeightingSummary();
+                }, 500);
+                
+                // Reload to get the latest effective weights
+                setTimeout(() => {
+                    loadFeatureWeights();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error saving feature weights:', error);
+                showFeatureWeightsFeedback('error', 'Failed to save feature weights. Please try again.');
+            } finally {
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }
+        }
+
+        function showFeatureWeightsFeedback(type, message) {
+            const existingAlert = document.querySelector('.feature-weights-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show feature-weights-alert`;
+            alertDiv.innerHTML = `
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const contentDiv = document.getElementById('feature-weights-content');
+            contentDiv.insertBefore(alertDiv, contentDiv.firstChild);
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function updateSeasonView() {
+            const selector = document.getElementById('seasonSelector');
+            const selectedSeason = selector.value;
+            
+            console.log('Season view changed to:', selectedSeason);
+            
+            // Update all weight sliders to show the appropriate seasonal values
+            document.querySelectorAll('.weight-slider').forEach(slider => {
+                const classification = slider.dataset.classification;
+                let newValue;
+                
+                if (selectedSeason === 'all') {
+                    // Show default/user weight
+                    newValue = slider.dataset.default;
+                } else {
+                    // Show seasonal weight (fallback to default if no seasonal weight)
+                    const seasonalAttr = `data-${selectedSeason.toLowerCase()}weight`;
+                    newValue = slider.getAttribute(seasonalAttr) || slider.dataset.default;
+                }
+                
+                slider.value = newValue;
+                updateWeightDisplay(slider);
+            });
+            
+            // Update the season selector display style to indicate active season
+            if (selectedSeason === 'all') {
+                selector.style.backgroundColor = '';
+                selector.style.borderColor = '';
+            } else {
+                selector.style.backgroundColor = '#e7f1ff';
+                selector.style.borderColor = '#0d6efd';
+            }
+            
+            // Show helpful text
+            const existingNotice = document.querySelector('.season-notice');
+            if (existingNotice) {
+                existingNotice.remove();
+            }
+            
+            if (selectedSeason !== 'all') {
+                const notice = document.createElement('div');
+                notice.className = 'alert alert-info alert-sm season-notice mt-2';
+                notice.innerHTML = `
+                    <i class="fas fa-info-circle me-1"></i>
+                    <small>Now viewing <strong>${selectedSeason === 'PreRut' ? 'Pre-Rut' : selectedSeason === 'PostRut' ? 'Post-Rut' : selectedSeason}</strong> seasonal weights. 
+                    Adjust sliders to set seasonal overrides, or switch back to "All Seasons" to edit default weights.</small>
+                `;
+                
+                selector.parentNode.appendChild(notice);
+            }
+        }
+
+        function showWeightingSummary() {
+            if (!window.originalFeatureWeights) return;
+
+            const summaryData = generateWeightingSummary();
+            const contentDiv = document.getElementById('feature-weights-content');
+            
+            // Remove existing summary
+            const existingSummary = contentDiv.querySelector('.weighting-summary');
+            if (existingSummary) {
+                existingSummary.remove();
+            }
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'alert alert-info weighting-summary mt-3';
+            summaryDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-2">
+                            <i class="fas fa-chart-line me-2"></i>Your Current Weighting Summary
+                        </h6>
+                        <div class="summary-content">
+                            ${summaryData.summary}
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+
+            contentDiv.appendChild(summaryDiv);
+        }
+
+        function generateWeightingSummary() {
+            const weightData = [];
+            const seasonalData = { PreRut: [], Rut: [], PostRut: [] };
+
+            // Collect current weight data
+            document.querySelectorAll('.feature-weight-item').forEach(item => {
+                const classification = parseInt(item.dataset.classification);
+                const slider = item.querySelector('.weight-slider');
+                const name = item.querySelector('.form-label').textContent;
+                const weight = parseFloat(slider.value);
+
+                weightData.push({ name, weight, classification });
+
+                // Collect seasonal data
+                ['PreRut', 'Rut', 'PostRut'].forEach(season => {
+                    const seasonalSlider = item.querySelector(`input[data-season="${season}"]`);
+                    if (seasonalSlider) {
+                        const seasonalWeight = parseFloat(seasonalSlider.value);
+                        seasonalData[season].push({ name, weight: seasonalWeight, classification });
+                    }
+                });
+            });
+
+            // Sort by weight (highest first)
+            weightData.sort((a, b) => b.weight - a.weight);
+            Object.keys(seasonalData).forEach(season => {
+                seasonalData[season].sort((a, b) => b.weight - a.weight);
+            });
+
+            let summary = '<div class="row g-3">';
+
+            // Overall priorities
+            const topFeatures = weightData.slice(0, 3);
+            const lowFeatures = weightData.filter(f => f.weight <= 0.3);
+
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Overall Priorities:</strong></p>';
+            summary += '<p class="mb-1">Your current weighting gives highest importance to: ';
+            summary += topFeatures.map(f => `<strong>${f.name}</strong> (${f.weight.toFixed(1)})`).join(', ');
+            summary += '.</p>';
+
+            if (lowFeatures.length > 0) {
+                summary += '<p class="mb-1">Lower priority features: ';
+                summary += lowFeatures.map(f => f.name).join(', ');
+                summary += '.</p>';
+            }
+            summary += '</div>';
+
+            // Seasonal insights
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Seasonal Patterns:</strong></p>';
+
+            Object.entries(seasonalData).forEach(([season, features]) => {
+                if (features.length > 0) {
+                    const topSeasonal = features.slice(0, 2);
+                    const seasonName = season === 'PreRut' ? 'Pre-Rut' : 
+                                     season === 'PostRut' ? 'Post-Rut' : season;
+                    summary += `<p class="mb-1 small"><strong>${seasonName}:</strong> `;
+                    summary += topSeasonal.map(f => `${f.name} (${f.weight.toFixed(1)})`).join(', ');
+                    summary += '</p>';
+                }
+            });
+            summary += '</div>';
+
+            // Movement insights
+            const bedding = weightData.find(f => f.name.toLowerCase().includes('bedding'));
+            const water = weightData.find(f => f.name.toLowerCase().includes('water') || f.name.toLowerCase().includes('pond'));
+            const food = weightData.find(f => f.name.toLowerCase().includes('food') || f.name.toLowerCase().includes('crop'));
+            const pinchPoint = weightData.find(f => f.name.toLowerCase().includes('pinch'));
+
+            summary += '<div class="col-12">';
+            summary += '<p class="mb-2"><strong>Movement Prediction Impact:</strong></p>';
+            
+            if (bedding && bedding.weight > 0.7) {
+                summary += '<p class="mb-1 small">• High bedding area weights suggest deer will prefer secure resting locations.</p>';
+            }
+            if (food && food.weight > 0.7) {
+                summary += '<p class="mb-1 small">• Strong food source emphasis will highlight feeding patterns.</p>';
+            }
+            if (pinchPoint && pinchPoint.weight > 0.8) {
+                summary += '<p class="mb-1 small">• High pinch point weights will emphasize natural travel bottlenecks.</p>';
+            }
+            if (water && water.weight > 0.6) {
+                summary += '<p class="mb-1 small">• Water source importance will affect daily movement to drinking locations.</p>';
+            }
+            summary += '</div>';
+
+            summary += '</div>';
+
+            return { summary, weightData, seasonalData };
+        }
+
+        // Season overrides functionality
+        function initializeSeasonOverrides() {
+            const accordion = document.getElementById('seasonOverridesCollapse');
+            if (!accordion) return;
+
+            let seasonOverridesLoaded = false;
+
+            // Load season overrides when accordion is shown
+            accordion.addEventListener('shown.bs.collapse', function() {
+                if (!seasonOverridesLoaded) {
+                    loadSeasonOverrides();
+                    seasonOverridesLoaded = true;
+                }
+            });
+        }
+
+        async function loadSeasonOverrides() {
+            const contentDiv = document.getElementById('season-overrides-content');
+            if (!contentDiv) return;
+
+            const propertyId = @Model.Id;
+
+            try {
+                // Load both seasons metadata and property overrides
+                const [seasonsResponse, overridesResponse] = await Promise.all([
+                    fetch('/seasons', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }),
+                    fetch(`/properties/${propertyId}/season-overrides`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                ]);
+
+                if (!seasonsResponse.ok || !overridesResponse.ok) {
+                    throw new Error('Failed to load season data');
+                }
+
+                const seasons = await seasonsResponse.json();
+                const overrides = await overridesResponse.json();
+                
+                renderSeasonOverrides(seasons, overrides);
+            } catch (error) {
+                console.error('Error loading season overrides:', error);
+                contentDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load season overrides. Please try again.
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadSeasonOverrides()">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSeasonOverrides(seasons, overrides) {
+            const contentDiv = document.getElementById('season-overrides-content');
+            if (!contentDiv) return;
+
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            let html = `
+                <div class="season-overrides-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Customize Season Calendars</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-warning" onclick="resetSeasonOverrides()">
+                                <i class="fas fa-undo me-1"></i> Reset All
+                            </button>
+                            <button type="button" class="btn btn-custom-primary" onclick="saveSeasonOverrides()">
+                                <i class="fas fa-save me-1"></i> Save
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted small mb-4">
+                        Customize when each hunting season occurs on your property. This affects how seasonal feature weights are applied.
+                        Click on months to include them in each season. Multiple seasons can overlap.
+                    </p>
+
+                    <div class="season-overrides-list">
+            `;
+
+            // Build lookup of current overrides
+            const overrideLookup = {};
+            if (overrides.seasonOverrides) {
+                overrides.seasonOverrides.forEach(override => {
+                    overrideLookup[override.season] = override;
+                });
+            }
+
+            seasons.forEach(season => {
+                const override = overrideLookup[season.season];
+                const activeMonths = override ? override.customMonths : season.defaultMonths;
+                const hasOverride = override ? override.hasOverride : false;
+
+                html += `
+                    <div class="season-override-item mb-4" data-season="${season.season}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 d-flex align-items-center">
+                                <span class="season-name">${season.seasonName}</span>
+                                ${hasOverride ? '<span class="badge badge-custom-warning ms-2 fs-8">Custom</span>' : '<span class="badge badge-custom-secondary ms-2 fs-8">Default</span>'}
+                            </h6>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="resetSeasonToDefault('${season.season}')">
+                                <i class="fas fa-undo me-1"></i> Reset
+                            </button>
+                        </div>
+                        
+                        <div class="month-selector-grid mb-2">
+                `;
+
+                // Add month checkboxes
+                for (let month = 1; month <= 12; month++) {
+                    const isActive = activeMonths.includes(month);
+                    const isDefault = season.defaultMonths.includes(month);
+                    
+                    html += `
+                        <label class="month-checkbox ${isActive ? 'active' : ''} ${isDefault ? 'default-month' : ''}" 
+                               title="${monthNames[month-1]} ${isDefault ? '(default)' : ''}">
+                            <input type="checkbox" 
+                                   data-season="${season.season}" 
+                                   data-month="${month}" 
+                                   ${isActive ? 'checked' : ''}
+                                   onchange="updateSeasonMonth(this)">
+                            <span class="month-label">${monthNames[month-1]}</span>
+                        </label>
+                    `;
+                }
+
+                html += `
+                        </div>
+                        <div class="season-summary">
+                            <small class="text-muted">
+                                <strong>Default:</strong> ${season.defaultMonths.map(m => monthNames[m-1]).join(', ')}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+
+            // Store original data for reset functionality
+            window.originalSeasonOverrides = { seasons, overrides };
+        }
+
+        function updateSeasonMonth(checkbox) {
+            const seasonItem = checkbox.closest('.season-override-item');
+            const season = checkbox.dataset.season;
+            const month = parseInt(checkbox.dataset.month);
+            
+            // Update the visual state
+            const label = checkbox.closest('.month-checkbox');
+            if (checkbox.checked) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+
+            // Update the custom badge
+            updateSeasonBadge(seasonItem, season);
+        }
+
+        function updateSeasonBadge(seasonItem, season) {
+            if (!window.originalSeasonOverrides) return;
+
+            const seasonData = window.originalSeasonOverrides.seasons.find(s => s.season == season);
+            if (!seasonData) return;
+
+            const checkboxes = seasonItem.querySelectorAll('input[type="checkbox"]');
+            const selectedMonths = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.dataset.month));
+
+            const defaultMonths = seasonData.defaultMonths;
+            const isCustom = !arraysEqual(selectedMonths.sort(), defaultMonths.sort());
+
+            const badge = seasonItem.querySelector('.badge');
+            if (isCustom) {
+                badge.className = 'badge badge-custom-warning ms-2 fs-8';
+                badge.textContent = 'Custom';
+            } else {
+                badge.className = 'badge badge-custom-secondary ms-2 fs-8';
+                badge.textContent = 'Default';
+            }
+        }
+
+        function resetSeasonToDefault(season) {
+            if (!window.originalSeasonOverrides) return;
+
+            const seasonData = window.originalSeasonOverrides.seasons.find(s => s.season == season);
+            if (!seasonData) return;
+
+            const seasonItem = document.querySelector(`[data-season="${season}"]`);
+            if (!seasonItem) return;
+
+            // Reset all checkboxes to default state
+            const checkboxes = seasonItem.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const month = parseInt(checkbox.dataset.month);
+                const shouldBeChecked = seasonData.defaultMonths.includes(month);
+                
+                checkbox.checked = shouldBeChecked;
+                const label = checkbox.closest('.month-checkbox');
+                if (shouldBeChecked) {
+                    label.classList.add('active');
+                } else {
+                    label.classList.remove('active');
+                }
+            });
+
+            // Update badge
+            updateSeasonBadge(seasonItem, season);
+        }
+
+        function resetSeasonOverrides() {
+            if (!window.originalSeasonOverrides) return;
+
+            window.originalSeasonOverrides.seasons.forEach(season => {
+                resetSeasonToDefault(season.season);
+            });
+        }
+
+        async function saveSeasonOverrides() {
+            const saveButton = document.querySelector('button[onclick="saveSeasonOverrides()"]');
+            const originalText = saveButton.innerHTML;
+            
+            try {
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+                saveButton.disabled = true;
+
+                const seasonOverrides = [];
+
+                // Collect all season override data - we need to process ALL seasons
+                document.querySelectorAll('.season-override-item').forEach(item => {
+                    const season = parseInt(item.dataset.season); // Convert to integer for enum
+                    const checkboxes = item.querySelectorAll('input[type="checkbox"]');
+                    const selectedMonths = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => parseInt(cb.dataset.month));
+
+                    // Get the original season data to compare with defaults
+                    const originalSeasonData = window.originalSeasonOverrides?.seasons.find(s => s.season == season);
+                    const defaultMonths = originalSeasonData ? originalSeasonData.defaultMonths : [];
+                    
+                    // Check if this is different from default
+                    const isCustom = !arraysEqual(selectedMonths.sort(), defaultMonths.sort());
+                    
+                    if (isCustom && selectedMonths.length > 0) {
+                        // Send custom months
+                        seasonOverrides.push({
+                            season: season,
+                            customMonths: selectedMonths,
+                            removeOverride: false
+                        });
+                    } else if (!isCustom) {
+                        // Reset to default (remove override)
+                        seasonOverrides.push({
+                            season: season,
+                            customMonths: null,
+                            removeOverride: true
+                        });
+                    }
+                });
+
+                const propertyId = @Model.Id;
+                const response = await fetch(`/properties/${propertyId}/season-overrides`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({ seasonOverrides })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Show success message
+                showSeasonOverridesFeedback('success', 'Season calendars saved successfully!');
+                
+                // Reload to get the latest data
+                setTimeout(() => {
+                    loadSeasonOverrides();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error saving season overrides:', error);
+                showSeasonOverridesFeedback('error', 'Failed to save season calendars. Please try again.');
+            } finally {
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+            }
+        }
+
+        function showSeasonOverridesFeedback(type, message) {
+            const existingAlert = document.querySelector('.season-overrides-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show season-overrides-alert`;
+            alertDiv.innerHTML = `
+                <i class="${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const contentDiv = document.getElementById('season-overrides-content');
+            contentDiv.insertBefore(alertDiv, contentDiv.firstChild);
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function arraysEqual(a, b) {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return false;
+            }
+            return true;
+        }
+    </script>
+}

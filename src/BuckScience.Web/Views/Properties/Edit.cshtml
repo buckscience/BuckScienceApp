@@ -33,8 +33,13 @@
 
     <div class="mb-3">
         <label asp-for="TimeZone" class="form-label"></label>
-        <input asp-for="TimeZone" class="form-control" />
+        <select asp-for="TimeZone" asp-items="Model.TimeZones" class="form-select">
+            <option value="">Select a timezone...</option>
+        </select>
         <span asp-validation-for="TimeZone" class="text-danger"></span>
+        <small class="form-text text-muted">
+            Timezone is important for accurate weather data matching to photo timestamps.
+        </small>
     </div>
 
     <div class="mb-3">
