@@ -193,6 +193,12 @@
                 if (selectedPropertyId) {
                     loadPropertyProfiles(selectedPropertyId);
                     loadPropertyFeatures(selectedPropertyId);
+                    
+                    // Trigger map layer update - same as Properties Details
+                    if (window.App && window.App.triggerMapLayerUpdate) {
+                        window.App.triggerMapLayerUpdate({ propertyId: selectedPropertyId });
+                    }
+                    
                     showProfileSection();
                 } else {
                     hideProfileSection();
@@ -224,25 +230,16 @@
         }
 
         function loadPropertyFeatures(propertyId) {
-            // Use existing properties features API endpoint instead of custom BuckTrax one
-            $.get('/properties/' + propertyId + '/features')
-                .done(function(features) {
-                    currentPropertyFeatures = features;
-                    
-                    // Use the existing feature rendering system from properties.js
-                    if (window.App && window.App.displayFeaturesOnMap) {
-                        console.log('Using existing displayFeaturesOnMap for', features.length, 'features');
-                        window.App.displayFeaturesOnMap(features);
-                        
-                        // Track the feature layer IDs created by displayFeaturesOnMap for visibility control
-                        bucktraxLayers.features = ['property-features-fill', 'property-features-line', 'property-features-points'];
-                    } else {
-                        console.warn('displayFeaturesOnMap not available from properties.js');
-                    }
-                })
-                .fail(function() {
-                    console.warn('Failed to load property features');
-                });
+            // Use the EXACT same approach as Properties Details view
+            if (window.App && window.App.initializePropertyFeatures) {
+                console.log('Using properties.js initializePropertyFeatures for property:', propertyId);
+                window.App.initializePropertyFeatures(propertyId);
+                
+                // Track the feature layer IDs created by initializePropertyFeatures for visibility control
+                bucktraxLayers.features = ['property-features-fill', 'property-features-line', 'property-features-points'];
+            } else {
+                console.warn('initializePropertyFeatures not available from properties.js');
+            }
         }
 
         // REMOVED: Custom displayPropertyFeatures function
