@@ -215,7 +215,7 @@
         }
 
         function loadPropertyFeatures(propertyId) {
-            $.get(`/bucktrax/api/properties/${propertyId}/features`)
+            $.get('/bucktrax/api/properties/' + propertyId + '/features')
                 .done(function(features) {
                     currentPropertyFeatures = features;
                     displayPropertyFeatures(features);
@@ -299,7 +299,7 @@
             map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
         }
         function loadPropertyProfiles(propertyId) {
-            $.get(`/bucktrax/api/properties/${propertyId}/profiles`)
+            $.get('/bucktrax/api/properties/' + propertyId + '/profiles')
                 .done(function(profiles) {
                     displayProfiles(profiles);
                 })
@@ -326,7 +326,7 @@
             profiles.forEach(profile => {
                 const statusBadge = getProfileStatusBadge(profile.profileStatus);
                 const photoHtml = profile.coverPhotoUrl 
-                    ? `<img src="${profile.coverPhotoUrl}" class="rounded me-2" style="width: 32px; height: 32px; object-fit: cover;">`
+                    ? '<img src="' + profile.coverPhotoUrl + '" class="rounded me-2" style="width: 32px; height: 32px; object-fit: cover;">'
                     : `<div class="bg-secondary rounded me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-deer text-white" style="font-size: 14px;"></i></div>`;
 
                 const profileCard = $(`
@@ -369,7 +369,7 @@
             
             // Update UI to show selection
             $('.profile-item').removeClass('border-primary');
-            $(`.profile-item[data-profile-id="${profileId}"]`).addClass('border-primary');
+            $('.profile-item[data-profile-id="' + profileId + '"]').addClass('border-primary');
             
             // Enable prediction button
             $('#run-prediction').prop('disabled', false);
@@ -777,14 +777,14 @@
             const formatHour = (hour) => {
                 if (hour === 0) return '12:00 AM';
                 if (hour === 12) return '12:00 PM';
-                if (hour < 12) return `${hour}:00 AM`;
-                return `${hour - 12}:00 PM`;
+                if (hour < 12) return hour + ':00 AM';
+                return (hour - 12) + ':00 PM';
             };
 
             if (start <= end) {
-                return `${formatHour(start)} - ${formatHour(end)}`;
+                return formatHour(start) + ' - ' + formatHour(end);
             } else {
-                return `${formatHour(start)} - ${formatHour(end + 24)}`;
+                return formatHour(start) + ' - ' + formatHour(end + 24);
             }
         }
 
