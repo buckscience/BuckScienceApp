@@ -1,7 +1,17 @@
 ﻿@{
     Layout = null;
     @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+    @inject BuckScience.Application.Abstractions.Auth.ICurrentUserService CurrentUser
+    @inject BuckScience.Application.Abstractions.Services.ISubscriptionService SubscriptionService
     var sidebarClass = ViewBag.SidebarWide == true ? "sidebar-overlay sidebar-wide" : "sidebar-overlay";
+    
+    // Get user subscription tier for navigation visibility
+    BuckScience.Domain.Enums.SubscriptionTier userTier = BuckScience.Domain.Enums.SubscriptionTier.Trial;
+    if (CurrentUser.IsAuthenticated && CurrentUser.Id.HasValue)
+    {
+        userTier = await SubscriptionService.GetUserSubscriptionTierAsync(CurrentUser.Id.Value);
+    }
+    bool showPremiumFeatures = userTier >= BuckScience.Domain.Enums.SubscriptionTier.Doe && userTier != BuckScience.Domain.Enums.SubscriptionTier.Expired;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -28,14 +38,17 @@
                 <i class="fas fa-map-marked"></i>
                 <span>Hunt Areas</span>
             </a>
-            <a href="/bucktrax" title="BuckTrax" style="margin-top: 60px;">
-                <i class="fas fa-route"></i>
-                <span>BuckTrax</span>
-            </a>
-            <a href="/buckcast" title="BuckCast" style="margin-top: 10px;">
-                <i class="fas fa-chart-line"></i>
-                <span>BuckCast</span>
-            </a>
+            @if (showPremiumFeatures)
+            {
+                <a href="/bucktrax" title="BuckTrax" style="margin-top: 60px;">
+                    <i class="fas fa-route"></i>
+                    <span>BuckTrax</span>
+                </a>
+                <a href="/buckcast" title="BuckCast" style="margin-top: 10px;">
+                    <i class="fas fa-chart-line"></i>
+                    <span>BuckCast</span>
+                </a>
+            }
         </div>
         <div class="nav-bottom">
             <a href="/subscription" title="Subscription">
