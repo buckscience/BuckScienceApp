@@ -86,12 +86,14 @@
                             Prediction Zones
                         </label>
                     </div>
+                    <!-- TEMPORARILY DISABLED: Movement Corridors Control
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="show-movement-corridors" checked>
                         <label class="form-check-label" for="show-movement-corridors">
                             Movement Corridors
                         </label>
                     </div>
+                    -->
                 </div>
 
                 <!-- Summary Stats -->
@@ -147,12 +149,14 @@
                             <i class="fas fa-eraser me-1"></i>Clear
                         </button>
                     </div>
+                    <!-- TEMPORARILY DISABLED: Movement Corridors Control
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="show-corridors" checked>
                         <label class="form-check-label" for="show-corridors">
                             Show Movement Corridors
                         </label>
                     </div>
+                    -->
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="show-zones" checked>
                         <label class="form-check-label" for="show-zones">
@@ -208,107 +212,38 @@
                 clearMapLayers();
             });
 
-            // Updated layer visibility handlers
-            $('#show-property-features, #show-prediction-zones, #show-movement-corridors').on('change', function() {
+            // Updated layer visibility handlers (excluding movement corridors)
+            $('#show-property-features, #show-prediction-zones').on('change', function() {
                 updateLayerVisibility();
             });
 
-            // Ensure all checkboxes are checked by default for better UX
+            // Ensure checkboxes are checked by default for better UX (excluding movement corridors)
             $('#show-property-features').prop('checked', true);
             $('#show-prediction-zones').prop('checked', true);
-            $('#show-movement-corridors').prop('checked', true);
+            // $('#show-movement-corridors').prop('checked', true); // TEMPORARILY DISABLED
         }
 
         function loadPropertyFeatures(propertyId) {
-            $.get('/bucktrax/api/properties/' + propertyId + '/features')
+            // Use existing properties features API endpoint instead of custom BuckTrax one
+            $.get('/properties/' + propertyId + '/features')
                 .done(function(features) {
                     currentPropertyFeatures = features;
-                    displayPropertyFeatures(features);
+                    
+                    // Use the existing feature rendering system from properties.js
+                    if (window.App && window.App.displayFeaturesOnMap) {
+                        console.log('Using existing displayFeaturesOnMap for', features.length, 'features');
+                        window.App.displayFeaturesOnMap(features);
+                    } else {
+                        console.warn('displayFeaturesOnMap not available from properties.js');
+                    }
                 })
                 .fail(function() {
                     console.warn('Failed to load property features');
                 });
         }
 
-        function displayPropertyFeatures(features) {
-            const map = window.App?.getMap?.();
-            if (!map || !features.length) return;
-
-            // Clear existing features
-            clearFeatureLayers();
-
-            // Create feature source
-            const featureData = {
-                type: 'FeatureCollection',
-                features: features.map(feature => ({
-                    type: 'Feature',
-                    properties: {
-                        id: feature.id,
-                        name: feature.name || 'Unnamed Feature',
-                        type: feature.classificationName,
-                        classification: feature.classificationType
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [feature.longitude, feature.latitude]
-                    }
-                }))
-            };
-
-            const sourceId = 'bucktrax-property-features';
-            const layerId = 'bucktrax-property-features-points';
-
-            map.addSource(sourceId, {
-                type: 'geojson',
-                data: featureData
-            });
-
-            // Determine initial visibility based on checkbox state
-            const showFeatures = $('#show-property-features').is(':checked');
-
-            map.addLayer({
-                id: layerId,
-                type: 'circle',
-                source: sourceId,
-                layout: {
-                    'visibility': showFeatures ? 'visible' : 'none'
-                },
-                paint: {
-                    'circle-radius': 8,
-                    'circle-color': [
-                        'case',
-                        ['<=', ['get', 'classification'], 10], '#8B4513', // Topographical - brown
-                        ['<=', ['get', 'classification'], 30], '#228B22', // Food - green
-                        ['<=', ['get', 'classification'], 60], '#1E90FF', // Water - blue
-                        ['<=', ['get', 'classification'], 80], '#228B22', // Bedding - green
-                        '#9370DB' // Other - purple
-                    ],
-                    'circle-stroke-color': '#ffffff',
-                    'circle-stroke-width': 2,
-                    'circle-opacity': 0.8
-                }
-            });
-
-            bucktraxLayers.features.push(layerId);
-            bucktraxLayers.sources.push(sourceId);
-
-            // Add click handler for features
-            map.on('click', layerId, (e) => {
-                const props = e.features[0].properties;
-                new mapboxgl.Popup()
-                    .setLngLat(e.lngLat)
-                    .setHTML(`
-                        <div class="p-2">
-                            <div class="fw-bold">${props.name}</div>
-                            <div class="text-muted">${props.type}</div>
-                        </div>
-                    `)
-                    .addTo(map);
-            });
-
-            map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
-            map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
-        }
+        // REMOVED: Custom displayPropertyFeatures function
+        // Now using the standard displayFeaturesOnMap from properties.js instead
         function loadPropertyProfiles(propertyId) {
             $.get('/bucktrax/api/properties/' + propertyId + '/profiles')
                 .done(function(profiles) {
@@ -540,10 +475,11 @@
             // Clear existing BuckTrax layers
             clearMapLayers();
 
-            // Add movement corridors
-            if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
-                addCorridorsToMap(map, predictions.movementCorridors);
-            }
+            // TEMPORARILY DISABLED: Add movement corridors
+            // TODO: Re-enable when corridor visualization is ready
+            // if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
+            //     addCorridorsToMap(map, predictions.movementCorridors);
+            // }
 
             // Add prediction zones
             const allZones = [];
@@ -561,6 +497,9 @@
             fitMapToPredictions(map, predictions);
         }
 
+        // TEMPORARILY DISABLED: addCorridorsToMap function
+        // TODO: Re-enable when corridor visualization is ready
+        /*
         function addCorridorsToMap(map, corridors) {
             const features = corridors.map(corridor => ({
                 type: 'Feature',
@@ -626,6 +565,7 @@
             map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
             map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
         }
+        */
 
         function addZonesToMap(map, zones) {
             const features = zones.map(zone => ({
@@ -700,12 +640,13 @@
             const bounds = new mapboxgl.LngLatBounds();
             let hasPoints = false;
 
-            // Add corridor points to bounds
-            predictions.movementCorridors.forEach(corridor => {
-                bounds.extend([corridor.startLongitude, corridor.startLatitude]);
-                bounds.extend([corridor.endLongitude, corridor.endLatitude]);
-                hasPoints = true;
-            });
+            // TEMPORARILY DISABLED: Add corridor points to bounds
+            // TODO: Re-enable when corridor visualization is ready
+            // predictions.movementCorridors.forEach(corridor => {
+            //     bounds.extend([corridor.startLongitude, corridor.startLatitude]);
+            //     bounds.extend([corridor.endLongitude, corridor.endLatitude]);
+            //     hasPoints = true;
+            // });
 
             // Add zone points to bounds
             predictions.timeSegments.forEach(segment => {
@@ -773,15 +714,18 @@
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            const showCorridors = $('#show-movement-corridors').is(':checked');
+            // TEMPORARILY DISABLED: Corridor visibility handling
+            // const showCorridors = $('#show-movement-corridors').is(':checked');
+            
             const showZones = $('#show-prediction-zones').is(':checked');
             const showFeatures = $('#show-property-features').is(':checked');
 
-            bucktraxLayers.corridors.forEach(layerId => {
-                if (map.getLayer(layerId)) {
-                    map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
-                }
-            });
+            // TEMPORARILY DISABLED: Corridor layer visibility
+            // bucktraxLayers.corridors.forEach(layerId => {
+            //     if (map.getLayer(layerId)) {
+            //         map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
+            //     }
+            // });
 
             bucktraxLayers.zones.forEach(layerId => {
                 if (map.getLayer(layerId)) {

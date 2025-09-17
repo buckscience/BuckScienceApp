@@ -1,6 +1,7 @@
 using BuckScience.Web.Controllers;
 using BuckScience.Web.ViewModels.BuckTrax;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -55,6 +56,70 @@ namespace BuckScience.Tests.Web.Controllers
             var expectedScore = System.Math.Round(System.Math.Min(baseScore + (corridorBonus * 100), 100), 1); // 92.0
 
             Assert.Equal(92.0, expectedScore);
+        }
+
+        [Fact]
+        public void GroupPhotosIntoSightings_Applies15MinuteRule_CorrectlyGroupsSightings()
+        {
+            // Test the 15-minute sighting grouping rule as requested by @buckscience
+            // Example: Photos at 07:05, 07:06, 07:08, and 07:22 should result in 2 sightings
+            var photos = new List<BuckTraxSighting>
+            {
+                new BuckTraxSighting
+                {
+                    PhotoId = 1,
+                    DateTaken = new DateTime(2024, 1, 1, 7, 5, 0),
+                    CameraId = 1,
+                    CameraName = "Camera 1",
+                    Latitude = 40.0,
+                    Longitude = -80.0
+                },
+                new BuckTraxSighting
+                {
+                    PhotoId = 2,
+                    DateTaken = new DateTime(2024, 1, 1, 7, 6, 0), // 1 minute later
+                    CameraId = 1,
+                    CameraName = "Camera 1",
+                    Latitude = 40.0,
+                    Longitude = -80.0
+                },
+                new BuckTraxSighting
+                {
+                    PhotoId = 3,
+                    DateTaken = new DateTime(2024, 1, 1, 7, 8, 0), // 3 minutes from first
+                    CameraId = 1,
+                    CameraName = "Camera 1",
+                    Latitude = 40.0,
+                    Longitude = -80.0
+                },
+                new BuckTraxSighting
+                {
+                    PhotoId = 4,
+                    DateTaken = new DateTime(2024, 1, 1, 7, 22, 0), // 17 minutes from first (new sighting)
+                    CameraId = 1,
+                    CameraName = "Camera 1",
+                    Latitude = 40.0,
+                    Longitude = -80.0
+                }
+            };
+
+            // Create a controller instance and use reflection to test the private method
+            var controller = new BuckTraxController(null, null);
+            var method = typeof(BuckTraxController).GetMethod("GroupPhotosIntoSightings", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = (List<BuckTraxSighting>)method.Invoke(controller, new object[] { photos });
+
+            // Should result in exactly 2 sightings (not 4 photos)
+            Assert.Equal(2, result.Count);
+            
+            // First sighting should be the first photo (07:05)
+            Assert.Equal(1, result[0].PhotoId);
+            Assert.Equal(new DateTime(2024, 1, 1, 7, 5, 0), result[0].DateTaken);
+            
+            // Second sighting should be the photo at 07:22 (>15 minutes later)
+            Assert.Equal(4, result[1].PhotoId);
+            Assert.Equal(new DateTime(2024, 1, 1, 7, 22, 0), result[1].DateTaken);
         }
 
         [Fact]
