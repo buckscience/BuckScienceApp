@@ -245,7 +245,8 @@ public class BuckTraxController : Controller
                 : null,
             TimeSegments = predictions,
             MovementCorridors = movementCorridors,
-            Configuration = config
+            Configuration = config,
+            DefaultTimeSegmentIndex = CalculateDefaultTimeSegmentIndex(predictions, timeSegments)
         };
     }
 
@@ -1034,17 +1035,45 @@ public class BuckTraxController : Controller
     {
         // Simple pattern matching - could be enhanced with more sophisticated analysis
         if (string.IsNullOrEmpty(corridor.TimeOfDayPattern))
-            return true;
+            return false; // Only show corridors that have a defined time pattern
 
         // Check if the corridor's primary activity time overlaps with the segment
-        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour >= 6 && endHour <= 12)
-            return true;
-        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour >= 16 && endHour <= 21)
-            return true;
-        if (corridor.TimeOfDayPattern.Contains("Night") && (startHour >= 20 || endHour <= 6))
-            return true;
+        // Use flexible range matching to work with dynamic time segments based on property daylight hours
+        
+        // Morning segments (typically early to mid-morning hours)
+        if (corridor.TimeOfDayPattern.Contains("Morning"))
+        {
+            // Morning corridors should match early daylight segments
+            // Look for segments that start early (5-11) and end before mid-day (8-14)
+            return startHour >= 5 && startHour <= 11 && endHour >= 8 && endHour <= 14;
+        }
+            
+        // Afternoon segments (typically mid-day hours)  
+        if (corridor.TimeOfDayPattern.Contains("Afternoon"))
+        {
+            // Afternoon corridors should match mid-day segments
+            // Look for segments that start mid-morning to early afternoon (10-14) and end in afternoon (12-18)
+            return startHour >= 10 && startHour <= 14 && endHour >= 12 && endHour <= 18;
+        }
+            
+        // Evening segments (typically late afternoon to early evening hours)
+        if (corridor.TimeOfDayPattern.Contains("Evening"))
+        {
+            // Evening corridors should match late daylight segments
+            // Look for segments that start in afternoon (14-18) and end in evening (16-22)
+            return startHour >= 14 && startHour <= 18 && endHour >= 16 && endHour <= 22;
+        }
+            
+        // Night segments (typically dark hours that span midnight)
+        if (corridor.TimeOfDayPattern.Contains("Night"))
+        {
+            // Night corridors should match night time segments
+            // Night typically spans midnight, so either late evening or early morning
+            return (startHour >= 20 && startHour <= 23) || (endHour >= 1 && endHour <= 8) || 
+                   (startHour > endHour); // Handle midnight-spanning segments
+        }
 
-        return true; // Default to including all corridors
+        return false; // Only show corridors that match the current time segment
     }
 
     private string GetTimeOfDayPattern(List<int> transitionTimes)
@@ -1066,6 +1095,56 @@ public class BuckTraxController : Controller
             patterns.Add("Night");
 
         return patterns.Any() ? string.Join(", ", patterns) : "All Day";
+    }
+
+    private int CalculateDefaultTimeSegmentIndex(List<BuckTraxTimeSegmentPrediction> predictions, object[] timeSegments)
+    {
+        // Find the time segment with the most activity (sightings + corridors)
+        var maxActivity = -1;
+        var defaultIndex = 0;
+        var daylightSegments = new List<int>(); // Track daylight segments for tie-breaking
+        
+        for (int i = 0; i < predictions.Count; i++)
+        {
+            var prediction = predictions[i];
+            var segment = timeSegments[i];
+            
+            // Calculate activity score (sightings + corridors)
+            var activityScore = prediction.SightingCount + (prediction.TimeSegmentCorridors?.Count ?? 0);
+            
+            // Track if this is a daylight segment (not "Night")
+            var isDaylight = !prediction.TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase);
+            
+            if (activityScore > maxActivity)
+            {
+                maxActivity = activityScore;
+                defaultIndex = i;
+                daylightSegments.Clear();
+                if (isDaylight) daylightSegments.Add(i);
+            }
+            else if (activityScore == maxActivity && activityScore > 0)
+            {
+                // Tie in activity - prioritize earliest daylight period
+                if (isDaylight)
+                {
+                    daylightSegments.Add(i);
+                    // If current default is not daylight, or this is earlier daylight, switch
+                    if (!predictions[defaultIndex].TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase) == false || 
+                        (daylightSegments.Count == 1 && isDaylight))
+                    {
+                        defaultIndex = i;
+                    }
+                }
+            }
+        }
+        
+        // If there's a tie and we have daylight segments, pick the earliest daylight one
+        if (daylightSegments.Count > 1)
+        {
+            defaultIndex = daylightSegments.First();
+        }
+        
+        return defaultIndex;
     }
 
     private GeometryType GetGeometryType(Geometry? geometry)
