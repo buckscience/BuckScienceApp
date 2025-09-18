@@ -1140,7 +1140,13 @@ public class BuckTraxController : Controller
             CameraFeatureProximityMeters = 100, // 100 meters
             MinimumSightingsThreshold = 5, // Reduced threshold for better responsiveness
             MinimumTransitionsThreshold = 2, // Reduced threshold for better responsiveness
-            ShowLimitedDataWarning = true
+            ShowLimitedDataWarning = true,
+            
+            // Feature-aware routing configuration
+            EnableFeatureAwareRouting = true,
+            MinimumDistanceForFeatureRouting = 200,
+            MaximumDetourPercentage = 0.3,
+            MaximumWaypointsPerRoute = 2
         };
     }
 }
