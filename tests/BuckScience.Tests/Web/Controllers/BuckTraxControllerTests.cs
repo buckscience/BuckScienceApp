@@ -121,6 +121,210 @@ namespace BuckScience.Tests.Web.Controllers
             Assert.Equal(4, result[1].PhotoId);
             Assert.Equal(new DateTime(2024, 1, 1, 7, 22, 0), result[1].DateTaken);
         }
+        
+        [Fact]
+        public void FeatureAwareRouting_EnabledWithLogicalWaypoints_CreatesEnhancedRoute()
+        {
+            // Test that feature-aware routing creates waypoints through logical features
+            var controller = new BuckTraxController(null, null);
+            var config = new BuckTraxConfiguration 
+            { 
+                EnableFeatureAwareRouting = true,
+                MinimumDistanceForFeatureRouting = 100,
+                MaximumDetourPercentage = 0.3,
+                MaximumWaypointsPerRoute = 2,
+                CameraFeatureProximityMeters = 100
+            };
+            
+            var features = new List<BuckTraxFeature>
+            {
+                new BuckTraxFeature { Id = 1, Name = "Food Plot A", ClassificationName = "Food Plot", Latitude = 40.0, Longitude = -80.0, EffectiveWeight = 0.8f },
+                new BuckTraxFeature { Id = 2, Name = "Creek Crossing", ClassificationName = "Creek Crossing", Latitude = 40.005, Longitude = -80.005, EffectiveWeight = 0.7f },
+                new BuckTraxFeature { Id = 3, Name = "Food Plot B", ClassificationName = "Food Plot", Latitude = 40.01, Longitude = -80.01, EffectiveWeight = 0.9f }
+            };
+            
+            var startPoint = new RoutePoint
+            {
+                LocationId = 100,
+                LocationName = "Camera 1",
+                LocationType = "Camera Location",
+                Latitude = 40.0,
+                Longitude = -80.0,
+                VisitTime = new DateTime(2024, 1, 1, 8, 0, 0)
+            };
+            
+            var endSighting = new BuckTraxSighting
+            {
+                CameraId = 101,
+                CameraName = "Camera 2",
+                Latitude = 40.01,
+                Longitude = -80.01,
+                DateTaken = new DateTime(2024, 1, 1, 9, 0, 0)
+            };
+            
+            // Use reflection to call the private method
+            var method = typeof(BuckTraxController).GetMethod("CreateFeatureAwareRoute", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = (List<RoutePoint>)method.Invoke(controller, new object[] { startPoint, endSighting, features, config });
+            
+            // Should include waypoints through logical features
+            Assert.True(result.Count >= 2); // At least start point + waypoint(s)
+            
+            // Start point should be unchanged
+            Assert.Equal(startPoint.LocationId, result[0].LocationId);
+            Assert.Equal("Camera Location", result[0].LocationType);
+            
+            // Should have added logical waypoints
+            var waypointAdded = result.Skip(1).Any(p => p.LocationType == "Property Feature");
+            Assert.True(waypointAdded, "Should have added at least one feature waypoint");
+        }
+        
+        [Fact]
+        public void FeatureAwareRouting_DisabledConfig_UsesDirectRoute()
+        {
+            // Test that when feature-aware routing is disabled, it uses direct routes
+            var controller = new BuckTraxController(null, null);
+            var config = new BuckTraxConfiguration 
+            { 
+                EnableFeatureAwareRouting = false // Disabled
+            };
+            
+            var features = new List<BuckTraxFeature>
+            {
+                new BuckTraxFeature { Id = 1, Name = "Creek Crossing", ClassificationName = "Creek Crossing", Latitude = 40.005, Longitude = -80.005, EffectiveWeight = 0.8f }
+            };
+            
+            var startPoint = new RoutePoint
+            {
+                LocationId = 100,
+                LocationName = "Camera 1",
+                LocationType = "Camera Location",
+                Latitude = 40.0,
+                Longitude = -80.0,
+                VisitTime = new DateTime(2024, 1, 1, 8, 0, 0)
+            };
+            
+            var endSighting = new BuckTraxSighting
+            {
+                CameraId = 101,
+                CameraName = "Camera 2",
+                Latitude = 40.01,
+                Longitude = -80.01,
+                DateTaken = new DateTime(2024, 1, 1, 9, 0, 0)
+            };
+            
+            // Use reflection to call the private method
+            var method = typeof(BuckTraxController).GetMethod("CreateFeatureAwareRoute", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = (List<RoutePoint>)method.Invoke(controller, new object[] { startPoint, endSighting, features, config });
+            
+            // Should only have the start point (no waypoints added)
+            Assert.Single(result);
+            Assert.Equal(startPoint.LocationId, result[0].LocationId);
+        }
+        
+        [Fact]
+        public void FeatureAwareRouting_ShortDistance_SkipsWaypoints()
+        {
+            // Test that short movements don't use feature routing
+            var controller = new BuckTraxController(null, null);
+            var config = new BuckTraxConfiguration 
+            { 
+                EnableFeatureAwareRouting = true,
+                MinimumDistanceForFeatureRouting = 500 // High threshold
+            };
+            
+            var features = new List<BuckTraxFeature>
+            {
+                new BuckTraxFeature { Id = 1, Name = "Creek Crossing", ClassificationName = "Creek Crossing", Latitude = 40.001, Longitude = -80.001, EffectiveWeight = 0.8f }
+            };
+            
+            var startPoint = new RoutePoint
+            {
+                LocationId = 100,
+                LocationName = "Camera 1",
+                LocationType = "Camera Location",
+                Latitude = 40.0,
+                Longitude = -80.0,
+                VisitTime = new DateTime(2024, 1, 1, 8, 0, 0)
+            };
+            
+            var endSighting = new BuckTraxSighting
+            {
+                CameraId = 101,
+                CameraName = "Camera 2",
+                Latitude = 40.002, // Short distance
+                Longitude = -80.002,
+                DateTaken = new DateTime(2024, 1, 1, 9, 0, 0)
+            };
+            
+            // Use reflection to call the private method
+            var method = typeof(BuckTraxController).GetMethod("CreateFeatureAwareRoute", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = (List<RoutePoint>)method.Invoke(controller, new object[] { startPoint, endSighting, features, config });
+            
+            // Should only have the start point due to short distance
+            Assert.Single(result);
+            Assert.Equal(startPoint.LocationId, result[0].LocationId);
+        }
+        
+        [Fact]
+        public void FindLogicalWaypoints_IdentifiesRelevantFeatures()
+        {
+            // Test that the waypoint finding logic correctly identifies relevant features
+            var controller = new BuckTraxController(null, null);
+            var config = new BuckTraxConfiguration 
+            { 
+                CameraFeatureProximityMeters = 100,
+                MaximumDetourPercentage = 0.3,
+                MaximumWaypointsPerRoute = 2
+            };
+            
+            var features = new List<BuckTraxFeature>
+            {
+                // Relevant waypoint features
+                new BuckTraxFeature { Id = 1, Name = "Creek Crossing", ClassificationName = "Creek Crossing", Latitude = 40.005, Longitude = -80.005, EffectiveWeight = 0.8f },
+                new BuckTraxFeature { Id = 2, Name = "Travel Corridor", ClassificationName = "Travel Corridor", Latitude = 40.007, Longitude = -80.007, EffectiveWeight = 0.7f },
+                
+                // Irrelevant features (wrong type or too far)
+                new BuckTraxFeature { Id = 3, Name = "Bedding Area", ClassificationName = "Bedding Area", Latitude = 40.006, Longitude = -80.006, EffectiveWeight = 0.9f },
+                new BuckTraxFeature { Id = 4, Name = "Far Creek", ClassificationName = "Creek Crossing", Latitude = 40.02, Longitude = -80.02, EffectiveWeight = 0.8f }
+            };
+            
+            var startPoint = new RoutePoint
+            {
+                LocationId = 100,
+                LocationName = "Camera 1",
+                LocationType = "Camera Location",
+                Latitude = 40.0,
+                Longitude = -80.0,
+                VisitTime = new DateTime(2024, 1, 1, 8, 0, 0)
+            };
+            
+            var endSighting = new BuckTraxSighting
+            {
+                CameraId = 101,
+                CameraName = "Camera 2",
+                Latitude = 40.01,
+                Longitude = -80.01,
+                DateTaken = new DateTime(2024, 1, 1, 9, 0, 0)
+            };
+            
+            // Use reflection to call the private method
+            var method = typeof(BuckTraxController).GetMethod("FindLogicalWaypoints", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = (List<BuckTraxFeature>)method.Invoke(controller, new object[] { startPoint, endSighting, features, config });
+            
+            // Should identify relevant waypoint features but not irrelevant ones
+            Assert.NotEmpty(result);
+            Assert.Contains(result, f => f.Name == "Creek Crossing");
+            Assert.DoesNotContain(result, f => f.Name == "Bedding Area"); // Wrong type
+            Assert.DoesNotContain(result, f => f.Name == "Far Creek"); // Too far from path
+        }
 
         [Fact]
         public void MovementCorridorAnalysis_IdentifiesValidTransitions()

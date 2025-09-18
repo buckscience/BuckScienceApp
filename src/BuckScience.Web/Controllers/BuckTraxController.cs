@@ -389,7 +389,7 @@ public class BuckTraxController : Controller
         var featureLookup = features.ToDictionary(f => f.Id, f => f);
 
         // First, identify movement routes (sequences of locations within time windows)
-        var routes = IdentifyMovementRoutes(sightings, config);
+        var routes = IdentifyMovementRoutes(sightings, features, config);
 
         // Convert routes to corridors
         foreach (var route in routes)
@@ -419,7 +419,7 @@ public class BuckTraxController : Controller
         return corridors.OrderByDescending(c => c.CorridorScore).ToList();
     }
 
-    private List<MovementRoute> IdentifyMovementRoutes(List<BuckTraxSighting> sightings, BuckTraxConfiguration config)
+    private List<MovementRoute> IdentifyMovementRoutes(List<BuckTraxSighting> sightings, List<BuckTraxFeature> features, BuckTraxConfiguration config)
     {
         var routes = new List<MovementRoute>();
         var routeId = 1;
@@ -464,10 +464,32 @@ public class BuckTraxController : Controller
                     continue;
 
                 // Check for barriers
-                if (IsMovementBlocked(sightings[j-1], nextSighting, new List<BuckTraxFeature>()))
+                if (IsMovementBlocked(sightings[j-1], nextSighting, features))
                     continue;
 
-                // Add this point to the route
+                // ENHANCEMENT: Check if there are logical features to route through
+                var enhancedRoute = CreateFeatureAwareRoute(lastPoint, nextSighting, features, config);
+                
+                if (enhancedRoute.Count > 1)
+                {
+                    // Add intermediate feature waypoints if found
+                    foreach (var waypoint in enhancedRoute.Skip(1)) // Skip first as it's already added
+                    {
+                        route.Points.Add(new RoutePoint
+                        {
+                            Order = route.Points.Count + 1,
+                            Sighting = waypoint.Sighting,
+                            LocationId = waypoint.LocationId,
+                            LocationName = waypoint.LocationName,
+                            LocationType = waypoint.LocationType,
+                            Latitude = waypoint.Latitude,
+                            Longitude = waypoint.Longitude,
+                            VisitTime = waypoint.VisitTime
+                        });
+                    }
+                }
+                
+                // Always add the final destination point, preferring feature over camera
                 route.Points.Add(new RoutePoint
                 {
                     Order = route.Points.Count + 1,
@@ -475,8 +497,12 @@ public class BuckTraxController : Controller
                     LocationId = GetLocationId(nextSighting),
                     LocationName = GetLocationName(nextSighting),
                     LocationType = GetLocationType(nextSighting),
-                    Latitude = nextSighting.Latitude,
-                    Longitude = nextSighting.Longitude,
+                    Latitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Latitude ?? nextSighting.Latitude : 
+                        nextSighting.Latitude,
+                    Longitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Longitude ?? nextSighting.Longitude : 
+                        nextSighting.Longitude,
                     VisitTime = nextSighting.DateTaken
                 });
 
@@ -491,6 +517,145 @@ public class BuckTraxController : Controller
         }
 
         return routes;
+    }
+
+    /// <summary>
+    /// Creates a feature-aware route between two points, identifying logical intermediate features
+    /// that should be used as waypoints instead of direct camera-to-camera movement.
+    /// </summary>
+    private List<RoutePoint> CreateFeatureAwareRoute(RoutePoint start, BuckTraxSighting endSighting, List<BuckTraxFeature> features, BuckTraxConfiguration config)
+    {
+        var route = new List<RoutePoint> { start };
+        
+        // Check if feature-aware routing is enabled
+        if (!config.EnableFeatureAwareRouting)
+        {
+            return route; // Return single point, will add end point in caller
+        }
+        
+        // Calculate total distance between start and end
+        var totalDistance = CalculateDistance(start.Latitude, start.Longitude, endSighting.Latitude, endSighting.Longitude);
+        
+        // Only consider feature routing for longer movements where intermediate features make sense
+        if (totalDistance < config.MinimumDistanceForFeatureRouting)
+        {
+            return route; // Return single point, will add end point in caller
+        }
+        
+        // Find potential intermediate features that could be logical waypoints
+        var candidateFeatures = FindLogicalWaypoints(start, endSighting, features, config);
+        
+        if (candidateFeatures.Any())
+        {
+            // Create waypoints for the most logical intermediate features
+            var interpolatedTime = InterpolateTime(start.VisitTime, endSighting.DateTaken, candidateFeatures.Count + 1);
+            
+            for (int i = 0; i < candidateFeatures.Count; i++)
+            {
+                var feature = candidateFeatures[i];
+                route.Add(new RoutePoint
+                {
+                    Order = route.Count + 1,
+                    Sighting = endSighting, // Reference the end sighting for metadata
+                    LocationId = feature.Id,
+                    LocationName = feature.Name,
+                    LocationType = "Property Feature",
+                    Latitude = feature.Latitude,
+                    Longitude = feature.Longitude,
+                    VisitTime = interpolatedTime[i] // Interpolated time between start and end
+                });
+            }
+        }
+        
+        return route;
+    }
+    
+    /// <summary>
+    /// Finds logical waypoint features between two points that make sense for deer movement.
+    /// Prioritizes travel corridors, food sources, and water features.
+    /// </summary>
+    private List<BuckTraxFeature> FindLogicalWaypoints(RoutePoint start, BuckTraxSighting end, List<BuckTraxFeature> features, BuckTraxConfiguration config)
+    {
+        var waypoints = new List<BuckTraxFeature>();
+        
+        // Define high-value feature types that deer commonly use as travel waypoints
+        var waypointFeatureTypes = new HashSet<string>
+        {
+            "Creek Crossing", "Pinch Point", "Saddle", "Ridge", "Draw", 
+            "Trail", "Travel Corridor", "Edge", "Fence Crossing",
+            "Food Plot", "Water", "Pond"
+        };
+        
+        // Find features that lie reasonably close to the direct path
+        var candidateFeatures = features
+            .Where(f => waypointFeatureTypes.Any(wft => f.ClassificationName.Contains(wft, StringComparison.OrdinalIgnoreCase)))
+            .Where(f => f.Id != start.LocationId && f.Id != GetLocationId(end)) // Exclude start/end locations
+            .Select(f => new
+            {
+                Feature = f,
+                DistanceFromPath = CalculateDistanceFromPath(start.Latitude, start.Longitude, end.Latitude, end.Longitude, f.Latitude, f.Longitude),
+                DistanceFromStart = CalculateDistance(start.Latitude, start.Longitude, f.Latitude, f.Longitude),
+                DistanceFromEnd = CalculateDistance(f.Latitude, f.Longitude, end.Latitude, end.Longitude),
+                TotalPathDistance = CalculateDistance(start.Latitude, start.Longitude, f.Latitude, f.Longitude) + 
+                                   CalculateDistance(f.Latitude, f.Longitude, end.Latitude, end.Longitude)
+            })
+            .Where(x => x.DistanceFromPath <= config.CameraFeatureProximityMeters * 2) // Within 200m of direct path by default
+            .Where(x => x.TotalPathDistance <= CalculateDistance(start.Latitude, start.Longitude, end.Latitude, end.Longitude) * (1 + config.MaximumDetourPercentage))
+            .OrderBy(x => x.DistanceFromPath)
+            .ThenByDescending(x => x.Feature.EffectiveWeight) // Prefer higher weighted features
+            .Take(config.MaximumWaypointsPerRoute) // Configurable limit to avoid overly complex routes
+            .ToList();
+
+        // Add features in order of distance from start to maintain logical sequence
+        waypoints.AddRange(candidateFeatures
+            .OrderBy(x => x.DistanceFromStart)
+            .Select(x => x.Feature));
+            
+        return waypoints;
+    }
+    
+    /// <summary>
+    /// Calculates the perpendicular distance from a point to a line segment.
+    /// </summary>
+    private double CalculateDistanceFromPath(double lineStartLat, double lineStartLon, double lineEndLat, double lineEndLon, double pointLat, double pointLon)
+    {
+        // Convert to Cartesian coordinates for easier calculation
+        var A = lineStartLat;
+        var B = lineStartLon;
+        var C = lineEndLat;
+        var D = lineEndLon;
+        var P = pointLat;
+        var Q = pointLon;
+        
+        // Calculate the perpendicular distance from point (P,Q) to line segment (A,B)-(C,D)
+        var lineLength = CalculateDistance(A, B, C, D);
+        if (lineLength < 0.001) return CalculateDistance(A, B, P, Q); // Line is essentially a point
+        
+        // Project point onto line and find closest point
+        var t = Math.Max(0, Math.Min(1, 
+            ((P - A) * (C - A) + (Q - B) * (D - B)) / (Math.Pow(C - A, 2) + Math.Pow(D - B, 2))));
+        
+        var projectionLat = A + t * (C - A);
+        var projectionLon = B + t * (D - B);
+        
+        return CalculateDistance(P, Q, projectionLat, projectionLon);
+    }
+    
+    /// <summary>
+    /// Interpolates times between start and end time for waypoints.
+    /// </summary>
+    private List<DateTime> InterpolateTime(DateTime startTime, DateTime endTime, int waypointCount)
+    {
+        var times = new List<DateTime>();
+        var totalMinutes = (endTime - startTime).TotalMinutes;
+        var intervalMinutes = totalMinutes / (waypointCount + 1);
+        
+        for (int i = 1; i <= waypointCount; i++)
+        {
+            times.Add(startTime.AddMinutes(intervalMinutes * i));
+        }
+        
+        return times;
     }
 
     private BuckTraxMovementCorridor CreateSimpleCorridor(RoutePoint start, RoutePoint end, Dictionary<int, BuckTraxFeature> featureLookup, string routeId)
@@ -677,25 +842,6 @@ public class BuckTraxController : Controller
         }
 
         return GetTimeOfDayPattern(transitionTimes);
-    }
-
-    // Helper classes for route identification
-    private class MovementRoute
-    {
-        public string Id { get; set; } = string.Empty;
-        public List<RoutePoint> Points { get; set; } = new();
-    }
-
-    private class RoutePoint
-    {
-        public int Order { get; set; }
-        public BuckTraxSighting Sighting { get; set; } = null!;
-        public int LocationId { get; set; }
-        public string LocationName { get; set; } = string.Empty;
-        public string LocationType { get; set; } = string.Empty;
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public DateTime VisitTime { get; set; }
     }
 
     private bool IsMovementBlocked(BuckTraxSighting from, BuckTraxSighting to, List<BuckTraxFeature> features)
@@ -990,7 +1136,13 @@ public class BuckTraxController : Controller
             CameraFeatureProximityMeters = 100, // 100 meters
             MinimumSightingsThreshold = 5, // Reduced threshold for better responsiveness
             MinimumTransitionsThreshold = 2, // Reduced threshold for better responsiveness
-            ShowLimitedDataWarning = true
+            ShowLimitedDataWarning = true,
+            
+            // Feature-aware routing configuration
+            EnableFeatureAwareRouting = true,
+            MinimumDistanceForFeatureRouting = 200,
+            MaximumDetourPercentage = 0.3,
+            MaximumWaypointsPerRoute = 2
         };
     }
 }

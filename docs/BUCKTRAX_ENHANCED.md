@@ -25,6 +25,13 @@ The enhanced algorithm analyzes movement patterns through:
 - Uses configurable proximity threshold for feature-camera relationships
 - Records transitions as feature-to-feature movements
 
+#### **NEW: Feature-Aware Routing**
+- Intelligently routes through logical intermediate features instead of direct camera-to-camera paths
+- Identifies waypoints like creek crossings, pinch points, food plots, and travel corridors
+- Only applies to longer movements where intermediate features make logical sense
+- Configurable with distance thresholds and detour percentages
+- Maintains original camera-to-camera routing when no logical features exist
+
 #### Transition Aggregation
 - Counts movement frequencies between feature pairs
 - Calculates corridor scores using feature weights
@@ -83,9 +90,23 @@ When data falls below thresholds:
     CameraFeatureProximityMeters: 100,     // 100 meters
     MinimumSightingsThreshold: 10,
     MinimumTransitionsThreshold: 3,
-    ShowLimitedDataWarning: true
+    ShowLimitedDataWarning: true,
+    
+    // NEW: Feature-Aware Routing Configuration
+    EnableFeatureAwareRouting: true,        // Enable intelligent feature routing
+    MinimumDistanceForFeatureRouting: 200,  // Minimum distance to use feature routing
+    MaximumDetourPercentage: 0.3,          // Max 30% longer route allowed
+    MaximumWaypointsPerRoute: 2             // Limit waypoints per route
 }
 ```
+
+#### Feature-Aware Routing
+The system now intelligently routes through logical features instead of direct camera-to-camera paths:
+- **Waypoint Features**: Creek crossings, pinch points, food plots, travel corridors, ridges, fence crossings
+- **Distance Logic**: Short movements (<200m) use direct routing, longer movements consider features
+- **Path Optimization**: Routes stay within 200m of direct path and max 30% longer distance
+- **Feature Weighting**: Prefers higher-weighted features as waypoints
+- **Fallback Behavior**: Uses original camera-to-camera routing when no logical features exist
 
 #### Time-of-Day Analysis
 - **Early Morning**: 5:00-8:00 AM
