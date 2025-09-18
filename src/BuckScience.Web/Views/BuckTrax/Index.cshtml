@@ -789,12 +789,12 @@
                     'circle-color': [
                         'case',
                         ['get', 'isCorridor'],
-                        '#ffa500', // Orange for corridor predictions
-                        '#ff4444'  // Red for sighting zones
+                        'rgba(255, 165, 0, 0.7)', // Orange with explicit alpha for corridor predictions
+                        'rgba(255, 68, 68, 0.7)'  // Red with explicit alpha for sighting zones
                     ],
-                    'circle-opacity': 0.7, // Same opacity for both corridor predictions and sighting zones
                     'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-opacity': 0.9
                 }
             });
 
