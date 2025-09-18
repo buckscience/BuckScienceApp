@@ -488,21 +488,23 @@ public class BuckTraxController : Controller
                         });
                     }
                 }
-                else
+                
+                // Always add the final destination point, preferring feature over camera
+                route.Points.Add(new RoutePoint
                 {
-                    // Add this point directly to the route (original behavior)
-                    route.Points.Add(new RoutePoint
-                    {
-                        Order = route.Points.Count + 1,
-                        Sighting = nextSighting,
-                        LocationId = GetLocationId(nextSighting),
-                        LocationName = GetLocationName(nextSighting),
-                        LocationType = GetLocationType(nextSighting),
-                        Latitude = nextSighting.Latitude,
-                        Longitude = nextSighting.Longitude,
-                        VisitTime = nextSighting.DateTaken
-                    });
-                }
+                    Order = route.Points.Count + 1,
+                    Sighting = nextSighting,
+                    LocationId = GetLocationId(nextSighting),
+                    LocationName = GetLocationName(nextSighting),
+                    LocationType = GetLocationType(nextSighting),
+                    Latitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Latitude ?? nextSighting.Latitude : 
+                        nextSighting.Latitude,
+                    Longitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Longitude ?? nextSighting.Longitude : 
+                        nextSighting.Longitude,
+                    VisitTime = nextSighting.DateTaken
+                });
 
                 i = j; // Skip processed sightings
             }
@@ -527,12 +529,6 @@ public class BuckTraxController : Controller
         
         // Check if feature-aware routing is enabled
         if (!config.EnableFeatureAwareRouting)
-        {
-            return route; // Return single point, will add end point in caller
-        }
-        
-        // If both start and end are already feature-based, no enhancement needed
-        if (start.LocationType == "Property Feature" && endSighting.AssociatedFeatureId.HasValue)
         {
             return route; // Return single point, will add end point in caller
         }
