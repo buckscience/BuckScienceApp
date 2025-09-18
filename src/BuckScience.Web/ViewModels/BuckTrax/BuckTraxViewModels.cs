@@ -89,6 +89,22 @@ public class BuckTraxMovementCorridor
     public double Distance { get; set; }
     public double AverageTimeSpan { get; set; }
     public string TimeOfDayPattern { get; set; } = string.Empty;
+    
+    // New properties for route support
+    public string? RouteId { get; set; } = null; // Groups corridors that are part of the same route
+    public List<BuckTraxRoutePoint> RoutePoints { get; set; } = new(); // Ordered points for multi-point routes
+    public bool IsPartOfMultiPointRoute { get; set; } = false;
+}
+
+public class BuckTraxRoutePoint
+{
+    public int Order { get; set; } // 1, 2, 3, 4...
+    public int LocationId { get; set; } // Camera ID or Feature ID
+    public string LocationName { get; set; } = string.Empty;
+    public string LocationType { get; set; } = string.Empty; // "Camera Location" or feature type
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public DateTime VisitTime { get; set; }
 }
 
 public class BuckTraxSighting

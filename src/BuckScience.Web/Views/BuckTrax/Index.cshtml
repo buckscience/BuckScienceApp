@@ -498,12 +498,32 @@
         }
 
         function addCorridorsToMap(map, corridors) {
+            const showCorridors = $('#show-movement-corridors').is(':checked');
+            
+            // Separate simple corridors from multi-point routes
+            const simpleCorridors = corridors.filter(c => !c.isPartOfMultiPointRoute);
+            const multiPointRoutes = corridors.filter(c => c.isPartOfMultiPointRoute);
+            
+            // Add simple corridors as lines
+            if (simpleCorridors.length > 0) {
+                addSimpleCorridors(map, simpleCorridors, showCorridors);
+            }
+            
+            // Add multi-point routes with numbered indicators
+            if (multiPointRoutes.length > 0) {
+                addMultiPointRoutes(map, multiPointRoutes, showCorridors);
+            }
+        }
+
+        function addSimpleCorridors(map, corridors, showCorridors) {
             const features = corridors.map(corridor => ({
                 type: 'Feature',
                 properties: {
                     name: corridor.name,
                     score: corridor.corridorScore,
-                    transitions: corridor.transitionCount
+                    transitions: corridor.transitionCount,
+                    routeId: corridor.routeId,
+                    isMultiPoint: false
                 },
                 geometry: {
                     type: 'LineString',
@@ -514,16 +534,13 @@
                 }
             }));
 
-            const sourceId = 'bucktrax-corridors';
-            const layerId = 'bucktrax-corridors-lines';
+            const sourceId = 'bucktrax-corridors-simple';
+            const layerId = 'bucktrax-corridors-simple-lines';
 
             map.addSource(sourceId, {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: features }
             });
-
-            // Check initial visibility state
-            const showCorridors = $('#show-movement-corridors').is(':checked');
 
             map.addLayer({
                 id: layerId,
@@ -544,7 +561,7 @@
             bucktraxLayers.corridors.push(layerId);
             bucktraxLayers.sources.push(sourceId);
 
-            // Add click handler
+            // Add click handler for simple corridors
             map.on('click', layerId, (e) => {
                 const props = e.features[0].properties;
                 new mapboxgl.Popup()
@@ -561,6 +578,164 @@
 
             map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
             map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
+        }
+
+        function addMultiPointRoutes(map, routes, showCorridors) {
+            routes.forEach((route, routeIndex) => {
+                // Create line segments for the route
+                const lineFeatures = [];
+                for (let i = 0; i < route.routePoints.length - 1; i++) {
+                    const current = route.routePoints[i];
+                    const next = route.routePoints[i + 1];
+                    
+                    lineFeatures.push({
+                        type: 'Feature',
+                        properties: {
+                            name: route.name,
+                            score: route.corridorScore,
+                            transitions: route.transitionCount,
+                            routeId: route.routeId,
+                            isMultiPoint: true,
+                            segmentIndex: i
+                        },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [
+                                [current.longitude, current.latitude],
+                                [next.longitude, next.latitude]
+                            ]
+                        }
+                    });
+                }
+
+                // Add route lines
+                const lineSourceId = `bucktrax-route-${routeIndex}-lines`;
+                const lineLayerId = `bucktrax-route-${routeIndex}-lines-layer`;
+
+                map.addSource(lineSourceId, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: lineFeatures }
+                });
+
+                map.addLayer({
+                    id: lineLayerId,
+                    type: 'line',
+                    source: lineSourceId,
+                    layout: { 
+                        'line-join': 'round', 
+                        'line-cap': 'round',
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'line-color': '#ff6600', // Orange for multi-point routes
+                        'line-width': ['interpolate', ['linear'], ['get', 'score'], 0, 3, 10, 8],
+                        'line-opacity': 0.9
+                    }
+                });
+
+                bucktraxLayers.corridors.push(lineLayerId);
+                bucktraxLayers.sources.push(lineSourceId);
+
+                // Add numbered point markers
+                const pointFeatures = route.routePoints.map(point => ({
+                    type: 'Feature',
+                    properties: {
+                        order: point.order,
+                        name: point.locationName,
+                        type: point.locationType,
+                        visitTime: point.visitTime,
+                        routeName: route.name,
+                        routeId: route.routeId
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [point.longitude, point.latitude]
+                    }
+                }));
+
+                const pointSourceId = `bucktrax-route-${routeIndex}-points`;
+                const pointLayerId = `bucktrax-route-${routeIndex}-points-layer`;
+
+                map.addSource(pointSourceId, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: pointFeatures }
+                });
+
+                map.addLayer({
+                    id: pointLayerId,
+                    type: 'circle',
+                    source: pointSourceId,
+                    layout: {
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'circle-radius': 12,
+                        'circle-color': '#ffffff',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ff6600'
+                    }
+                });
+
+                // Add number labels
+                const labelLayerId = `bucktrax-route-${routeIndex}-labels-layer`;
+                map.addLayer({
+                    id: labelLayerId,
+                    type: 'symbol',
+                    source: pointSourceId,
+                    layout: {
+                        'text-field': ['get', 'order'],
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 12,
+                        'text-anchor': 'center',
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'text-color': '#ff6600'
+                    }
+                });
+
+                bucktraxLayers.corridors.push(pointLayerId, labelLayerId);
+                bucktraxLayers.sources.push(pointSourceId);
+
+                // Add click handlers for route lines
+                map.on('click', lineLayerId, (e) => {
+                    const props = e.features[0].properties;
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <div class="fw-bold">${props.name}</div>
+                                <div class="text-info">Multi-point Route</div>
+                                <div>Score: ${props.score}</div>
+                                <div>Transitions: ${props.transitions}</div>
+                            </div>
+                        `)
+                        .addTo(map);
+                });
+
+                // Add click handlers for route points
+                map.on('click', pointLayerId, (e) => {
+                    const props = e.features[0].properties;
+                    const visitTime = new Date(props.visitTime).toLocaleString();
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <div class="fw-bold">Stop ${props.order}: ${props.name}</div>
+                                <div class="text-muted">${props.type}</div>
+                                <div><small>Visited: ${visitTime}</small></div>
+                                <div class="text-info"><small>Route: ${props.routeName}</small></div>
+                            </div>
+                        `)
+                        .addTo(map);
+                });
+
+                // Add hover effects
+                map.on('mouseenter', lineLayerId, () => map.getCanvas().style.cursor = 'pointer');
+                map.on('mouseleave', lineLayerId, () => map.getCanvas().style.cursor = '');
+                map.on('mouseenter', pointLayerId, () => map.getCanvas().style.cursor = 'pointer');
+                map.on('mouseleave', pointLayerId, () => map.getCanvas().style.cursor = '');
+            });
         }
 
         function addZonesToMap(map, zones) {
