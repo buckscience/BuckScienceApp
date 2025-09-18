@@ -11,6 +11,10 @@ public class PhotoFilters
     public DateTime? DateUploadedFrom { get; set; }
     public DateTime? DateUploadedTo { get; set; }
     
+    // Time of day filters (hours)
+    public int? TimeOfDayStart { get; set; }
+    public int? TimeOfDayEnd { get; set; }
+    
     // Camera filters
     public List<int>? CameraIds { get; set; }
     
@@ -61,6 +65,7 @@ public class PhotoFilters
     public bool HasAnyFilters =>
         DateTakenFrom.HasValue || DateTakenTo.HasValue ||
         DateUploadedFrom.HasValue || DateUploadedTo.HasValue ||
+        TimeOfDayStart.HasValue || TimeOfDayEnd.HasValue ||
         (CameraIds?.Count > 0) ||
         (CameraPlacementHistoryIds?.Count > 0) ||
         HasWeatherFilters;

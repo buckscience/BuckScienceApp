@@ -118,6 +118,24 @@ public static class ListPropertyPhotos
         if (filters.DateUploadedTo.HasValue)
             query = query.Where(p => p.DateUploaded <= filters.DateUploadedTo.Value);
 
+        // Time of day filters
+        if (filters.TimeOfDayStart.HasValue && filters.TimeOfDayEnd.HasValue)
+        {
+            var startHour = filters.TimeOfDayStart.Value;
+            var endHour = filters.TimeOfDayEnd.Value;
+            
+            if (startHour <= endHour)
+            {
+                // Normal range (e.g., 6 AM to 6 PM)
+                query = query.Where(p => p.DateTaken.Hour >= startHour && p.DateTaken.Hour < endHour);
+            }
+            else
+            {
+                // Overnight range (e.g., 6 PM to 6 AM)
+                query = query.Where(p => p.DateTaken.Hour >= startHour || p.DateTaken.Hour < endHour);
+            }
+        }
+
         // Camera filters - use Contains for simple integer list filtering
         if (filters.CameraIds?.Count > 0)
         {
