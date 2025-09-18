@@ -679,11 +679,10 @@
                         'circle-radius': 10,
                         'circle-color': [
                             'case',
-                            ['==', ['get', 'order'], 1], '#00aa00', // Start point: Green
-                            ['==', ['get', 'order'], route.routePoints.length], '#ff4444', // End point: Red
-                            '#ffa500' // Mid points: Orange
+                            ['==', ['get', 'order'], 1], 'rgba(0, 170, 0, 0.7)', // Start point: Green with embedded opacity
+                            ['==', ['get', 'order'], route.routePoints.length], 'rgba(255, 68, 68, 0.7)', // End point: Red with embedded opacity
+                            'rgba(255, 165, 0, 0.7)' // Mid points: Orange with embedded opacity
                         ],
-                        'circle-opacity': 0.7, // Explicit opacity for better browser compatibility
                         'circle-stroke-width': 1.5,
                         'circle-stroke-color': '#ffffff',
                         'circle-stroke-opacity': 0.9
@@ -790,10 +789,9 @@
                     'circle-color': [
                         'case',
                         ['get', 'isCorridor'],
-                        '#ffa500', // Orange for corridor predictions
-                        '#ff4444'  // Red for sighting zones
+                        'rgba(255, 165, 0, 0.7)', // Orange for corridor predictions with embedded opacity
+                        'rgba(255, 68, 68, 0.7)'  // Red for sighting zones with embedded opacity
                     ],
-                    'circle-opacity': 0.7, // Explicit opacity separate from color for better browser compatibility
                     'circle-stroke-width': 2,
                     'circle-stroke-color': '#ffffff',
                     'circle-stroke-opacity': 0.9
