@@ -1038,22 +1038,40 @@ public class BuckTraxController : Controller
             return false; // Only show corridors that have a defined time pattern
 
         // Check if the corridor's primary activity time overlaps with the segment
+        // Use flexible range matching to work with dynamic time segments based on property daylight hours
         
-        // Morning: 6-12
-        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour == 6 && endHour == 12)
-            return true;
+        // Morning segments (typically early to mid-morning hours)
+        if (corridor.TimeOfDayPattern.Contains("Morning"))
+        {
+            // Morning corridors should match early daylight segments
+            // Look for segments that start early (5-11) and end before mid-day (8-14)
+            return startHour >= 5 && startHour <= 11 && endHour >= 8 && endHour <= 14;
+        }
             
-        // Afternoon: 12-18  
-        if (corridor.TimeOfDayPattern.Contains("Afternoon") && startHour == 12 && endHour == 18)
-            return true;
+        // Afternoon segments (typically mid-day hours)  
+        if (corridor.TimeOfDayPattern.Contains("Afternoon"))
+        {
+            // Afternoon corridors should match mid-day segments
+            // Look for segments that start mid-morning to early afternoon (10-14) and end in afternoon (12-18)
+            return startHour >= 10 && startHour <= 14 && endHour >= 12 && endHour <= 18;
+        }
             
-        // Evening: 18-21 (but not night which starts at 20)
-        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour == 18 && endHour == 21)
-            return true;
+        // Evening segments (typically late afternoon to early evening hours)
+        if (corridor.TimeOfDayPattern.Contains("Evening"))
+        {
+            // Evening corridors should match late daylight segments
+            // Look for segments that start in afternoon (14-18) and end in evening (16-22)
+            return startHour >= 14 && startHour <= 18 && endHour >= 16 && endHour <= 22;
+        }
             
-        // Night: 20-6 (spans midnight)
-        if (corridor.TimeOfDayPattern.Contains("Night") && startHour == 20 && endHour == 6)
-            return true;
+        // Night segments (typically dark hours that span midnight)
+        if (corridor.TimeOfDayPattern.Contains("Night"))
+        {
+            // Night corridors should match night time segments
+            // Night typically spans midnight, so either late evening or early morning
+            return (startHour >= 20 && startHour <= 23) || (endHour >= 1 && endHour <= 8) || 
+                   (startHour > endHour); // Handle midnight-spanning segments
+        }
 
         return false; // Only show corridors that match the current time segment
     }

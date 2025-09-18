@@ -617,28 +617,42 @@ namespace BuckScience.Tests.Web.Controllers
 
             var controller = new BuckTraxController(null!, null!);
             
-            // Test Morning segment (6-12)
+            // Test Morning segment (7-11) - typical morning range
             var morningCorridors = corridors.Where(c => 
-                TestIsCorridorActiveInTimeSegment(controller, c, 6, 12)).ToList();
+                TestIsCorridorActiveInTimeSegment(controller, c, 7, 11)).ToList();
             Assert.Single(morningCorridors);
             Assert.Equal("Morning Corridor", morningCorridors[0].Name);
 
-            // Test Afternoon segment (12-18)
+            // Test Afternoon segment (11-15) - typical afternoon range
             var afternoonCorridors = corridors.Where(c => 
-                TestIsCorridorActiveInTimeSegment(controller, c, 12, 18)).ToList();
+                TestIsCorridorActiveInTimeSegment(controller, c, 11, 15)).ToList();
             Assert.Single(afternoonCorridors);
             Assert.Equal("Afternoon Corridor", afternoonCorridors[0].Name);
 
-            // Test Evening segment (18-21)
+            // Test Evening segment (15-19) - typical evening range
             var eveningCorridors = corridors.Where(c => 
-                TestIsCorridorActiveInTimeSegment(controller, c, 18, 21)).ToList();
+                TestIsCorridorActiveInTimeSegment(controller, c, 15, 19)).ToList();
             Assert.Single(eveningCorridors);
             Assert.Equal("Evening Corridor", eveningCorridors[0].Name);
 
-            // Test Night segment (20-6) - should have no corridors since none have Night pattern
+            // Test Night segment (21-5) - spans midnight, should have no corridors since none have Night pattern
             var nightCorridors = corridors.Where(c => 
-                TestIsCorridorActiveInTimeSegment(controller, c, 20, 6)).ToList();
+                TestIsCorridorActiveInTimeSegment(controller, c, 21, 5)).ToList();
             Assert.Empty(nightCorridors);
+            
+            // Test that corridors without patterns are filtered out
+            var emptyPatternCorridors = corridors.Where(c => 
+                string.IsNullOrEmpty(c.TimeOfDayPattern)).ToList();
+            Assert.Equal(2, emptyPatternCorridors.Count); // "No Pattern" and "Null Pattern" corridors
+            
+            // None of the empty pattern corridors should match any time segment
+            foreach (var emptyCorr in emptyPatternCorridors)
+            {
+                Assert.False(TestIsCorridorActiveInTimeSegment(controller, emptyCorr, 7, 11)); // Morning
+                Assert.False(TestIsCorridorActiveInTimeSegment(controller, emptyCorr, 11, 15)); // Afternoon
+                Assert.False(TestIsCorridorActiveInTimeSegment(controller, emptyCorr, 15, 19)); // Evening
+                Assert.False(TestIsCorridorActiveInTimeSegment(controller, emptyCorr, 21, 5)); // Night
+            }
         }
 
         private bool TestIsCorridorActiveInTimeSegment(BuckTraxController controller, BuckTraxMovementCorridor corridor, int startHour, int endHour)
