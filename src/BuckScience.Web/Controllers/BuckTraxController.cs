@@ -1035,17 +1035,27 @@ public class BuckTraxController : Controller
     {
         // Simple pattern matching - could be enhanced with more sophisticated analysis
         if (string.IsNullOrEmpty(corridor.TimeOfDayPattern))
-            return true;
+            return false; // Only show corridors that have a defined time pattern
 
         // Check if the corridor's primary activity time overlaps with the segment
-        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour >= 6 && endHour <= 12)
+        
+        // Morning: 6-12
+        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour == 6 && endHour == 12)
             return true;
-        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour >= 16 && endHour <= 21)
+            
+        // Afternoon: 12-18  
+        if (corridor.TimeOfDayPattern.Contains("Afternoon") && startHour == 12 && endHour == 18)
             return true;
-        if (corridor.TimeOfDayPattern.Contains("Night") && (startHour >= 20 || endHour <= 6))
+            
+        // Evening: 18-21 (but not night which starts at 20)
+        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour == 18 && endHour == 21)
+            return true;
+            
+        // Night: 20-6 (spans midnight)
+        if (corridor.TimeOfDayPattern.Contains("Night") && startHour == 20 && endHour == 6)
             return true;
 
-        return true; // Default to including all corridors
+        return false; // Only show corridors that match the current time segment
     }
 
     private string GetTimeOfDayPattern(List<int> transitionTimes)

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Xunit;
 
 namespace BuckScience.Tests.Web.Controllers
@@ -599,6 +600,53 @@ namespace BuckScience.Tests.Web.Controllers
             // The earliest daylight segment should be selected (Morning = index 0)
             var expectedDefault = daylightSegments.First();
             Assert.Equal(0, expectedDefault);
+        }
+
+        [Fact]
+        public void CorridorFiltering_OnlyShowsCorridorsAssociatedWithTimeSegment()
+        {
+            // Test that corridors without time patterns or mismatched patterns are not shown
+            var corridors = new List<BuckTraxMovementCorridor>
+            {
+                new BuckTraxMovementCorridor { Name = "Morning Corridor", TimeOfDayPattern = "Morning" },
+                new BuckTraxMovementCorridor { Name = "Evening Corridor", TimeOfDayPattern = "Evening" },
+                new BuckTraxMovementCorridor { Name = "No Pattern Corridor", TimeOfDayPattern = "" },
+                new BuckTraxMovementCorridor { Name = "Null Pattern Corridor", TimeOfDayPattern = null },
+                new BuckTraxMovementCorridor { Name = "Afternoon Corridor", TimeOfDayPattern = "Afternoon" }
+            };
+
+            var controller = new BuckTraxController(null!, null!);
+            
+            // Test Morning segment (6-12)
+            var morningCorridors = corridors.Where(c => 
+                TestIsCorridorActiveInTimeSegment(controller, c, 6, 12)).ToList();
+            Assert.Single(morningCorridors);
+            Assert.Equal("Morning Corridor", morningCorridors[0].Name);
+
+            // Test Afternoon segment (12-18)
+            var afternoonCorridors = corridors.Where(c => 
+                TestIsCorridorActiveInTimeSegment(controller, c, 12, 18)).ToList();
+            Assert.Single(afternoonCorridors);
+            Assert.Equal("Afternoon Corridor", afternoonCorridors[0].Name);
+
+            // Test Evening segment (18-21)
+            var eveningCorridors = corridors.Where(c => 
+                TestIsCorridorActiveInTimeSegment(controller, c, 18, 21)).ToList();
+            Assert.Single(eveningCorridors);
+            Assert.Equal("Evening Corridor", eveningCorridors[0].Name);
+
+            // Test Night segment (20-6) - should have no corridors since none have Night pattern
+            var nightCorridors = corridors.Where(c => 
+                TestIsCorridorActiveInTimeSegment(controller, c, 20, 6)).ToList();
+            Assert.Empty(nightCorridors);
+        }
+
+        private bool TestIsCorridorActiveInTimeSegment(BuckTraxController controller, BuckTraxMovementCorridor corridor, int startHour, int endHour)
+        {
+            // Use reflection to access the private method for testing
+            var methodInfo = typeof(BuckTraxController).GetMethod("IsCorridorActiveInTimeSegment", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            return (bool)methodInfo.Invoke(controller, new object[] { corridor, startHour, endHour });
         }
 
         private double CalculateSimpleDistance(BuckTraxSighting sighting, BuckTraxFeature feature)
