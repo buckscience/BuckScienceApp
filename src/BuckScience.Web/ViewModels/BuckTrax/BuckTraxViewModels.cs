@@ -107,6 +107,25 @@ public class BuckTraxRoutePoint
     public DateTime VisitTime { get; set; }
 }
 
+// Helper classes for route identification (moved from private to support testing)
+public class MovementRoute
+{
+    public string Id { get; set; } = string.Empty;
+    public List<RoutePoint> Points { get; set; } = new();
+}
+
+public class RoutePoint
+{
+    public int Order { get; set; }
+    public BuckTraxSighting Sighting { get; set; } = null!;
+    public int LocationId { get; set; }
+    public string LocationName { get; set; } = string.Empty;
+    public string LocationType { get; set; } = string.Empty;
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public DateTime VisitTime { get; set; }
+}
+
 public class BuckTraxSighting
 {
     public int PhotoId { get; set; }
@@ -140,4 +159,10 @@ public class BuckTraxConfiguration
     public int MinimumSightingsThreshold { get; set; } = 10;
     public int MinimumTransitionsThreshold { get; set; } = 3;
     public bool ShowLimitedDataWarning { get; set; } = true;
+    
+    // New configuration options for feature-aware routing
+    public bool EnableFeatureAwareRouting { get; set; } = true;
+    public double MinimumDistanceForFeatureRouting { get; set; } = 200; // Don't use feature routing for very short distances
+    public double MaximumDetourPercentage { get; set; } = 0.3; // 30% longer route allowed for feature routing
+    public int MaximumWaypointsPerRoute { get; set; } = 2; // Limit waypoints to avoid overly complex routes
 }
