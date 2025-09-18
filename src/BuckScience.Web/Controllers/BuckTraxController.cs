@@ -394,11 +394,7 @@ public class BuckTraxController : Controller
             var currentSighting = sightings[i];
             var nextSighting = sightings[i + 1];
 
-            // Check if both sightings are associated with features
-            if (!currentSighting.AssociatedFeatureId.HasValue || !nextSighting.AssociatedFeatureId.HasValue)
-                continue;
-
-            // Check time window constraint
+            // Check time window constraint first
             var timeDiff = nextSighting.DateTaken - currentSighting.DateTaken;
             if (timeDiff.TotalMinutes > config.MovementTimeWindowMinutes)
                 continue;
@@ -411,48 +407,92 @@ public class BuckTraxController : Controller
             if (distance > config.MaxMovementDistanceMeters)
                 continue;
 
-            // Skip same feature transitions
-            if (currentSighting.AssociatedFeatureId == nextSighting.AssociatedFeatureId)
+            // Skip same location movements (same camera or very close proximity)
+            if (currentSighting.CameraId == nextSighting.CameraId || distance < 10) // 10 meters minimum movement
                 continue;
 
             // Enhanced terrain analysis - check for barriers
             if (IsMovementBlocked(currentSighting, nextSighting, features))
                 continue;
 
-            // Create corridor key
-            var startFeatureId = currentSighting.AssociatedFeatureId.Value;
-            var endFeatureId = nextSighting.AssociatedFeatureId.Value;
-            var corridorKey = $"{Math.Min(startFeatureId, endFeatureId)}-{Math.Max(startFeatureId, endFeatureId)}";
+            // Determine corridor type and create corridor key
+            string corridorKey;
+            BuckTraxMovementCorridor corridor;
 
-            if (!corridors.ContainsKey(corridorKey))
+            // Priority 1: Feature-to-Feature movement (if both sightings have associated features)
+            if (currentSighting.AssociatedFeatureId.HasValue && nextSighting.AssociatedFeatureId.HasValue)
             {
-                var startFeature = featureLookup[startFeatureId];
-                var endFeature = featureLookup[endFeatureId];
+                var startFeatureId = currentSighting.AssociatedFeatureId.Value;
+                var endFeatureId = nextSighting.AssociatedFeatureId.Value;
+                
+                // Skip same feature transitions
+                if (startFeatureId == endFeatureId)
+                    continue;
 
-                corridors[corridorKey] = new BuckTraxMovementCorridor
+                corridorKey = $"feature-{Math.Min(startFeatureId, endFeatureId)}-{Math.Max(startFeatureId, endFeatureId)}";
+                
+                if (!corridors.ContainsKey(corridorKey))
                 {
-                    Name = $"{startFeature.Name} → {endFeature.Name}",
-                    StartFeatureId = startFeatureId,
-                    EndFeatureId = endFeatureId,
-                    StartFeatureName = startFeature.Name,
-                    EndFeatureName = endFeature.Name,
-                    StartFeatureType = startFeature.ClassificationName,
-                    EndFeatureType = endFeature.ClassificationName,
-                    StartLatitude = startFeature.Latitude,
-                    StartLongitude = startFeature.Longitude,
-                    EndLatitude = endFeature.Latitude,
-                    EndLongitude = endFeature.Longitude,
-                    TransitionCount = 0,
-                    StartFeatureWeight = startFeature.EffectiveWeight,
-                    EndFeatureWeight = endFeature.EffectiveWeight,
-                    Distance = distance,
-                    AverageTimeSpan = 0,
-                    TimeOfDayPattern = ""
-                };
+                    var startFeature = featureLookup[startFeatureId];
+                    var endFeature = featureLookup[endFeatureId];
+
+                    corridors[corridorKey] = new BuckTraxMovementCorridor
+                    {
+                        Name = $"{startFeature.Name} → {endFeature.Name}",
+                        StartFeatureId = startFeatureId,
+                        EndFeatureId = endFeatureId,
+                        StartFeatureName = startFeature.Name,
+                        EndFeatureName = endFeature.Name,
+                        StartFeatureType = startFeature.ClassificationName,
+                        EndFeatureType = endFeature.ClassificationName,
+                        StartLatitude = startFeature.Latitude,
+                        StartLongitude = startFeature.Longitude,
+                        EndLatitude = endFeature.Latitude,
+                        EndLongitude = endFeature.Longitude,
+                        TransitionCount = 0,
+                        StartFeatureWeight = startFeature.EffectiveWeight,
+                        EndFeatureWeight = endFeature.EffectiveWeight,
+                        Distance = distance,
+                        AverageTimeSpan = 0,
+                        TimeOfDayPattern = ""
+                    };
+                }
+            }
+            // Priority 2: Camera-to-Camera movement (when feature association is not available)
+            else
+            {
+                var startCameraId = currentSighting.CameraId;
+                var endCameraId = nextSighting.CameraId;
+                
+                corridorKey = $"camera-{Math.Min(startCameraId, endCameraId)}-{Math.Max(startCameraId, endCameraId)}";
+                
+                if (!corridors.ContainsKey(corridorKey))
+                {
+                    corridors[corridorKey] = new BuckTraxMovementCorridor
+                    {
+                        Name = $"{currentSighting.CameraName} → {nextSighting.CameraName}",
+                        StartFeatureId = startCameraId, // Using camera ID as pseudo-feature ID
+                        EndFeatureId = endCameraId,
+                        StartFeatureName = currentSighting.CameraName,
+                        EndFeatureName = nextSighting.CameraName,
+                        StartFeatureType = "Camera Location",
+                        EndFeatureType = "Camera Location",
+                        StartLatitude = currentSighting.Latitude,
+                        StartLongitude = currentSighting.Longitude,
+                        EndLatitude = nextSighting.Latitude,
+                        EndLongitude = nextSighting.Longitude,
+                        TransitionCount = 0,
+                        StartFeatureWeight = 0.5f, // Default weight for camera locations
+                        EndFeatureWeight = 0.5f,
+                        Distance = distance,
+                        AverageTimeSpan = 0,
+                        TimeOfDayPattern = ""
+                    };
+                }
             }
 
             // Update corridor statistics
-            var corridor = corridors[corridorKey];
+            corridor = corridors[corridorKey];
             corridor.TransitionCount++;
             
             // Update average time span
@@ -461,8 +501,8 @@ public class BuckTraxController : Controller
 
             // Enhanced corridor score calculation with weight amplification
             var weightMultiplier = (corridor.StartFeatureWeight + corridor.EndFeatureWeight) / 2;
-            // Give more emphasis to highly weighted features 
-            var amplifiedWeight = Math.Pow(weightMultiplier, 1.5);
+            // Give more emphasis to highly weighted features, but ensure camera movements still score reasonably
+            var amplifiedWeight = Math.Max(0.5, Math.Pow(weightMultiplier, 1.5));
             corridor.CorridorScore = corridor.TransitionCount * amplifiedWeight * 5; // Increased base multiplier
         }
 
@@ -476,8 +516,27 @@ public class BuckTraxController : Controller
                 var currentSighting = sightings[i];
                 var nextSighting = sightings[i + 1];
 
-                if (currentSighting.AssociatedFeatureId == corridor.StartFeatureId &&
-                    nextSighting.AssociatedFeatureId == corridor.EndFeatureId)
+                // Check if this transition matches the corridor (feature-based or camera-based)
+                bool isMatchingTransition = false;
+                
+                if (corridor.StartFeatureType == "Camera Location")
+                {
+                    // Camera-based corridor
+                    isMatchingTransition = (currentSighting.CameraId == corridor.StartFeatureId && 
+                                          nextSighting.CameraId == corridor.EndFeatureId) ||
+                                         (currentSighting.CameraId == corridor.EndFeatureId && 
+                                          nextSighting.CameraId == corridor.StartFeatureId);
+                }
+                else
+                {
+                    // Feature-based corridor
+                    isMatchingTransition = (currentSighting.AssociatedFeatureId == corridor.StartFeatureId &&
+                                          nextSighting.AssociatedFeatureId == corridor.EndFeatureId) ||
+                                         (currentSighting.AssociatedFeatureId == corridor.EndFeatureId &&
+                                          nextSighting.AssociatedFeatureId == corridor.StartFeatureId);
+                }
+
+                if (isMatchingTransition)
                 {
                     transitionTimes.Add(currentSighting.DateTaken.Hour);
                 }
@@ -776,7 +835,7 @@ public class BuckTraxController : Controller
     {
         return new BuckTraxConfiguration
         {
-            MovementTimeWindowMinutes = 240, // Reduced to 4 hours for more realistic movement
+            MovementTimeWindowMinutes = 60, // Reduced to 1 hour to capture short movements like 12 minutes
             MaxMovementDistanceMeters = 2000, // Reduced to 2 km for more realistic movement  
             CameraFeatureProximityMeters = 100, // 100 meters
             MinimumSightingsThreshold = 5, // Reduced threshold for better responsiveness
