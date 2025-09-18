@@ -86,14 +86,12 @@
                             Prediction Zones
                         </label>
                     </div>
-                    <!-- TEMPORARILY DISABLED: Movement Corridors Control
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="show-movement-corridors" checked>
                         <label class="form-check-label" for="show-movement-corridors">
                             Movement Corridors
                         </label>
                     </div>
-                    -->
                 </div>
 
                 <!-- Summary Stats -->
@@ -221,15 +219,15 @@
                 clearMapLayers();
             });
 
-            // Updated layer visibility handlers (excluding movement corridors)
-            $('#show-property-features, #show-prediction-zones').on('change', function() {
+            // Layer visibility handlers
+            $('#show-property-features, #show-prediction-zones, #show-movement-corridors').on('change', function() {
                 updateLayerVisibility();
             });
 
-            // Ensure checkboxes are checked by default for better UX (excluding movement corridors)
+            // Ensure checkboxes are checked by default for better UX
             $('#show-property-features').prop('checked', true);
             $('#show-prediction-zones').prop('checked', true);
-            // $('#show-movement-corridors').prop('checked', true); // TEMPORARILY DISABLED
+            $('#show-movement-corridors').prop('checked', true);
         }
 
         function loadPropertyFeatures(propertyId) {
@@ -478,11 +476,10 @@
             // Clear existing BuckTrax layers
             clearMapLayers();
 
-            // TEMPORARILY DISABLED: Add movement corridors
-            // TODO: Re-enable when corridor visualization is ready
-            // if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
-            //     addCorridorsToMap(map, predictions.movementCorridors);
-            // }
+            // Add movement corridors
+            if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
+                addCorridorsToMap(map, predictions.movementCorridors);
+            }
 
             // Add prediction zones
             const allZones = [];
@@ -500,9 +497,6 @@
             fitMapToPredictions(map, predictions);
         }
 
-        // TEMPORARILY DISABLED: addCorridorsToMap function
-        // TODO: Re-enable when corridor visualization is ready
-        /*
         function addCorridorsToMap(map, corridors) {
             const features = corridors.map(corridor => ({
                 type: 'Feature',
@@ -568,7 +562,6 @@
             map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
             map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
         }
-        */
 
         function addZonesToMap(map, zones) {
             const features = zones.map(zone => ({
@@ -727,18 +720,16 @@
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            // TEMPORARILY DISABLED: Corridor visibility handling
-            // const showCorridors = $('#show-movement-corridors').is(':checked');
-            
+            const showCorridors = $('#show-movement-corridors').is(':checked');
             const showZones = $('#show-prediction-zones').is(':checked');
             const showFeatures = $('#show-property-features').is(':checked');
 
-            // TEMPORARILY DISABLED: Corridor layer visibility
-            // bucktraxLayers.corridors.forEach(layerId => {
-            //     if (map.getLayer(layerId)) {
-            //         map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
-            //     }
-            // });
+            // Corridor layer visibility
+            bucktraxLayers.corridors.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
+                }
+            });
 
             bucktraxLayers.zones.forEach(layerId => {
                 if (map.getLayer(layerId)) {
