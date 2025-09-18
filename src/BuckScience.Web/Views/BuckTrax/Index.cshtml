@@ -679,13 +679,13 @@
                         'circle-radius': 10,
                         'circle-color': [
                             'case',
-                            ['==', ['get', 'order'], 1], '#00aa00', // Start point: Green
-                            ['==', ['get', 'order'], route.routePoints.length], '#ff4444', // End point: Red
-                            '#ffa500' // Mid points: Orange
+                            ['==', ['get', 'order'], 1], 'rgba(0, 170, 0, 0.7)', // Start point: Green with alpha
+                            ['==', ['get', 'order'], route.routePoints.length], 'rgba(255, 68, 68, 0.7)', // End point: Red with alpha
+                            'rgba(255, 165, 0, 0.7)' // Mid points: Orange with alpha
                         ],
                         'circle-stroke-width': 1.5,
                         'circle-stroke-color': '#ffffff',
-                        'circle-opacity': 0.7 // Match camera sighting opacity
+                        'circle-stroke-opacity': 0.9
                     }
                 });
 
