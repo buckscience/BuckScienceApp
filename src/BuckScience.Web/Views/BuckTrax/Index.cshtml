@@ -86,14 +86,18 @@
                             Prediction Zones
                         </label>
                     </div>
-                    <!-- TEMPORARILY DISABLED: Movement Corridors Control
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="show-movement-corridors" checked>
                         <label class="form-check-label" for="show-movement-corridors">
                             Movement Corridors
                         </label>
                     </div>
-                    -->
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="show-cameras" checked>
+                        <label class="form-check-label" for="show-cameras">
+                            Camera Locations
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Summary Stats -->
@@ -138,30 +142,6 @@
                 <div class="flex-grow-1">
                     <div id="time-segment-content">
                         <!-- Time segment details will be loaded dynamically -->
-                    </div>
-                </div>
-
-                <!-- Map Controls -->
-                <div class="mt-3 pt-3 border-top">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold">Map Controls</span>
-                        <button id="clear-map" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-eraser me-1"></i>Clear
-                        </button>
-                    </div>
-                    <!-- TEMPORARILY DISABLED: Movement Corridors Control
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="show-corridors" checked>
-                        <label class="form-check-label" for="show-corridors">
-                            Show Movement Corridors
-                        </label>
-                    </div>
-                    -->
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="show-zones" checked>
-                        <label class="form-check-label" for="show-zones">
-                            Show Prediction Zones
-                        </label>
                     </div>
                 </div>
             </div>
@@ -216,20 +196,16 @@
                 }
             });
 
-            // Map control handlers
-            $('#clear-map').on('click', function() {
-                clearMapLayers();
-            });
-
-            // Updated layer visibility handlers (excluding movement corridors)
-            $('#show-property-features, #show-prediction-zones').on('change', function() {
+            // Layer visibility handlers
+            $('#show-property-features, #show-prediction-zones, #show-movement-corridors, #show-cameras').on('change', function() {
                 updateLayerVisibility();
             });
 
-            // Ensure checkboxes are checked by default for better UX (excluding movement corridors)
+            // Ensure checkboxes are checked by default for better UX
             $('#show-property-features').prop('checked', true);
             $('#show-prediction-zones').prop('checked', true);
-            // $('#show-movement-corridors').prop('checked', true); // TEMPORARILY DISABLED
+            $('#show-movement-corridors').prop('checked', true);
+            $('#show-cameras').prop('checked', true);
         }
 
         function loadPropertyFeatures(propertyId) {
@@ -368,22 +344,25 @@
             $('#total-transitions').text(predictions.totalTransitions);
             $('#active-periods').text(predictions.timeSegments.filter(t => t.sightingCount > 0).length);
 
-            // Create time segment tabs
+            // Initialize map (clear existing layers) BEFORE creating time segment tabs
+            updateMapWithPredictions(predictions);
+            
+            // Create time segment tabs (this will populate the map with default segment data)
             createTimeSegmentTabs(predictions.timeSegments);
 
             // Show results section
             showResultsSection();
-
-            // Update map with predictions
-            updateMapWithPredictions(predictions);
         }
 
         function createTimeSegmentTabs(timeSegments) {
             const tabsContainer = $('#time-segment-tabs');
             tabsContainer.empty();
 
+            // Use defaultTimeSegmentIndex from predictions if available
+            const defaultIndex = currentPredictions?.defaultTimeSegmentIndex ?? 0;
+
             timeSegments.forEach((segment, index) => {
-                const isActive = index === 0 ? 'active' : '';
+                const isActive = index === defaultIndex ? 'active' : '';
                 const badgeClass = segment.sightingCount > 0 ? 'bg-success' : 'bg-secondary';
                 
                 const tab = $(`
@@ -402,11 +381,16 @@
             tabsContainer.find('button').on('click', function() {
                 const index = parseInt($(this).attr('id').split('-')[1]);
                 displayTimeSegmentContent(timeSegments[index]);
+                // Update map to show only the selected time segment's data
+                updateMapForTimeSegment(timeSegments[index]);
             });
 
-            // Show first segment by default
+            // Show default segment (most active or earliest daylight)
             if (timeSegments.length > 0) {
-                displayTimeSegmentContent(timeSegments[0]);
+                const selectedSegment = timeSegments[defaultIndex];
+                displayTimeSegmentContent(selectedSegment);
+                // Initialize map with the default segment's data
+                updateMapForTimeSegment(selectedSegment);
             }
         }
 
@@ -477,39 +461,97 @@
 
             // Clear existing BuckTrax layers
             clearMapLayers();
-
-            // TEMPORARILY DISABLED: Add movement corridors
-            // TODO: Re-enable when corridor visualization is ready
-            // if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
-            //     addCorridorsToMap(map, predictions.movementCorridors);
-            // }
-
-            // Add prediction zones
-            const allZones = [];
-            predictions.timeSegments.forEach(segment => {
-                segment.predictedZones.forEach(zone => {
-                    allZones.push(zone);
-                });
-            });
-
-            if (allZones.length > 0) {
-                addZonesToMap(map, allZones);
-            }
-
-            // Fit map to show all predictions
-            fitMapToPredictions(map, predictions);
+            
+            // Note: We don't add any data here anymore - 
+            // the time segment selection will handle displaying the appropriate data
+            // This function now just ensures the map is ready for time segment updates
         }
 
-        // TEMPORARILY DISABLED: addCorridorsToMap function
-        // TODO: Re-enable when corridor visualization is ready
-        /*
+        function updateMapForTimeSegment(selectedSegment) {
+            const map = window.App?.getMap?.();
+            if (!map || !currentPredictions) {
+                console.warn('Main map or predictions not available');
+                return;
+            }
+
+            // Clear existing BuckTrax layers
+            clearMapLayers();
+
+            // Filter corridors to only show those for the selected time segment
+            if (selectedSegment.timeSegmentCorridors && selectedSegment.timeSegmentCorridors.length > 0) {
+                addCorridorsToMap(map, selectedSegment.timeSegmentCorridors);
+            }
+
+            // Add prediction zones for the selected time segment only
+            if (selectedSegment.predictedZones && selectedSegment.predictedZones.length > 0) {
+                addZonesToMap(map, selectedSegment.predictedZones);
+            }
+
+            // Fit map to show the selected segment's predictions
+            fitMapToTimeSegment(map, selectedSegment);
+        }
+
+        function fitMapToTimeSegment(map, segment) {
+            const bounds = new mapboxgl.LngLatBounds();
+            let hasPoints = false;
+
+            // Add corridor points to bounds
+            if (segment.timeSegmentCorridors) {
+                segment.timeSegmentCorridors.forEach(corridor => {
+                    bounds.extend([corridor.startLongitude, corridor.startLatitude]);
+                    bounds.extend([corridor.endLongitude, corridor.endLatitude]);
+                    hasPoints = true;
+                });
+            }
+
+            // Add zone points to bounds
+            if (segment.predictedZones) {
+                segment.predictedZones.forEach(zone => {
+                    bounds.extend([zone.longitude, zone.latitude]);
+                    hasPoints = true;
+                });
+            }
+
+            // Only fit bounds if we have points
+            if (hasPoints) {
+                try {
+                    map.fitBounds(bounds, { 
+                        padding: 50,
+                        maxZoom: 15 // Don't zoom in too close
+                    });
+                } catch (e) {
+                    console.warn('Error fitting map bounds:', e);
+                }
+            }
+        }
+
         function addCorridorsToMap(map, corridors) {
+            const showCorridors = $('#show-movement-corridors').is(':checked');
+            
+            // Separate simple corridors from multi-point routes
+            const simpleCorridors = corridors.filter(c => !c.isPartOfMultiPointRoute);
+            const multiPointRoutes = corridors.filter(c => c.isPartOfMultiPointRoute);
+            
+            // Add simple corridors as lines
+            if (simpleCorridors.length > 0) {
+                addSimpleCorridors(map, simpleCorridors, showCorridors);
+            }
+            
+            // Add multi-point routes with numbered indicators
+            if (multiPointRoutes.length > 0) {
+                addMultiPointRoutes(map, multiPointRoutes, showCorridors);
+            }
+        }
+
+        function addSimpleCorridors(map, corridors, showCorridors) {
             const features = corridors.map(corridor => ({
                 type: 'Feature',
                 properties: {
                     name: corridor.name,
                     score: corridor.corridorScore,
-                    transitions: corridor.transitionCount
+                    transitions: corridor.transitionCount,
+                    routeId: corridor.routeId,
+                    isMultiPoint: false
                 },
                 geometry: {
                     type: 'LineString',
@@ -520,16 +562,13 @@
                 }
             }));
 
-            const sourceId = 'bucktrax-corridors';
-            const layerId = 'bucktrax-corridors-lines';
+            const sourceId = 'bucktrax-corridors-simple';
+            const layerId = 'bucktrax-corridors-simple-lines';
 
             map.addSource(sourceId, {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: features }
             });
-
-            // Check initial visibility state
-            const showCorridors = $('#show-movement-corridors').is(':checked');
 
             map.addLayer({
                 id: layerId,
@@ -550,7 +589,7 @@
             bucktraxLayers.corridors.push(layerId);
             bucktraxLayers.sources.push(sourceId);
 
-            // Add click handler
+            // Add click handler for simple corridors
             map.on('click', layerId, (e) => {
                 const props = e.features[0].properties;
                 new mapboxgl.Popup()
@@ -568,7 +607,170 @@
             map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
             map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
         }
-        */
+
+        function addMultiPointRoutes(map, routes, showCorridors) {
+            routes.forEach((route, routeIndex) => {
+                // Create line segments for the route
+                const lineFeatures = [];
+                for (let i = 0; i < route.routePoints.length - 1; i++) {
+                    const current = route.routePoints[i];
+                    const next = route.routePoints[i + 1];
+                    
+                    lineFeatures.push({
+                        type: 'Feature',
+                        properties: {
+                            name: route.name,
+                            score: route.corridorScore,
+                            transitions: route.transitionCount,
+                            routeId: route.routeId,
+                            isMultiPoint: true,
+                            segmentIndex: i
+                        },
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: [
+                                [current.longitude, current.latitude],
+                                [next.longitude, next.latitude]
+                            ]
+                        }
+                    });
+                }
+
+                // Add route lines
+                const lineSourceId = `bucktrax-route-${routeIndex}-lines`;
+                const lineLayerId = `bucktrax-route-${routeIndex}-lines-layer`;
+
+                map.addSource(lineSourceId, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: lineFeatures }
+                });
+
+                map.addLayer({
+                    id: lineLayerId,
+                    type: 'line',
+                    source: lineSourceId,
+                    layout: { 
+                        'line-join': 'round', 
+                        'line-cap': 'round',
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'line-color': '#ff6600', // Orange for multi-point routes
+                        'line-width': ['interpolate', ['linear'], ['get', 'score'], 0, 3, 10, 8],
+                        'line-opacity': 0.9
+                    }
+                });
+
+                bucktraxLayers.corridors.push(lineLayerId);
+                bucktraxLayers.sources.push(lineSourceId);
+
+                // Add numbered point markers
+                const pointFeatures = route.routePoints.map(point => ({
+                    type: 'Feature',
+                    properties: {
+                        order: point.order,
+                        name: point.locationName,
+                        type: point.locationType,
+                        visitTime: point.visitTime,
+                        routeName: route.name,
+                        routeId: route.routeId
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [point.longitude, point.latitude]
+                    }
+                }));
+
+                const pointSourceId = `bucktrax-route-${routeIndex}-points`;
+                const pointLayerId = `bucktrax-route-${routeIndex}-points-layer`;
+
+                map.addSource(pointSourceId, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: pointFeatures }
+                });
+
+                map.addLayer({
+                    id: pointLayerId,
+                    type: 'circle',
+                    source: pointSourceId,
+                    layout: {
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'circle-radius': 10,
+                        'circle-color': [
+                            'case',
+                            ['==', ['get', 'order'], 1], 'rgba(0, 170, 0, 0.7)', // Start point: Green with embedded opacity
+                            ['==', ['get', 'order'], route.routePoints.length], 'rgba(255, 68, 68, 0.7)', // End point: Red with embedded opacity
+                            'rgba(255, 165, 0, 0.7)' // Mid points: Orange with embedded opacity
+                        ],
+                        'circle-stroke-width': 1.5,
+                        'circle-stroke-color': '#ffffff',
+                        'circle-stroke-opacity': 0.9
+                    }
+                });
+
+                // Add number labels
+                const labelLayerId = `bucktrax-route-${routeIndex}-labels-layer`;
+                map.addLayer({
+                    id: labelLayerId,
+                    type: 'symbol',
+                    source: pointSourceId,
+                    layout: {
+                        'text-field': ['get', 'order'],
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 12,
+                        'text-anchor': 'center',
+                        'visibility': showCorridors ? 'visible' : 'none'
+                    },
+                    paint: {
+                        'text-color': '#ffffff'
+                    }
+                });
+
+                bucktraxLayers.corridors.push(pointLayerId, labelLayerId);
+                bucktraxLayers.sources.push(pointSourceId);
+
+                // Add click handlers for route lines
+                map.on('click', lineLayerId, (e) => {
+                    const props = e.features[0].properties;
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <div class="fw-bold">${props.name}</div>
+                                <div class="text-info">Multi-point Route</div>
+                                <div>Score: ${props.score}</div>
+                                <div>Transitions: ${props.transitions}</div>
+                            </div>
+                        `)
+                        .addTo(map);
+                });
+
+                // Add click handlers for route points
+                map.on('click', pointLayerId, (e) => {
+                    const props = e.features[0].properties;
+                    const visitTime = new Date(props.visitTime).toLocaleString();
+                    new mapboxgl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(`
+                            <div class="p-2">
+                                <div class="fw-bold">Stop ${props.order}: ${props.name}</div>
+                                <div class="text-muted">${props.type}</div>
+                                <div><small>Visited: ${visitTime}</small></div>
+                                <div class="text-info"><small>Route: ${props.routeName}</small></div>
+                            </div>
+                        `)
+                        .addTo(map);
+                });
+
+                // Add hover effects
+                map.on('mouseenter', lineLayerId, () => map.getCanvas().style.cursor = 'pointer');
+                map.on('mouseleave', lineLayerId, () => map.getCanvas().style.cursor = '');
+                map.on('mouseenter', pointLayerId, () => map.getCanvas().style.cursor = 'pointer');
+                map.on('mouseleave', pointLayerId, () => map.getCanvas().style.cursor = '');
+            });
+        }
 
         function addZonesToMap(map, zones) {
             const features = zones.map(zone => ({
@@ -608,12 +810,12 @@
                     'circle-color': [
                         'case',
                         ['get', 'isCorridor'],
-                        '#ffa500', // Orange for corridor predictions
-                        '#ff4444'  // Red for sighting zones
+                        'rgba(255, 165, 0, 0.7)', // Orange for corridor predictions with embedded opacity
+                        'rgba(255, 68, 68, 0.7)'  // Red for sighting zones with embedded opacity
                     ],
-                    'circle-opacity': 0.7,
                     'circle-stroke-width': 2,
-                    'circle-stroke-color': '#ffffff'
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-opacity': 0.9
                 }
             });
 
@@ -727,18 +929,17 @@
             const map = window.App?.getMap?.();
             if (!map) return;
 
-            // TEMPORARILY DISABLED: Corridor visibility handling
-            // const showCorridors = $('#show-movement-corridors').is(':checked');
-            
+            const showCorridors = $('#show-movement-corridors').is(':checked');
             const showZones = $('#show-prediction-zones').is(':checked');
             const showFeatures = $('#show-property-features').is(':checked');
+            const showCameras = $('#show-cameras').is(':checked');
 
-            // TEMPORARILY DISABLED: Corridor layer visibility
-            // bucktraxLayers.corridors.forEach(layerId => {
-            //     if (map.getLayer(layerId)) {
-            //         map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
-            //     }
-            // });
+            // Corridor layer visibility
+            bucktraxLayers.corridors.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', showCorridors ? 'visible' : 'none');
+                }
+            });
 
             bucktraxLayers.zones.forEach(layerId => {
                 if (map.getLayer(layerId)) {
@@ -751,6 +952,17 @@
                     map.setLayoutProperty(layerId, 'visibility', showFeatures ? 'visible' : 'none');
                 }
             });
+
+            // Camera marker visibility
+            if (window.App._cameraMarkers) {
+                window.App._cameraMarkers.forEach(marker => {
+                    if (showCameras) {
+                        marker.addTo(map);
+                    } else {
+                        marker.remove();
+                    }
+                });
+            }
         }
 
         function formatTimeRange(start, end) {

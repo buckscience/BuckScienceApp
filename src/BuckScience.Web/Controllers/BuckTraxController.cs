@@ -245,7 +245,8 @@ public class BuckTraxController : Controller
                 : null,
             TimeSegments = predictions,
             MovementCorridors = movementCorridors,
-            Configuration = config
+            Configuration = config,
+            DefaultTimeSegmentIndex = CalculateDefaultTimeSegmentIndex(predictions, timeSegments)
         };
     }
 
@@ -385,108 +386,463 @@ public class BuckTraxController : Controller
         List<BuckTraxFeature> features, 
         BuckTraxConfiguration config)
     {
-        var corridors = new Dictionary<string, BuckTraxMovementCorridor>();
+        var corridors = new List<BuckTraxMovementCorridor>();
         var featureLookup = features.ToDictionary(f => f.Id, f => f);
 
-        // Analyze sequential sightings for movement patterns
-        for (int i = 0; i < sightings.Count - 1; i++)
+        // First, identify movement routes (sequences of locations within time windows)
+        var routes = IdentifyMovementRoutes(sightings, features, config);
+
+        // Convert routes to corridors
+        foreach (var route in routes)
         {
-            var currentSighting = sightings[i];
-            var nextSighting = sightings[i + 1];
+            if (route.Points.Count < 2) continue;
 
-            // Check if both sightings are associated with features
-            if (!currentSighting.AssociatedFeatureId.HasValue || !nextSighting.AssociatedFeatureId.HasValue)
-                continue;
-
-            // Check time window constraint
-            var timeDiff = nextSighting.DateTaken - currentSighting.DateTaken;
-            if (timeDiff.TotalMinutes > config.MovementTimeWindowMinutes)
-                continue;
-
-            // Check distance constraint
-            var distance = CalculateDistance(
-                currentSighting.Latitude, currentSighting.Longitude,
-                nextSighting.Latitude, nextSighting.Longitude);
-            
-            if (distance > config.MaxMovementDistanceMeters)
-                continue;
-
-            // Skip same feature transitions
-            if (currentSighting.AssociatedFeatureId == nextSighting.AssociatedFeatureId)
-                continue;
-
-            // Enhanced terrain analysis - check for barriers
-            if (IsMovementBlocked(currentSighting, nextSighting, features))
-                continue;
-
-            // Create corridor key
-            var startFeatureId = currentSighting.AssociatedFeatureId.Value;
-            var endFeatureId = nextSighting.AssociatedFeatureId.Value;
-            var corridorKey = $"{Math.Min(startFeatureId, endFeatureId)}-{Math.Max(startFeatureId, endFeatureId)}";
-
-            if (!corridors.ContainsKey(corridorKey))
+            if (route.Points.Count == 2)
             {
-                var startFeature = featureLookup[startFeatureId];
-                var endFeature = featureLookup[endFeatureId];
-
-                corridors[corridorKey] = new BuckTraxMovementCorridor
-                {
-                    Name = $"{startFeature.Name} → {endFeature.Name}",
-                    StartFeatureId = startFeatureId,
-                    EndFeatureId = endFeatureId,
-                    StartFeatureName = startFeature.Name,
-                    EndFeatureName = endFeature.Name,
-                    StartFeatureType = startFeature.ClassificationName,
-                    EndFeatureType = endFeature.ClassificationName,
-                    StartLatitude = startFeature.Latitude,
-                    StartLongitude = startFeature.Longitude,
-                    EndLatitude = endFeature.Latitude,
-                    EndLongitude = endFeature.Longitude,
-                    TransitionCount = 0,
-                    StartFeatureWeight = startFeature.EffectiveWeight,
-                    EndFeatureWeight = endFeature.EffectiveWeight,
-                    Distance = distance,
-                    AverageTimeSpan = 0,
-                    TimeOfDayPattern = ""
-                };
+                // Simple point-to-point corridor
+                var corridor = CreateSimpleCorridor(route.Points[0], route.Points[1], featureLookup, route.Id);
+                corridors.Add(corridor);
             }
-
-            // Update corridor statistics
-            var corridor = corridors[corridorKey];
-            corridor.TransitionCount++;
-            
-            // Update average time span
-            var totalTime = corridor.AverageTimeSpan * (corridor.TransitionCount - 1) + timeDiff.TotalHours;
-            corridor.AverageTimeSpan = totalTime / corridor.TransitionCount;
-
-            // Enhanced corridor score calculation with weight amplification
-            var weightMultiplier = (corridor.StartFeatureWeight + corridor.EndFeatureWeight) / 2;
-            // Give more emphasis to highly weighted features 
-            var amplifiedWeight = Math.Pow(weightMultiplier, 1.5);
-            corridor.CorridorScore = corridor.TransitionCount * amplifiedWeight * 5; // Increased base multiplier
+            else
+            {
+                // Multi-point route - create a primary corridor representing the full route
+                var primaryCorridor = CreateMultiPointCorridor(route, featureLookup);
+                corridors.Add(primaryCorridor);
+            }
         }
 
         // Calculate time of day patterns for each corridor
-        foreach (var corridor in corridors.Values)
+        foreach (var corridor in corridors)
         {
-            var transitionTimes = new List<int>();
+            corridor.TimeOfDayPattern = CalculateTimeOfDayPattern(corridor, sightings);
+        }
+
+        return corridors.OrderByDescending(c => c.CorridorScore).ToList();
+    }
+
+    private List<MovementRoute> IdentifyMovementRoutes(List<BuckTraxSighting> sightings, List<BuckTraxFeature> features, BuckTraxConfiguration config)
+    {
+        var routes = new List<MovementRoute>();
+        var routeId = 1;
+
+        for (int i = 0; i < sightings.Count; i++)
+        {
+            var route = new MovementRoute { Id = $"route-{routeId++}" };
+            var currentSighting = sightings[i];
             
+            // Add first point
+            route.Points.Add(new RoutePoint
+            {
+                Order = 1,
+                Sighting = currentSighting,
+                LocationId = GetLocationId(currentSighting),
+                LocationName = GetLocationName(currentSighting),
+                LocationType = GetLocationType(currentSighting),
+                Latitude = currentSighting.Latitude,
+                Longitude = currentSighting.Longitude,
+                VisitTime = currentSighting.DateTaken
+            });
+
+            // Look ahead for connected movements within the time window
+            for (int j = i + 1; j < sightings.Count; j++)
+            {
+                var nextSighting = sightings[j];
+                var lastPoint = route.Points.Last();
+                
+                var timeDiff = nextSighting.DateTaken - lastPoint.VisitTime;
+                if (timeDiff.TotalMinutes > config.MovementTimeWindowMinutes)
+                    break; // Time window exceeded
+
+                var distance = CalculateDistance(
+                    lastPoint.Latitude, lastPoint.Longitude,
+                    nextSighting.Latitude, nextSighting.Longitude);
+                
+                if (distance > config.MaxMovementDistanceMeters)
+                    continue; // Too far
+
+                // Skip same location
+                if (GetLocationId(nextSighting) == lastPoint.LocationId)
+                    continue;
+
+                // Check for barriers
+                if (IsMovementBlocked(sightings[j-1], nextSighting, features))
+                    continue;
+
+                // ENHANCEMENT: Check if there are logical features to route through
+                var enhancedRoute = CreateFeatureAwareRoute(lastPoint, nextSighting, features, config);
+                
+                if (enhancedRoute.Count > 1)
+                {
+                    // Add intermediate feature waypoints if found
+                    foreach (var waypoint in enhancedRoute.Skip(1)) // Skip first as it's already added
+                    {
+                        route.Points.Add(new RoutePoint
+                        {
+                            Order = route.Points.Count + 1,
+                            Sighting = waypoint.Sighting,
+                            LocationId = waypoint.LocationId,
+                            LocationName = waypoint.LocationName,
+                            LocationType = waypoint.LocationType,
+                            Latitude = waypoint.Latitude,
+                            Longitude = waypoint.Longitude,
+                            VisitTime = waypoint.VisitTime
+                        });
+                    }
+                }
+                
+                // Always add the final destination point, preferring feature over camera
+                route.Points.Add(new RoutePoint
+                {
+                    Order = route.Points.Count + 1,
+                    Sighting = nextSighting,
+                    LocationId = GetLocationId(nextSighting),
+                    LocationName = GetLocationName(nextSighting),
+                    LocationType = GetLocationType(nextSighting),
+                    Latitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Latitude ?? nextSighting.Latitude : 
+                        nextSighting.Latitude,
+                    Longitude = nextSighting.AssociatedFeatureId.HasValue ? 
+                        features.FirstOrDefault(f => f.Id == nextSighting.AssociatedFeatureId.Value)?.Longitude ?? nextSighting.Longitude : 
+                        nextSighting.Longitude,
+                    VisitTime = nextSighting.DateTaken
+                });
+
+                i = j; // Skip processed sightings
+            }
+
+            // Only add routes with movement (more than one point)
+            if (route.Points.Count > 1)
+            {
+                routes.Add(route);
+            }
+        }
+
+        return routes;
+    }
+
+    /// <summary>
+    /// Creates a feature-aware route between two points, identifying logical intermediate features
+    /// that should be used as waypoints instead of direct camera-to-camera movement.
+    /// </summary>
+    private List<RoutePoint> CreateFeatureAwareRoute(RoutePoint start, BuckTraxSighting endSighting, List<BuckTraxFeature> features, BuckTraxConfiguration config)
+    {
+        var route = new List<RoutePoint> { start };
+        
+        // Check if feature-aware routing is enabled
+        if (!config.EnableFeatureAwareRouting)
+        {
+            return route; // Return single point, will add end point in caller
+        }
+        
+        // Calculate total distance between start and end
+        var totalDistance = CalculateDistance(start.Latitude, start.Longitude, endSighting.Latitude, endSighting.Longitude);
+        
+        // Only consider feature routing for longer movements where intermediate features make sense
+        if (totalDistance < config.MinimumDistanceForFeatureRouting)
+        {
+            return route; // Return single point, will add end point in caller
+        }
+        
+        // Find potential intermediate features that could be logical waypoints
+        var candidateFeatures = FindLogicalWaypoints(start, endSighting, features, config);
+        
+        if (candidateFeatures.Any())
+        {
+            // Create waypoints for the most logical intermediate features
+            var interpolatedTime = InterpolateTime(start.VisitTime, endSighting.DateTaken, candidateFeatures.Count + 1);
+            
+            for (int i = 0; i < candidateFeatures.Count; i++)
+            {
+                var feature = candidateFeatures[i];
+                route.Add(new RoutePoint
+                {
+                    Order = route.Count + 1,
+                    Sighting = endSighting, // Reference the end sighting for metadata
+                    LocationId = feature.Id,
+                    LocationName = feature.Name,
+                    LocationType = "Property Feature",
+                    Latitude = feature.Latitude,
+                    Longitude = feature.Longitude,
+                    VisitTime = interpolatedTime[i] // Interpolated time between start and end
+                });
+            }
+        }
+        
+        return route;
+    }
+    
+    /// <summary>
+    /// Finds logical waypoint features between two points that make sense for deer movement.
+    /// Prioritizes travel corridors, food sources, and water features.
+    /// </summary>
+    private List<BuckTraxFeature> FindLogicalWaypoints(RoutePoint start, BuckTraxSighting end, List<BuckTraxFeature> features, BuckTraxConfiguration config)
+    {
+        var waypoints = new List<BuckTraxFeature>();
+        
+        // Define high-value feature types that deer commonly use as travel waypoints
+        var waypointFeatureTypes = new HashSet<string>
+        {
+            "Creek Crossing", "Pinch Point", "Saddle", "Ridge", "Draw", 
+            "Trail", "Travel Corridor", "Edge", "Fence Crossing",
+            "Food Plot", "Water", "Pond"
+        };
+        
+        // Find features that lie reasonably close to the direct path
+        var candidateFeatures = features
+            .Where(f => waypointFeatureTypes.Any(wft => f.ClassificationName.Contains(wft, StringComparison.OrdinalIgnoreCase)))
+            .Where(f => f.Id != start.LocationId && f.Id != GetLocationId(end)) // Exclude start/end locations
+            .Select(f => new
+            {
+                Feature = f,
+                DistanceFromPath = CalculateDistanceFromPath(start.Latitude, start.Longitude, end.Latitude, end.Longitude, f.Latitude, f.Longitude),
+                DistanceFromStart = CalculateDistance(start.Latitude, start.Longitude, f.Latitude, f.Longitude),
+                DistanceFromEnd = CalculateDistance(f.Latitude, f.Longitude, end.Latitude, end.Longitude),
+                TotalPathDistance = CalculateDistance(start.Latitude, start.Longitude, f.Latitude, f.Longitude) + 
+                                   CalculateDistance(f.Latitude, f.Longitude, end.Latitude, end.Longitude)
+            })
+            .Where(x => x.DistanceFromPath <= config.CameraFeatureProximityMeters * 2) // Within 200m of direct path by default
+            .Where(x => x.TotalPathDistance <= CalculateDistance(start.Latitude, start.Longitude, end.Latitude, end.Longitude) * (1 + config.MaximumDetourPercentage))
+            .OrderBy(x => x.DistanceFromPath)
+            .ThenByDescending(x => x.Feature.EffectiveWeight) // Prefer higher weighted features
+            .Take(config.MaximumWaypointsPerRoute) // Configurable limit to avoid overly complex routes
+            .ToList();
+
+        // Add features in order of distance from start to maintain logical sequence
+        waypoints.AddRange(candidateFeatures
+            .OrderBy(x => x.DistanceFromStart)
+            .Select(x => x.Feature));
+            
+        return waypoints;
+    }
+    
+    /// <summary>
+    /// Calculates the perpendicular distance from a point to a line segment.
+    /// </summary>
+    private double CalculateDistanceFromPath(double lineStartLat, double lineStartLon, double lineEndLat, double lineEndLon, double pointLat, double pointLon)
+    {
+        // Convert to Cartesian coordinates for easier calculation
+        var A = lineStartLat;
+        var B = lineStartLon;
+        var C = lineEndLat;
+        var D = lineEndLon;
+        var P = pointLat;
+        var Q = pointLon;
+        
+        // Calculate the perpendicular distance from point (P,Q) to line segment (A,B)-(C,D)
+        var lineLength = CalculateDistance(A, B, C, D);
+        if (lineLength < 0.001) return CalculateDistance(A, B, P, Q); // Line is essentially a point
+        
+        // Project point onto line and find closest point
+        var t = Math.Max(0, Math.Min(1, 
+            ((P - A) * (C - A) + (Q - B) * (D - B)) / (Math.Pow(C - A, 2) + Math.Pow(D - B, 2))));
+        
+        var projectionLat = A + t * (C - A);
+        var projectionLon = B + t * (D - B);
+        
+        return CalculateDistance(P, Q, projectionLat, projectionLon);
+    }
+    
+    /// <summary>
+    /// Interpolates times between start and end time for waypoints.
+    /// </summary>
+    private List<DateTime> InterpolateTime(DateTime startTime, DateTime endTime, int waypointCount)
+    {
+        var times = new List<DateTime>();
+        var totalMinutes = (endTime - startTime).TotalMinutes;
+        var intervalMinutes = totalMinutes / (waypointCount + 1);
+        
+        for (int i = 1; i <= waypointCount; i++)
+        {
+            times.Add(startTime.AddMinutes(intervalMinutes * i));
+        }
+        
+        return times;
+    }
+
+    private BuckTraxMovementCorridor CreateSimpleCorridor(RoutePoint start, RoutePoint end, Dictionary<int, BuckTraxFeature> featureLookup, string routeId)
+    {
+        var distance = CalculateDistance(start.Latitude, start.Longitude, end.Latitude, end.Longitude);
+        var timeDiff = end.VisitTime - start.VisitTime;
+        
+        // Get weights from features if available
+        var startWeight = GetLocationWeight(start, featureLookup);
+        var endWeight = GetLocationWeight(end, featureLookup);
+        
+        return new BuckTraxMovementCorridor
+        {
+            Name = $"{start.LocationName} → {end.LocationName}",
+            StartFeatureId = start.LocationId,
+            EndFeatureId = end.LocationId,
+            StartFeatureName = start.LocationName,
+            EndFeatureName = end.LocationName,
+            StartFeatureType = start.LocationType,
+            EndFeatureType = end.LocationType,
+            StartLatitude = start.Latitude,
+            StartLongitude = start.Longitude,
+            EndLatitude = end.Latitude,
+            EndLongitude = end.Longitude,
+            TransitionCount = 1,
+            StartFeatureWeight = startWeight,
+            EndFeatureWeight = endWeight,
+            Distance = distance,
+            AverageTimeSpan = timeDiff.TotalHours,
+            RouteId = routeId,
+            RoutePoints = new List<BuckTraxRoutePoint>
+            {
+                new BuckTraxRoutePoint
+                {
+                    Order = 1,
+                    LocationId = start.LocationId,
+                    LocationName = start.LocationName,
+                    LocationType = start.LocationType,
+                    Latitude = start.Latitude,
+                    Longitude = start.Longitude,
+                    VisitTime = start.VisitTime
+                },
+                new BuckTraxRoutePoint
+                {
+                    Order = 2,
+                    LocationId = end.LocationId,
+                    LocationName = end.LocationName,
+                    LocationType = end.LocationType,
+                    Latitude = end.Latitude,
+                    Longitude = end.Longitude,
+                    VisitTime = end.VisitTime
+                }
+            },
+            IsPartOfMultiPointRoute = false,
+            CorridorScore = CalculateCorridorScore(1, startWeight, endWeight)
+        };
+    }
+
+    private BuckTraxMovementCorridor CreateMultiPointCorridor(MovementRoute route, Dictionary<int, BuckTraxFeature> featureLookup)
+    {
+        var firstPoint = route.Points.First();
+        var lastPoint = route.Points.Last();
+        var totalDistance = 0.0;
+        var totalTime = (lastPoint.VisitTime - firstPoint.VisitTime).TotalHours;
+        
+        // Calculate total distance along the route
+        for (int i = 0; i < route.Points.Count - 1; i++)
+        {
+            var current = route.Points[i];
+            var next = route.Points[i + 1];
+            totalDistance += CalculateDistance(current.Latitude, current.Longitude, next.Latitude, next.Longitude);
+        }
+
+        var startWeight = GetLocationWeight(firstPoint, featureLookup);
+        var endWeight = GetLocationWeight(lastPoint, featureLookup);
+        
+        // Create route name showing the path
+        var routeName = string.Join(" → ", route.Points.Select(p => p.LocationName));
+        
+        return new BuckTraxMovementCorridor
+        {
+            Name = routeName,
+            StartFeatureId = firstPoint.LocationId,
+            EndFeatureId = lastPoint.LocationId,
+            StartFeatureName = firstPoint.LocationName,
+            EndFeatureName = lastPoint.LocationName,
+            StartFeatureType = firstPoint.LocationType,
+            EndFeatureType = lastPoint.LocationType,
+            StartLatitude = firstPoint.Latitude,
+            StartLongitude = firstPoint.Longitude,
+            EndLatitude = lastPoint.Latitude,
+            EndLongitude = lastPoint.Longitude,
+            TransitionCount = route.Points.Count - 1, // Number of transitions
+            StartFeatureWeight = startWeight,
+            EndFeatureWeight = endWeight,
+            Distance = totalDistance,
+            AverageTimeSpan = totalTime,
+            RouteId = route.Id,
+            RoutePoints = route.Points.Select(p => new BuckTraxRoutePoint
+            {
+                Order = p.Order,
+                LocationId = p.LocationId,
+                LocationName = p.LocationName,
+                LocationType = p.LocationType,
+                Latitude = p.Latitude,
+                Longitude = p.Longitude,
+                VisitTime = p.VisitTime
+            }).ToList(),
+            IsPartOfMultiPointRoute = true,
+            CorridorScore = CalculateCorridorScore(route.Points.Count - 1, startWeight, endWeight) * 1.5 // Boost score for multi-point routes
+        };
+    }
+
+    private int GetLocationId(BuckTraxSighting sighting)
+    {
+        return sighting.AssociatedFeatureId ?? sighting.CameraId;
+    }
+
+    private string GetLocationName(BuckTraxSighting sighting)
+    {
+        return sighting.AssociatedFeatureName ?? sighting.CameraName;
+    }
+
+    private string GetLocationType(BuckTraxSighting sighting)
+    {
+        return sighting.AssociatedFeatureId.HasValue ? "Property Feature" : "Camera Location";
+    }
+
+    private float GetLocationWeight(RoutePoint point, Dictionary<int, BuckTraxFeature> featureLookup)
+    {
+        if (point.LocationType == "Property Feature" && featureLookup.ContainsKey(point.LocationId))
+        {
+            return featureLookup[point.LocationId].EffectiveWeight;
+        }
+        return 0.5f; // Default weight for camera locations
+    }
+
+    private double CalculateCorridorScore(int transitionCount, float startWeight, float endWeight)
+    {
+        var weightMultiplier = (startWeight + endWeight) / 2;
+        var amplifiedWeight = Math.Max(0.5, Math.Pow(weightMultiplier, 1.5));
+        return transitionCount * amplifiedWeight * 5;
+    }
+
+    private string CalculateTimeOfDayPattern(BuckTraxMovementCorridor corridor, List<BuckTraxSighting> sightings)
+    {
+        var transitionTimes = new List<int>();
+        
+        // For multi-point routes, use the start time of the route
+        if (corridor.IsPartOfMultiPointRoute && corridor.RoutePoints.Any())
+        {
+            transitionTimes.Add(corridor.RoutePoints.First().VisitTime.Hour);
+        }
+        else
+        {
+            // For simple corridors, find matching transitions in the sightings
             for (int i = 0; i < sightings.Count - 1; i++)
             {
                 var currentSighting = sightings[i];
                 var nextSighting = sightings[i + 1];
 
-                if (currentSighting.AssociatedFeatureId == corridor.StartFeatureId &&
-                    nextSighting.AssociatedFeatureId == corridor.EndFeatureId)
+                bool isMatchingTransition = false;
+                
+                if (corridor.StartFeatureType == "Camera Location")
+                {
+                    isMatchingTransition = (currentSighting.CameraId == corridor.StartFeatureId && 
+                                          nextSighting.CameraId == corridor.EndFeatureId) ||
+                                         (currentSighting.CameraId == corridor.EndFeatureId && 
+                                          nextSighting.CameraId == corridor.StartFeatureId);
+                }
+                else
+                {
+                    isMatchingTransition = (currentSighting.AssociatedFeatureId == corridor.StartFeatureId &&
+                                          nextSighting.AssociatedFeatureId == corridor.EndFeatureId) ||
+                                         (currentSighting.AssociatedFeatureId == corridor.EndFeatureId &&
+                                          nextSighting.AssociatedFeatureId == corridor.StartFeatureId);
+                }
+
+                if (isMatchingTransition)
                 {
                     transitionTimes.Add(currentSighting.DateTaken.Hour);
                 }
             }
-
-            corridor.TimeOfDayPattern = GetTimeOfDayPattern(transitionTimes);
         }
 
-        return corridors.Values.OrderByDescending(c => c.CorridorScore).ToList();
+        return GetTimeOfDayPattern(transitionTimes);
     }
 
     private bool IsMovementBlocked(BuckTraxSighting from, BuckTraxSighting to, List<BuckTraxFeature> features)
@@ -679,17 +1035,45 @@ public class BuckTraxController : Controller
     {
         // Simple pattern matching - could be enhanced with more sophisticated analysis
         if (string.IsNullOrEmpty(corridor.TimeOfDayPattern))
-            return true;
+            return false; // Only show corridors that have a defined time pattern
 
         // Check if the corridor's primary activity time overlaps with the segment
-        if (corridor.TimeOfDayPattern.Contains("Morning") && startHour >= 6 && endHour <= 12)
-            return true;
-        if (corridor.TimeOfDayPattern.Contains("Evening") && startHour >= 16 && endHour <= 21)
-            return true;
-        if (corridor.TimeOfDayPattern.Contains("Night") && (startHour >= 20 || endHour <= 6))
-            return true;
+        // Use flexible range matching to work with dynamic time segments based on property daylight hours
+        
+        // Morning segments (typically early to mid-morning hours)
+        if (corridor.TimeOfDayPattern.Contains("Morning"))
+        {
+            // Morning corridors should match early daylight segments
+            // Look for segments that start early (5-11) and end before mid-day (8-14)
+            return startHour >= 5 && startHour <= 11 && endHour >= 8 && endHour <= 14;
+        }
+            
+        // Afternoon segments (typically mid-day hours)  
+        if (corridor.TimeOfDayPattern.Contains("Afternoon"))
+        {
+            // Afternoon corridors should match mid-day segments
+            // Look for segments that start mid-morning to early afternoon (10-14) and end in afternoon (12-18)
+            return startHour >= 10 && startHour <= 14 && endHour >= 12 && endHour <= 18;
+        }
+            
+        // Evening segments (typically late afternoon to early evening hours)
+        if (corridor.TimeOfDayPattern.Contains("Evening"))
+        {
+            // Evening corridors should match late daylight segments
+            // Look for segments that start in afternoon (14-18) and end in evening (16-22)
+            return startHour >= 14 && startHour <= 18 && endHour >= 16 && endHour <= 22;
+        }
+            
+        // Night segments (typically dark hours that span midnight)
+        if (corridor.TimeOfDayPattern.Contains("Night"))
+        {
+            // Night corridors should match night time segments
+            // Night typically spans midnight, so either late evening or early morning
+            return (startHour >= 20 && startHour <= 23) || (endHour >= 1 && endHour <= 8) || 
+                   (startHour > endHour); // Handle midnight-spanning segments
+        }
 
-        return true; // Default to including all corridors
+        return false; // Only show corridors that match the current time segment
     }
 
     private string GetTimeOfDayPattern(List<int> transitionTimes)
@@ -711,6 +1095,56 @@ public class BuckTraxController : Controller
             patterns.Add("Night");
 
         return patterns.Any() ? string.Join(", ", patterns) : "All Day";
+    }
+
+    private int CalculateDefaultTimeSegmentIndex(List<BuckTraxTimeSegmentPrediction> predictions, object[] timeSegments)
+    {
+        // Find the time segment with the most activity (sightings + corridors)
+        var maxActivity = -1;
+        var defaultIndex = 0;
+        var daylightSegments = new List<int>(); // Track daylight segments for tie-breaking
+        
+        for (int i = 0; i < predictions.Count; i++)
+        {
+            var prediction = predictions[i];
+            var segment = timeSegments[i];
+            
+            // Calculate activity score (sightings + corridors)
+            var activityScore = prediction.SightingCount + (prediction.TimeSegmentCorridors?.Count ?? 0);
+            
+            // Track if this is a daylight segment (not "Night")
+            var isDaylight = !prediction.TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase);
+            
+            if (activityScore > maxActivity)
+            {
+                maxActivity = activityScore;
+                defaultIndex = i;
+                daylightSegments.Clear();
+                if (isDaylight) daylightSegments.Add(i);
+            }
+            else if (activityScore == maxActivity && activityScore > 0)
+            {
+                // Tie in activity - prioritize earliest daylight period
+                if (isDaylight)
+                {
+                    daylightSegments.Add(i);
+                    // If current default is not daylight, or this is earlier daylight, switch
+                    if (!predictions[defaultIndex].TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase) == false || 
+                        (daylightSegments.Count == 1 && isDaylight))
+                    {
+                        defaultIndex = i;
+                    }
+                }
+            }
+        }
+        
+        // If there's a tie and we have daylight segments, pick the earliest daylight one
+        if (daylightSegments.Count > 1)
+        {
+            defaultIndex = daylightSegments.First();
+        }
+        
+        return defaultIndex;
     }
 
     private GeometryType GetGeometryType(Geometry? geometry)
@@ -776,12 +1210,18 @@ public class BuckTraxController : Controller
     {
         return new BuckTraxConfiguration
         {
-            MovementTimeWindowMinutes = 240, // Reduced to 4 hours for more realistic movement
+            MovementTimeWindowMinutes = 60, // Reduced to 1 hour to capture short movements like 12 minutes
             MaxMovementDistanceMeters = 2000, // Reduced to 2 km for more realistic movement  
             CameraFeatureProximityMeters = 100, // 100 meters
             MinimumSightingsThreshold = 5, // Reduced threshold for better responsiveness
             MinimumTransitionsThreshold = 2, // Reduced threshold for better responsiveness
-            ShowLimitedDataWarning = true
+            ShowLimitedDataWarning = true,
+            
+            // Feature-aware routing configuration
+            EnableFeatureAwareRouting = true,
+            MinimumDistanceForFeatureRouting = 200,
+            MaximumDetourPercentage = 0.3,
+            MaximumWaypointsPerRoute = 2
         };
     }
 }
