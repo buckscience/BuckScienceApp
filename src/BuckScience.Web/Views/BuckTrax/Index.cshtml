@@ -677,10 +677,15 @@
                     },
                     paint: {
                         'circle-radius': 8,
-                        'circle-color': '#ffffff',
+                        'circle-color': [
+                            'case',
+                            ['==', ['get', 'order'], 1], '#00aa00', // Start point: Green
+                            ['==', ['get', 'order'], route.routePoints.length], '#ff4444', // End point: Red
+                            '#ffa500' // Mid points: Orange
+                        ],
                         'circle-stroke-width': 1.5,
-                        'circle-stroke-color': '#333333',
-                        'circle-opacity': 0.9
+                        'circle-stroke-color': '#ffffff',
+                        'circle-opacity': 0.7 // Match camera sighting opacity
                     }
                 });
 
@@ -698,7 +703,7 @@
                         'visibility': showCorridors ? 'visible' : 'none'
                     },
                     paint: {
-                        'text-color': '#333333'
+                        'text-color': '#ffffff'
                     }
                 });
 
