@@ -42,6 +42,7 @@ public class BuckTraxPredictionResult
     public List<BuckTraxTimeSegmentPrediction> TimeSegments { get; set; } = new();
     public List<BuckTraxMovementCorridor> MovementCorridors { get; set; } = new();
     public BuckTraxConfiguration Configuration { get; set; } = new();
+    public int DefaultTimeSegmentIndex { get; set; } = 0; // Index of the most active time segment for default selection
 }
 
 public class BuckTraxTimeSegmentPrediction

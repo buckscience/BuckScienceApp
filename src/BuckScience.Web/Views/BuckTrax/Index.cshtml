@@ -358,8 +358,11 @@
             const tabsContainer = $('#time-segment-tabs');
             tabsContainer.empty();
 
+            // Use defaultTimeSegmentIndex from predictions if available
+            const defaultIndex = currentPredictions?.defaultTimeSegmentIndex ?? 0;
+
             timeSegments.forEach((segment, index) => {
-                const isActive = index === 0 ? 'active' : '';
+                const isActive = index === defaultIndex ? 'active' : '';
                 const badgeClass = segment.sightingCount > 0 ? 'bg-success' : 'bg-secondary';
                 
                 const tab = $(`
@@ -378,11 +381,16 @@
             tabsContainer.find('button').on('click', function() {
                 const index = parseInt($(this).attr('id').split('-')[1]);
                 displayTimeSegmentContent(timeSegments[index]);
+                // Update map to show only the selected time segment's data
+                updateMapForTimeSegment(timeSegments[index]);
             });
 
-            // Show first segment by default
+            // Show default segment (most active or earliest daylight)
             if (timeSegments.length > 0) {
-                displayTimeSegmentContent(timeSegments[0]);
+                const selectedSegment = timeSegments[defaultIndex];
+                displayTimeSegmentContent(selectedSegment);
+                // Initialize map with the default segment's data
+                updateMapForTimeSegment(selectedSegment);
             }
         }
 
@@ -453,26 +461,68 @@
 
             // Clear existing BuckTrax layers
             clearMapLayers();
+            
+            // Note: We don't add any data here anymore - 
+            // the time segment selection will handle displaying the appropriate data
+            // This function now just ensures the map is ready for time segment updates
+        }
 
-            // Add movement corridors
-            if (predictions.movementCorridors && predictions.movementCorridors.length > 0) {
-                addCorridorsToMap(map, predictions.movementCorridors);
+        function updateMapForTimeSegment(selectedSegment) {
+            const map = window.App?.getMap?.();
+            if (!map || !currentPredictions) {
+                console.warn('Main map or predictions not available');
+                return;
             }
 
-            // Add prediction zones
-            const allZones = [];
-            predictions.timeSegments.forEach(segment => {
-                segment.predictedZones.forEach(zone => {
-                    allZones.push(zone);
+            // Clear existing BuckTrax layers
+            clearMapLayers();
+
+            // Filter corridors to only show those for the selected time segment
+            if (selectedSegment.timeSegmentCorridors && selectedSegment.timeSegmentCorridors.length > 0) {
+                addCorridorsToMap(map, selectedSegment.timeSegmentCorridors);
+            }
+
+            // Add prediction zones for the selected time segment only
+            if (selectedSegment.predictedZones && selectedSegment.predictedZones.length > 0) {
+                addZonesToMap(map, selectedSegment.predictedZones);
+            }
+
+            // Fit map to show the selected segment's predictions
+            fitMapToTimeSegment(map, selectedSegment);
+        }
+
+        function fitMapToTimeSegment(map, segment) {
+            const bounds = new mapboxgl.LngLatBounds();
+            let hasPoints = false;
+
+            // Add corridor points to bounds
+            if (segment.timeSegmentCorridors) {
+                segment.timeSegmentCorridors.forEach(corridor => {
+                    bounds.extend([corridor.startLongitude, corridor.startLatitude]);
+                    bounds.extend([corridor.endLongitude, corridor.endLatitude]);
+                    hasPoints = true;
                 });
-            });
-
-            if (allZones.length > 0) {
-                addZonesToMap(map, allZones);
             }
 
-            // Fit map to show all predictions
-            fitMapToPredictions(map, predictions);
+            // Add zone points to bounds
+            if (segment.predictedZones) {
+                segment.predictedZones.forEach(zone => {
+                    bounds.extend([zone.longitude, zone.latitude]);
+                    hasPoints = true;
+                });
+            }
+
+            // Only fit bounds if we have points
+            if (hasPoints) {
+                try {
+                    map.fitBounds(bounds, { 
+                        padding: 50,
+                        maxZoom: 15 // Don't zoom in too close
+                    });
+                } catch (e) {
+                    console.warn('Error fitting map bounds:', e);
+                }
+            }
         }
 
         function addCorridorsToMap(map, corridors) {

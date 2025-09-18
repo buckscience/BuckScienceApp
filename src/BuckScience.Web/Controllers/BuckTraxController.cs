@@ -245,7 +245,8 @@ public class BuckTraxController : Controller
                 : null,
             TimeSegments = predictions,
             MovementCorridors = movementCorridors,
-            Configuration = config
+            Configuration = config,
+            DefaultTimeSegmentIndex = CalculateDefaultTimeSegmentIndex(predictions, timeSegments)
         };
     }
 
@@ -1066,6 +1067,56 @@ public class BuckTraxController : Controller
             patterns.Add("Night");
 
         return patterns.Any() ? string.Join(", ", patterns) : "All Day";
+    }
+
+    private int CalculateDefaultTimeSegmentIndex(List<BuckTraxTimeSegmentPrediction> predictions, object[] timeSegments)
+    {
+        // Find the time segment with the most activity (sightings + corridors)
+        var maxActivity = -1;
+        var defaultIndex = 0;
+        var daylightSegments = new List<int>(); // Track daylight segments for tie-breaking
+        
+        for (int i = 0; i < predictions.Count; i++)
+        {
+            var prediction = predictions[i];
+            var segment = timeSegments[i];
+            
+            // Calculate activity score (sightings + corridors)
+            var activityScore = prediction.SightingCount + (prediction.TimeSegmentCorridors?.Count ?? 0);
+            
+            // Track if this is a daylight segment (not "Night")
+            var isDaylight = !prediction.TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase);
+            
+            if (activityScore > maxActivity)
+            {
+                maxActivity = activityScore;
+                defaultIndex = i;
+                daylightSegments.Clear();
+                if (isDaylight) daylightSegments.Add(i);
+            }
+            else if (activityScore == maxActivity && activityScore > 0)
+            {
+                // Tie in activity - prioritize earliest daylight period
+                if (isDaylight)
+                {
+                    daylightSegments.Add(i);
+                    // If current default is not daylight, or this is earlier daylight, switch
+                    if (!predictions[defaultIndex].TimeSegment.Equals("Night", StringComparison.OrdinalIgnoreCase) == false || 
+                        (daylightSegments.Count == 1 && isDaylight))
+                    {
+                        defaultIndex = i;
+                    }
+                }
+            }
+        }
+        
+        // If there's a tie and we have daylight segments, pick the earliest daylight one
+        if (daylightSegments.Count > 1)
+        {
+            defaultIndex = daylightSegments.First();
+        }
+        
+        return defaultIndex;
     }
 
     private GeometryType GetGeometryType(Geometry? geometry)
