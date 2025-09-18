@@ -92,6 +92,12 @@
                             Movement Corridors
                         </label>
                     </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="show-cameras" checked>
+                        <label class="form-check-label" for="show-cameras">
+                            Camera Locations
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Summary Stats -->
@@ -220,7 +226,7 @@
             });
 
             // Layer visibility handlers
-            $('#show-property-features, #show-prediction-zones, #show-movement-corridors').on('change', function() {
+            $('#show-property-features, #show-prediction-zones, #show-movement-corridors, #show-cameras').on('change', function() {
                 updateLayerVisibility();
             });
 
@@ -228,6 +234,7 @@
             $('#show-property-features').prop('checked', true);
             $('#show-prediction-zones').prop('checked', true);
             $('#show-movement-corridors').prop('checked', true);
+            $('#show-cameras').prop('checked', true);
         }
 
         function loadPropertyFeatures(propertyId) {
@@ -669,10 +676,11 @@
                         'visibility': showCorridors ? 'visible' : 'none'
                     },
                     paint: {
-                        'circle-radius': 12,
+                        'circle-radius': 8,
                         'circle-color': '#ffffff',
-                        'circle-stroke-width': 2,
-                        'circle-stroke-color': '#ff6600'
+                        'circle-stroke-width': 1.5,
+                        'circle-stroke-color': '#333333',
+                        'circle-opacity': 0.9
                     }
                 });
 
@@ -685,12 +693,12 @@
                     layout: {
                         'text-field': ['get', 'order'],
                         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                        'text-size': 12,
+                        'text-size': 10,
                         'text-anchor': 'center',
                         'visibility': showCorridors ? 'visible' : 'none'
                     },
                     paint: {
-                        'text-color': '#ff6600'
+                        'text-color': '#333333'
                     }
                 });
 
@@ -898,6 +906,7 @@
             const showCorridors = $('#show-movement-corridors').is(':checked');
             const showZones = $('#show-prediction-zones').is(':checked');
             const showFeatures = $('#show-property-features').is(':checked');
+            const showCameras = $('#show-cameras').is(':checked');
 
             // Corridor layer visibility
             bucktraxLayers.corridors.forEach(layerId => {
@@ -917,6 +926,17 @@
                     map.setLayoutProperty(layerId, 'visibility', showFeatures ? 'visible' : 'none');
                 }
             });
+
+            // Camera marker visibility
+            if (window.App._cameraMarkers) {
+                window.App._cameraMarkers.forEach(marker => {
+                    if (showCameras) {
+                        marker.addTo(map);
+                    } else {
+                        marker.remove();
+                    }
+                });
+            }
         }
 
         function formatTimeRange(start, end) {
