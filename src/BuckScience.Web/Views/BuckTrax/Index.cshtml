@@ -344,14 +344,14 @@
             $('#total-transitions').text(predictions.totalTransitions);
             $('#active-periods').text(predictions.timeSegments.filter(t => t.sightingCount > 0).length);
 
-            // Create time segment tabs
+            // Initialize map (clear existing layers) BEFORE creating time segment tabs
+            updateMapWithPredictions(predictions);
+            
+            // Create time segment tabs (this will populate the map with default segment data)
             createTimeSegmentTabs(predictions.timeSegments);
 
             // Show results section
             showResultsSection();
-
-            // Update map with predictions
-            updateMapWithPredictions(predictions);
         }
 
         function createTimeSegmentTabs(timeSegments) {
