@@ -9,16 +9,16 @@
     <input type="hidden" asp-for="PropertyId" />
 
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-    <div class="alert alert-info mb-4" role="alert">
+    <div class="alert alert-success mb-4" role="alert" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
         <div class="d-flex align-items-start">
             @if (Context.Request.Query["fromSetup"] == "1")
             {
                 <div class="me-3">
-                    <span class="badge bg-primary">Step 2</span>
+                    <span class="badge badge-custom-primary">Step 2</span>
                 </div>
             }
             <div class="flex-grow-1">
-                <h5 class="mb-2">Add your first camera</h5>
+                <h5 class="mb-2" style="color: #527A52;">Add your first camera</h5>
                 <p class="mb-2">Add a camera to this property so you can start uploading photos.</p>
                 <ol class="mb-0">
                     <li>Name the camera so it’s easy to recognize (e.g., “Gate Cam” or “Ridge Cam”).</li>
