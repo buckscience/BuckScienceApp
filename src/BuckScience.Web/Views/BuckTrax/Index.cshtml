@@ -6,7 +6,7 @@
 <div class="container-fluid h-100 d-flex flex-column">
     <div class="d-flex flex-column h-100">
         <div class="d-flex align-items-center">
-            <i class="fas fa-route text-primary me-3" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-route text-custom-primary me-3" style="font-size: 1.5rem;"></i>
             <h2 class="sidebar-title mb-0">BuckTrax</h2>
         </div>
         <p class="text-muted mb-3">Predict deer movement patterns based on sighting history and property features.</p>
@@ -105,7 +105,7 @@
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body px-2 py-2">
-                                <div class="h6 text-primary mb-0" id="total-sightings">0</div>
+                                <div class="h6 text-custom-primary mb-0" id="total-sightings">0</div>
                                 <small class="text-muted">Sightings</small>
                             </div>
                         </div>
@@ -121,7 +121,7 @@
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body px-2 py-2">
-                                <div class="h6 text-info mb-0" id="active-periods">0</div>
+                                <div class="h6 text-custom-primary mb-0" id="active-periods">0</div>
                                 <small class="text-muted">Periods</small>
                             </div>
                         </div>
@@ -739,7 +739,7 @@
                         .setHTML(`
                             <div class="p-2">
                                 <div class="fw-bold">${props.name}</div>
-                                <div class="text-info">Multi-point Route</div>
+                                <div class="text-custom-primary">Multi-point Route</div>
                                 <div>Score: ${props.score}</div>
                                 <div>Transitions: ${props.transitions}</div>
                             </div>
@@ -758,7 +758,7 @@
                                 <div class="fw-bold">Stop ${props.order}: ${props.name}</div>
                                 <div class="text-muted">${props.type}</div>
                                 <div><small>Visited: ${visitTime}</small></div>
-                                <div class="text-info"><small>Route: ${props.routeName}</small></div>
+                                <div class="text-custom-primary"><small>Route: ${props.routeName}</small></div>
                             </div>
                         `)
                         .addTo(map);

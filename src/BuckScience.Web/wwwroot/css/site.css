@@ -740,6 +740,15 @@ html, body {
     box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
 }
 
+/* ========== Text Utilities ========== */
+.text-custom-primary {
+    color: #527A52 !important;
+}
+
+.text-custom-success {
+    color: #8CAF8C !important;
+}
+
 /* ========== Camera Markers ========== */
 .camera-marker {
     cursor: pointer;
