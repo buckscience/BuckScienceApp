@@ -281,10 +281,10 @@
 
         function getProfileStatusBadge(status) {
             switch(status) {
-                case 1: return '<span class="badge bg-success">Watching</span>';
-                case 2: return '<span class="badge bg-warning">Hit List</span>';
-                case 3: return '<span class="badge bg-dark">Harvested</span>';
-                default: return '<span class="badge bg-secondary">Unknown</span>';
+                case 1: return '<span class="badge badge-custom-info">Watching</span>';
+                case 2: return '<span class="badge badge-custom-warning">Hit List</span>';
+                case 3: return '<span class="badge badge-custom-success">Harvested</span>';
+                default: return '<span class="badge badge-custom-secondary">Unknown</span>';
             }
         }
 
