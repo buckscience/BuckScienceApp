@@ -15,17 +15,17 @@
         <div id="errorMessage"></div>
     </div>
     
-    <div class="alert alert-info mb-4" role="alert">
+    <div class="alert alert-success mb-4" role="alert" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
         <div class="d-flex align-items-start">
             @if (Context.Request.Query["fromSetup"] == "1")
             {
                 <div class="me-3">
-                    <span class="badge bg-primary">Step 3</span>
+                    <span class="badge badge-custom-primary">Step 3</span>
                 </div>
             }
             
             <div class="flex-grow-1">
-                <h5 class="mb-2">Upload photos</h5>
+                <h5 class="mb-2" style="color: #527A52;">Upload photos</h5>
                 <p class="mb-2">Upload a few photos from this camera to finish setup.</p>
                 <ol class="mb-0">
                     <li>Choose one or more image files (JPEG/PNG). Larger images may take longer to process.</li>

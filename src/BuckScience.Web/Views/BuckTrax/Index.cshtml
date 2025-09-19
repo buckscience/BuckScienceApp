@@ -6,7 +6,7 @@
 <div class="container-fluid h-100 d-flex flex-column">
     <div class="d-flex flex-column h-100">
         <div class="d-flex align-items-center">
-            <i class="fas fa-route text-primary me-3" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-route text-custom-primary me-3" style="font-size: 1.5rem;"></i>
             <h2 class="sidebar-title mb-0">BuckTrax</h2>
         </div>
         <p class="text-muted mb-3">Predict deer movement patterns based on sighting history and property features.</p>
@@ -30,7 +30,7 @@
                 }
                 else
                 {
-                    <div class="alert alert-info">
+                    <div class="alert alert-success" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
                         <i class="fas fa-info-circle me-2"></i>
                         No properties found. <a href="/properties">Create a property</a> to get started.
                     </div>
@@ -49,12 +49,12 @@
 
             <!-- Prediction Controls -->
             <div class="mb-3" id="prediction-section" style="display: none;">
-                <button id="run-prediction" class="btn btn-primary w-100" disabled>
+                <button id="run-prediction" class="btn btn-custom-primary w-100" disabled>
                     <i class="fas fa-play me-2"></i>
                     Run BuckTrax Prediction
                 </button>
                 <div id="prediction-loading" class="text-center mt-3" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
+                    <div class="spinner-border" style="color: #527A52;" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="mt-2 text-muted">Analyzing movement patterns...</p>
@@ -105,7 +105,7 @@
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body px-2 py-2">
-                                <div class="h6 text-primary mb-0" id="total-sightings">0</div>
+                                <div class="h6 text-custom-primary mb-0" id="total-sightings">0</div>
                                 <small class="text-muted">Sightings</small>
                             </div>
                         </div>
@@ -121,7 +121,7 @@
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body px-2 py-2">
-                                <div class="h6 text-info mb-0" id="active-periods">0</div>
+                                <div class="h6 text-custom-primary mb-0" id="active-periods">0</div>
                                 <small class="text-muted">Periods</small>
                             </div>
                         </div>
@@ -239,7 +239,7 @@
 
             if (profiles.length === 0) {
                 container.html(`
-                    <div class="alert alert-info">
+                    <div class="alert alert-success" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
                         <i class="fas fa-info-circle me-2"></i>
                         No profiles found for this property. <a href="/properties/${selectedPropertyId}">Create a profile</a> to get started.
                     </div>
@@ -281,10 +281,10 @@
 
         function getProfileStatusBadge(status) {
             switch(status) {
-                case 1: return '<span class="badge bg-success">Watching</span>';
-                case 2: return '<span class="badge bg-warning">Hit List</span>';
-                case 3: return '<span class="badge bg-dark">Harvested</span>';
-                default: return '<span class="badge bg-secondary">Unknown</span>';
+                case 1: return '<span class="badge badge-custom-info">Watching</span>';
+                case 2: return '<span class="badge badge-custom-warning">Hit List</span>';
+                case 3: return '<span class="badge badge-custom-success">Harvested</span>';
+                default: return '<span class="badge badge-custom-secondary">Unknown</span>';
             }
         }
 
@@ -425,7 +425,7 @@
                                     <div class="fw-bold">${zone.locationName}</div>
                                     <small class="text-muted">${zone.sightingCount} sightings</small>
                                 </div>
-                                <span class="badge bg-primary">${Math.round(zone.probability * 100)}%</span>
+                                <span class="badge badge-custom-primary">${Math.round(zone.probability * 100)}%</span>
                             </div>
                         `).join('')}
                     </div>
@@ -739,7 +739,7 @@
                         .setHTML(`
                             <div class="p-2">
                                 <div class="fw-bold">${props.name}</div>
-                                <div class="text-info">Multi-point Route</div>
+                                <div class="text-custom-primary">Multi-point Route</div>
                                 <div>Score: ${props.score}</div>
                                 <div>Transitions: ${props.transitions}</div>
                             </div>
@@ -758,7 +758,7 @@
                                 <div class="fw-bold">Stop ${props.order}: ${props.name}</div>
                                 <div class="text-muted">${props.type}</div>
                                 <div><small>Visited: ${visitTime}</small></div>
-                                <div class="text-info"><small>Route: ${props.routeName}</small></div>
+                                <div class="text-custom-primary"><small>Route: ${props.routeName}</small></div>
                             </div>
                         `)
                         .addTo(map);

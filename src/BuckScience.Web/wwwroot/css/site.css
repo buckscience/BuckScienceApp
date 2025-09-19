@@ -703,6 +703,56 @@ html, body {
         color: #fff;
     }
 
+/* ========== Form Switches & Toggles ========== */
+.form-check-input {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+.form-check-input:checked {
+    background-color: #527A52 !important;
+    border-color: #527A52 !important;
+}
+
+.form-check-input:focus {
+    border-color: #8CAF8C !important;
+    box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
+}
+
+.form-check-input:checked:focus {
+    border-color: #527A52 !important;
+    box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
+}
+
+/* ========== Navigation Pills ========== */
+.nav-pills .nav-link {
+    color: #527A52 !important;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+}
+
+.nav-pills .nav-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
+}
+
+/* ========== Text Utilities ========== */
+.text-custom-primary {
+    color: #527A52 !important;
+}
+
+.text-custom-success {
+    color: #8CAF8C !important;
+}
+
 /* ========== Camera Markers ========== */
 .camera-marker {
     cursor: pointer;
