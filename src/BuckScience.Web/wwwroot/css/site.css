@@ -725,6 +725,10 @@ html, body {
 }
 
 /* ========== Navigation Pills ========== */
+.nav-pills .nav-link {
+    color: #527A52 !important;
+}
+
 .nav-pills .nav-link.active,
 .nav-pills .show > .nav-link {
     background-color: #527A52 !important;
