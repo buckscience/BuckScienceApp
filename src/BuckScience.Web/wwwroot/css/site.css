@@ -724,6 +724,22 @@ html, body {
     box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
 }
 
+/* ========== Navigation Pills ========== */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: #527A52 !important;
+    color: #fff !important;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: #8CAF8C !important;
+    color: #fff !important;
+}
+
+.nav-pills .nav-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(82, 122, 82, 0.25) !important;
+}
+
 /* ========== Camera Markers ========== */
 .camera-marker {
     cursor: pointer;
