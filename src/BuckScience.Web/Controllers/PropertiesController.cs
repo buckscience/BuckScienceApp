@@ -217,6 +217,8 @@ public class PropertiesController : Controller
     public async Task<IActionResult> Photos(
         int id,
         [FromQuery] string sort = "DateTakenDesc",
+        // Quick filters
+        [FromQuery] string? quickFilter = null,
         // Date filters
         [FromQuery] DateTime? dateTakenFrom = null,
         [FromQuery] DateTime? dateTakenTo = null,
@@ -262,6 +264,9 @@ public class PropertiesController : Controller
             _ => ListPropertyPhotos.SortBy.DateTakenDesc
         };
 
+        // Apply quick filter to time parameters if specified
+        (int? timeStart, int? timeEnd) = ApplyQuickFilter(quickFilter, property.DayHour, property.NightHour);
+
         // Build filters from query parameters
         var filters = BuildFilters(
             dateTakenFrom, dateTakenTo, dateUploadedFrom, dateUploadedTo,
@@ -269,7 +274,7 @@ public class PropertiesController : Controller
             humidityMin, humidityMax, pressureMin, pressureMax,
             visibilityMin, visibilityMax, cloudCoverMin, cloudCoverMax,
             moonPhaseMin, moonPhaseMax, conditions, moonPhaseTexts,
-            pressureTrends, windDirections);
+            pressureTrends, windDirections, timeStart, timeEnd);
 
         // Get all photos from all cameras on this property
         var photos = await ListPropertyPhotos.HandleAsync(_db, _currentUser.Id.Value, id, sortBy, filters, ct);
@@ -288,6 +293,8 @@ public class PropertiesController : Controller
         {
             PropertyId = property.Id,
             PropertyName = property.Name,
+            DayHour = property.DayHour,
+            NightHour = property.NightHour,
             PhotoGroups = photoGroups,
             CurrentSort = sort,
             TotalPhotoCount = photos.Count(),
@@ -437,7 +444,8 @@ public class PropertiesController : Controller
         double? cloudCoverMin, double? cloudCoverMax,
         double? moonPhaseMin, double? moonPhaseMax,
         string? conditions, string? moonPhaseTexts,
-        string? pressureTrends, string? windDirections)
+        string? pressureTrends, string? windDirections,
+        int? timeOfDayStart = null, int? timeOfDayEnd = null)
     {
         var filters = new PhotoFilters
         {
@@ -445,6 +453,8 @@ public class PropertiesController : Controller
             DateTakenTo = dateTakenTo,
             DateUploadedFrom = dateUploadedFrom,
             DateUploadedTo = dateUploadedTo,
+            TimeOfDayStart = timeOfDayStart,
+            TimeOfDayEnd = timeOfDayEnd,
             TemperatureMin = tempMin,
             TemperatureMax = tempMax,
             WindSpeedMin = windSpeedMin,
@@ -507,6 +517,16 @@ public class PropertiesController : Controller
 
         // Return null if no filters are applied to avoid unnecessary processing
         return filters.HasAnyFilters ? filters : null;
+    }
+
+    private static (int? timeStart, int? timeEnd) ApplyQuickFilter(string? quickFilter, int dayHour, int nightHour)
+    {
+        return quickFilter?.ToLower() switch
+        {
+            "day" => (dayHour, nightHour),
+            "night" => (nightHour, dayHour),
+            _ => (null, null)
+        };
     }
 
 

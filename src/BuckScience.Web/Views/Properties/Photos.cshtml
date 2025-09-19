@@ -49,6 +49,10 @@
                 query.Add($"conditions={string.Join(",", Model.AppliedFilters.Conditions)}");
             if (Model.AppliedFilters.WindDirectionTexts?.Count > 0)
                 query.Add($"windDirections={string.Join(",", Model.AppliedFilters.WindDirectionTexts)}");
+            if (Model.AppliedFilters.TimeOfDayStart.HasValue)
+                query.Add($"timeOfDayStart={Model.AppliedFilters.TimeOfDayStart}");
+            if (Model.AppliedFilters.TimeOfDayEnd.HasValue)
+                query.Add($"timeOfDayEnd={Model.AppliedFilters.TimeOfDayEnd}");
         }
         
         return "?" + string.Join("&", query);
@@ -115,6 +119,34 @@ else
                             Filter options are based on data from photos taken on <strong>@Model.PropertyName</strong> only.
                         </small>
                     </div>
+                    
+                    <!-- Quick Filters -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-lightning-bolt me-2"></i>Quick Filters</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort&quickFilter=day" 
+                                   class="btn btn-outline-primary btn-sm @(ViewContext.HttpContext.Request.Query["quickFilter"] == "day" ? "active" : "")"
+                                   title="Daylight hours (@Model.DayHour:00 - @Model.NightHour:00)">
+                                    <i class="fas fa-sun me-1"></i>Day
+                                </a>
+                                <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort&quickFilter=night" 
+                                   class="btn btn-outline-primary btn-sm @(ViewContext.HttpContext.Request.Query["quickFilter"] == "night" ? "active" : "")"
+                                   title="Night hours (@Model.NightHour:00 - @Model.DayHour:00)">
+                                    <i class="fas fa-moon me-1"></i>Night
+                                </a>
+                                @if (ViewContext.HttpContext.Request.Query["quickFilter"].ToString() != "")
+                                {
+                                    <a href="/properties/@Model.PropertyId/photos?sort=@Model.CurrentSort" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-times me-1"></i>Clear Quick Filter
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4" style="border-color: #8CAF8C;">
                     
                     <div class="row">
                         <!-- Date Filters -->

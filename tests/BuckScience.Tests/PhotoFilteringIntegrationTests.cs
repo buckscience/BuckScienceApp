@@ -20,7 +20,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         });
 
         // Assert
@@ -42,7 +43,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         }) as PhotoFilters;
 
         // Assert
@@ -68,7 +70,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         }) as PhotoFilters;
 
         // Assert
@@ -97,7 +100,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, "Clear,Cloudy,Rainy", null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         }) as PhotoFilters;
 
         // Assert
@@ -129,7 +133,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         }) as PhotoFilters;
 
         // Assert
@@ -155,7 +160,8 @@ public class PhotoFilteringIntegrationTests
             null, null, null, null, // humidity and pressure
             null, null, null, null, // visibility and cloud cover
             null, null, null, null, // moon phase and conditions
-            null, null // pressure trends and wind directions
+            null, null, // pressure trends and wind directions
+            null, null // timeOfDayStart and timeOfDayEnd
         }) as PhotoFilters;
 
         // Assert

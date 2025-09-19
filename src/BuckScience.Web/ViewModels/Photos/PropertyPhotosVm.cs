@@ -12,6 +12,10 @@ public class PropertyPhotosVm
     public string CurrentSort { get; set; } = "DateTakenDesc";
     public int TotalPhotoCount { get; set; }
     
+    // Property configuration for quick filters
+    public int DayHour { get; set; }
+    public int NightHour { get; set; }
+    
     // Filter information
     public PhotoFilters? AppliedFilters { get; set; }
     public bool HasFiltersApplied => AppliedFilters?.HasAnyFilters == true;
