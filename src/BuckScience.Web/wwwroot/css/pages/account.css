@@ -1,0 +1,83 @@
+/* ========== Account Page Styles ========== */
+
+/* Account profile cards */
+.account-profile-card {
+    background: rgba(46, 58, 40, 0.3);
+    border: 1px solid rgba(200, 131, 42, 0.2);
+    border-radius: var(--bs-border-radius-lg);
+    padding: var(--bs-space-xl);
+    margin-bottom: var(--bs-space-lg);
+    transition: all var(--bs-transition-base);
+}
+
+.account-profile-card:hover {
+    border-color: rgba(200, 131, 42, 0.3);
+    box-shadow: var(--bs-shadow-md);
+}
+
+/* Subscription cards */
+.subscription-card {
+    background: rgba(46, 58, 40, 0.2);
+    border: 1px solid rgba(200, 131, 42, 0.15);
+    border-radius: var(--bs-border-radius-lg);
+    padding: var(--bs-space-lg);
+    transition: all var(--bs-transition-base);
+    position: relative;
+    overflow: hidden;
+}
+
+.subscription-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--bs-amber), var(--bs-gold));
+    transition: width 0.3s ease;
+}
+
+.subscription-card:hover::before {
+    width: 100%;
+}
+
+.subscription-card:hover {
+    background: rgba(61, 92, 48, 0.25);
+    border-color: rgba(200, 131, 42, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Account section headers */
+.account-section-header {
+    font-family: var(--bs-font-family-condensed);
+    font-size: var(--bs-font-size-xl);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bs-white);
+    margin-bottom: var(--bs-space-lg);
+    border-bottom: 1px solid rgba(200, 131, 42, 0.2);
+    padding-bottom: var(--bs-space-sm);
+}
+
+/* Profile form styling */
+.profile-form .form-group {
+    margin-bottom: var(--bs-space-lg);
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--bs-amber);
+    background: rgba(200, 131, 42, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--bs-space-md);
+}
+
+.profile-avatar i {
+    font-size: 2rem;
+    color: var(--bs-amber);
+}

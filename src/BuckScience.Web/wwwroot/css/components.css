@@ -1,0 +1,772 @@
+/* ========== BuckScience Components CSS ========== */
+/* Hunting-themed components for consistent UI */
+
+/* ========== Buttons ========== */
+/* ========== Buttons - Hunting Theme ========== */
+.btn {
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--bs-border-radius);
+  transition: all var(--bs-transition-base);
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary,
+.btn-custom-primary,
+.theme-btn {
+  background-color: var(--bs-amber);
+  border-color: var(--bs-amber);
+  color: var(--bs-dark);
+  font-weight: 700;
+}
+
+.btn-primary:hover,
+.btn-custom-primary:hover,
+.theme-btn:hover {
+  background-color: var(--bs-gold);
+  border-color: var(--bs-gold);
+  color: var(--bs-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--bs-shadow-md);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border-color: var(--bs-amber);
+  color: var(--bs-amber);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--bs-amber);
+  border-color: var(--bs-amber);
+  color: var(--bs-dark);
+}
+
+.btn-secondary,
+.btn-custom-cancel {
+  background-color: var(--bs-bark);
+  border-color: var(--bs-bark);
+  color: var(--bs-cream);
+}
+
+.btn-secondary:hover,
+.btn-custom-cancel:hover {
+  background-color: var(--bs-moss);
+  border-color: var(--bs-moss);
+  color: var(--bs-white);
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border-color: rgba(196, 168, 130, 0.3);
+  color: var(--bs-tan);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--bs-bark);
+  border-color: var(--bs-bark);
+  color: var(--bs-cream);
+}
+
+/* Ghost button style */
+.btn-ghost {
+  background-color: transparent;
+  border-color: rgba(196, 168, 130, 0.3);
+  color: var(--bs-tan);
+  font-weight: 600;
+}
+
+.btn-ghost:hover {
+  border-color: var(--bs-amber);
+  color: var(--bs-amber);
+  background-color: rgba(200, 131, 42, 0.05);
+}
+
+/* Button sizes */
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: var(--bs-font-size-xs);
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: var(--bs-font-size-lg);
+}
+
+/* ========== Cards ========== */
+/* ========== Cards - Hunting Theme for Low Light Use ========== */
+.card {
+  background-color: rgba(46, 58, 40, 0.25);
+  border: 1px solid rgba(200, 131, 42, 0.2);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--bs-shadow-sm);
+  transition: all var(--bs-transition-base);
+  color: var(--bs-cream);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bs-amber), var(--bs-gold));
+  transition: width 0.3s ease;
+}
+
+.card:hover::before {
+  width: 100%;
+}
+
+.card:hover {
+  box-shadow: var(--bs-shadow-md);
+  border-color: rgba(200, 131, 42, 0.3);
+  transform: translateY(-1px);
+  background-color: rgba(61, 92, 48, 0.3);
+}
+
+.card-header {
+  background-color: rgba(26, 35, 24, 0.4);
+  border-bottom: 1px solid rgba(200, 131, 42, 0.2);
+  color: var(--bs-white);
+  font-weight: 600;
+}
+
+.card-body {
+  padding: var(--bs-space-lg);
+}
+
+.card-title {
+  color: var(--bs-white);
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--bs-space-sm);
+}
+
+.card-text {
+  color: var(--bs-cream);
+  line-height: 1.6;
+}
+
+/* Hunting-themed card variants - Dark theme optimized */
+.property-card,
+.camera-card,
+.profile-card,
+.feature-card {
+  background: rgba(46, 58, 40, 0.2);
+  border: 1px solid rgba(200, 131, 42, 0.15);
+  transition: all var(--bs-transition-base);
+  position: relative;
+  color: var(--bs-cream);
+}
+
+.property-card::before,
+.camera-card::before,
+.profile-card::before,
+.feature-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bs-amber), var(--bs-gold));
+  transition: width 0.3s ease;
+}
+
+.property-card:hover::before,
+.camera-card:hover::before,
+.profile-card:hover::before,
+.feature-card:hover::before {
+  width: 100%;
+}
+
+.property-card:hover,
+.camera-card:hover,
+.profile-card:hover,
+.feature-card:hover {
+  background: rgba(61, 92, 48, 0.25);
+  border-color: rgba(200, 131, 42, 0.3);
+  box-shadow: var(--bs-shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* ========== Badges ========== */
+/* ========== Badges - Hunting Theme ========== */
+.badge {
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--bs-border-radius-sm);
+}
+
+.badge-custom-primary {
+  background-color: var(--bs-amber);
+  color: var(--bs-dark);
+}
+
+.badge-custom-secondary {
+  background-color: var(--bs-bark);
+  color: var(--bs-cream);
+}
+
+.badge-custom-success {
+  background-color: var(--bs-olive);
+  color: var(--bs-white);
+}
+
+.badge-custom-info {
+  background-color: var(--bs-moss);
+  color: var(--bs-white);
+}
+
+.badge-custom-warning {
+  background-color: var(--bs-gold);
+  color: var(--bs-dark);
+}
+
+.badge-custom-light {
+  background-color: var(--bs-cream);
+  color: var(--bs-dark);
+  border: 1px solid rgba(196, 168, 130, 0.3);
+}
+
+/* ========== Navigation Components ========== */
+/* ========== Navigation Pills - Hunting Theme ========== */
+.nav-pills .nav-link {
+  color: var(--bs-tan);
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--bs-border-radius);
+  transition: all var(--bs-transition-base);
+}
+
+.nav-pills .nav-link:hover {
+  background-color: rgba(200, 131, 42, 0.1);
+  color: var(--bs-amber);
+}
+
+.nav-pills .nav-link.active {
+  background-color: var(--bs-amber);
+  color: var(--bs-dark);
+}
+
+/* ========== Accordions ========== */
+.accordion-item {
+  background-color: transparent;
+  border: 1px solid rgba(196, 168, 130, 0.15);
+  border-radius: var(--bs-border-radius-lg);
+  margin-bottom: var(--bs-space-sm);
+}
+
+.accordion-button {
+  background-color: rgba(26, 35, 24, 0.3);
+  color: var(--bs-cream);
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--bs-border-radius-lg) !important;
+  transition: all var(--bs-transition-base);
+}
+
+.accordion-button:hover {
+  background-color: rgba(46, 58, 40, 0.4);
+  color: var(--bs-white);
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: var(--bs-amber);
+  color: var(--bs-dark);
+  box-shadow: none;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+  border: none;
+}
+
+.accordion-body {
+  background-color: rgba(13, 20, 9, 0.2);
+  color: var(--bs-cream);
+  border-top: 1px solid rgba(200, 131, 42, 0.15);
+}
+
+/* ========== Form Components ========== */
+.form-control,
+.form-select {
+  background-color: rgba(240, 232, 216, 0.08);
+  border: 1px solid rgba(196, 168, 130, 0.3);
+  color: var(--bs-white);
+  border-radius: var(--bs-border-radius);
+  transition: all var(--bs-transition-base);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: rgba(240, 232, 216, 0.12);
+  border-color: var(--bs-amber);
+  box-shadow: 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+  color: var(--bs-white);
+}
+
+.form-control::placeholder {
+  color: rgba(196, 168, 130, 0.6);
+}
+
+.form-check-input {
+  background-color: rgba(240, 232, 216, 0.1);
+  border-color: rgba(196, 168, 130, 0.3);
+}
+
+.form-check-input:checked {
+  background-color: var(--bs-amber);
+  border-color: var(--bs-amber);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+}
+
+/* ========== Alerts ========== */
+.alert {
+  border-radius: var(--bs-border-radius-lg);
+  border: none;
+  font-weight: 500;
+}
+
+.alert-success {
+  background-color: rgba(107, 140, 62, 0.15);
+  color: var(--bs-olive);
+  border-left: 4px solid var(--bs-olive);
+}
+
+.alert-info {
+  background-color: rgba(200, 131, 42, 0.15);
+  color: var(--bs-amber);
+  border-left: 4px solid var(--bs-amber);
+}
+
+.alert-warning {
+  background-color: rgba(232, 168, 56, 0.15);
+  color: var(--bs-gold);
+  border-left: 4px solid var(--bs-gold);
+}
+
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+  border-left: 4px solid #dc3545;
+}
+
+/* ========== Modals ========== */
+/* ========== Modals - Hunting Theme ========== */
+.modal-content {
+  background-color: var(--bs-forest);
+  border: 1px solid rgba(200, 131, 42, 0.2);
+  border-radius: var(--bs-border-radius-lg);
+  color: var(--bs-cream);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(196, 168, 130, 0.2);
+  background-color: rgba(46, 58, 40, 0.3);
+}
+
+.modal-title {
+  color: var(--bs-white);
+  font-family: var(--bs-font-family-heading);
+  letter-spacing: 0.02em;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(196, 168, 130, 0.2);
+  background-color: rgba(13, 20, 9, 0.5);
+}
+
+.btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.7;
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
+/* ========== Dropdowns ========== */
+/* ========== Dropdowns - Hunting Theme ========== */
+.dropdown-menu {
+  background-color: var(--bs-forest);
+  border: 1px solid rgba(200, 131, 42, 0.2);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--bs-shadow-xl);
+}
+
+.dropdown-item {
+  color: var(--bs-cream);
+  transition: all var(--bs-transition-fast);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: rgba(200, 131, 42, 0.1);
+  color: var(--bs-amber);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: var(--bs-amber);
+  color: var(--bs-dark);
+}
+
+/* ========== Tables ========== */
+/* ========== Tables - Hunting Theme ========== */
+.table {
+  color: var(--bs-cream);
+}
+
+.table-dark {
+  --bs-table-bg: var(--bs-forest);
+  --bs-table-striped-bg: rgba(240, 232, 216, 0.05);
+  --bs-table-border-color: rgba(196, 168, 130, 0.2);
+}
+
+.table th {
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bs-white);
+  border-bottom: 2px solid var(--bs-amber);
+}
+
+.table td {
+  color: var(--bs-cream);
+  border-color: rgba(196, 168, 130, 0.2);
+}
+
+/* ========== Progress Bars ========== */
+/* ========== Progress Bars - Hunting Theme ========== */
+.progress {
+  background-color: rgba(46, 58, 40, 0.3);
+  border-radius: var(--bs-border-radius);
+  height: 0.5rem;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, var(--bs-amber), var(--bs-gold));
+  border-radius: var(--bs-border-radius);
+}
+
+/* ========== Spinners ========== */
+/* ========== Spinners - Hunting Theme ========== */
+.spinner-border {
+  border-color: rgba(200, 131, 42, 0.25);
+  border-right-color: var(--bs-amber);
+}
+
+.spinner-grow {
+  background-color: var(--bs-amber);
+}
+
+/* ========== Responsive Utilities ========== */
+@media (max-width: 768px) {
+  .card-body {
+    padding: var(--bs-space-md);
+  }
+  
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: var(--bs-font-size-sm);
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: var(--bs-font-size-xs);
+  }
+
+  .content-icon-card {
+    padding: var(--bs-space-md);
+  }
+  
+  .hunt-area-card {
+    padding: var(--bs-space-md);
+    margin-bottom: var(--bs-space-sm);
+  }
+
+  .hunt-area-icon {
+    font-size: 1.5rem;
+    margin-right: var(--bs-space-sm);
+  }
+
+  .hunt-area-name {
+    font-size: var(--bs-font-size-base);
+  }
+
+  .bucklens-chart-container {
+    height: 250px;
+    max-height: 250px;
+  }
+  
+  .bucklens-chart-container.moon-phase-chart {
+    height: 300px;
+    max-height: 300px;
+  }
+  
+  .bucklens-summary .badge {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+/* ========== Icon Enhancements - Hunting Theme ========== */
+.fas, .fa {
+  color: inherit;
+  transition: color var(--bs-transition-base);
+}
+
+/* Icon color variants */
+.icon-primary { 
+    color: var(--bs-amber); 
+}
+
+.icon-secondary { 
+    color: var(--bs-bark); 
+}
+
+.icon-success { 
+    color: var(--bs-olive); 
+}
+
+.icon-info { 
+    color: var(--bs-moss); 
+}
+
+.icon-warning { 
+    color: var(--bs-gold); 
+}
+
+.icon-muted { 
+    color: var(--bs-tan); 
+}
+
+/* ========== Camera Markers - Hunting Theme ========== */
+.camera-marker {
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    position: relative;
+}
+
+.camera-marker-inner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--bs-white);
+    box-shadow: var(--bs-shadow-lg);
+    font-size: 14px;
+    color: var(--bs-white);
+    transition: transform var(--bs-transition-base);
+}
+
+.camera-marker-inner:hover {
+    transform: scale(1.1);
+}
+
+.camera-marker-inner.active {
+    background-color: var(--bs-amber);
+    border-color: var(--bs-gold);
+}
+
+.camera-marker-inner.inactive {
+    background-color: var(--bs-bark);
+    border-color: var(--bs-moss);
+}
+
+/* ========== Gallery and Photo Components ========== */
+.gallery-item {
+    transition: transform var(--bs-transition-base), box-shadow var(--bs-transition-base);
+    border: none;
+    border-radius: var(--bs-border-radius-lg);
+    overflow: hidden;
+    background: rgba(46, 58, 40, 0.1);
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bs-shadow-xl);
+}
+
+.gallery-image {
+    height: 200px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: opacity var(--bs-transition-base);
+    border-radius: var(--bs-border-radius-lg);
+}
+
+.gallery-image:hover {
+    opacity: 0.9;
+}
+
+/* ========== BuckLens Analytics Styles - Hunting Theme ========== */
+.bucklens-chart-container {
+    position: relative;
+    height: 300px;
+    max-height: 300px;
+    background: rgba(46, 58, 40, 0.1);
+    border-radius: var(--bs-border-radius-lg);
+    border: 1px solid rgba(200, 131, 42, 0.2);
+}
+
+.bucklens-chart-container.moon-phase-chart {
+    height: 350px;
+    max-height: 350px;
+}
+
+.bucklens-chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    flex-direction: column;
+    color: var(--bs-cream);
+}
+
+.bucklens-summary {
+    background: linear-gradient(135deg, rgba(46, 58, 40, 0.2) 0%, rgba(26, 35, 24, 0.3) 100%);
+    border-left: 4px solid var(--bs-amber);
+    color: var(--bs-cream);
+}
+
+.bucklens-summary .badge {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+}
+
+.bucklens-chart-card {
+    transition: transform var(--bs-transition-base), box-shadow var(--bs-transition-base);
+    background: rgba(46, 58, 40, 0.1);
+    border: 1px solid rgba(200, 131, 42, 0.2);
+}
+
+.bucklens-chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bs-shadow-lg);
+}
+/* ========== Phase 1 Component Additions ========== */
+
+/* ---- Info alert — replaces old green alert-success banners ---- */
+.alert-bs-info {
+  background-color: rgba(200, 131, 42, 0.08);
+  border: none;
+  border-left: 4px solid var(--bs-amber);
+  color: var(--bs-cream);
+  border-radius: var(--bs-border-radius);
+}
+
+.alert-bs-info h5,
+.alert-bs-info .alert-heading {
+  color: var(--bs-amber);
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.alert-bs-info p,
+.alert-bs-info ol,
+.alert-bs-info li {
+  color: var(--bs-tan);
+  margin-bottom: 0.25rem;
+}
+
+.alert-bs-info strong { color: var(--bs-cream); }
+.alert-bs-info a { color: var(--bs-amber); text-decoration: underline; }
+
+/* ---- Warning alert variant ---- */
+.alert-bs-warning {
+  background-color: rgba(232, 168, 56, 0.08);
+  border: none;
+  border-left: 4px solid var(--bs-gold);
+  color: var(--bs-cream);
+  border-radius: var(--bs-border-radius);
+}
+
+/* ---- BuckTrax loading spinner — replaces style="color:#527A52" ---- */
+.bucktrax-spinner {
+  color: var(--bs-amber) !important;
+}
+
+/* ---- Profile avatar thumbnails in BuckTrax ---- */
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profile-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-icon {
+  font-size: 14px;
+}
+
+/* ---- Upload modal header — replaces bg-success ---- */
+.modal-header.bg-bark {
+  background-color: var(--bs-bark) !important;
+  border-bottom: 1px solid rgba(200, 131, 42, 0.2);
+  color: var(--bs-white);
+}
+
+/* ---- form-range thumb — amber ---- */
+.form-range::-webkit-slider-thumb {
+  background-color: var(--bs-amber);
+}
+.form-range::-moz-range-thumb {
+  background-color: var(--bs-amber);
+  border: none;
+}
+.form-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1px var(--bs-dark), 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+}
+
+/* ---- form-select option bg ---- */
+.form-select option {
+  background-color: var(--bs-forest);
+  color: var(--bs-cream);
+}
+
+/* ---- Drawing instructions floating panel ---- */
+.drawing-instructions-panel {
+  position: fixed;
+  top: 10px;
+  right: 60px;
+  z-index: 1000;
+  max-width: 300px;
+  background-color: rgba(26, 35, 24, 0.97) !important;
+  border: 1px solid rgba(200, 131, 42, 0.4) !important;
+  color: var(--bs-cream) !important;
+}
+
+/* ---- Small alert variant ---- */
+.alert-sm { padding: 0.375rem 0.75rem; }

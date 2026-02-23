@@ -9,3 +9,4 @@ TestResults/
 # Uploaded files
 src/BuckScience.Web/wwwroot/uploads/*
 !src/BuckScience.Web/wwwroot/uploads/photos/.gitkeep
+/src/BuckScience.Web/keys/key-28078da5-668e-4488-8c35-afc53bd6cd04.xml

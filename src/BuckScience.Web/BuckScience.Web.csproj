@@ -8,9 +8,13 @@
 
   <ItemGroup>
     <Compile Remove="Views\Photos\**" />
+    <Compile Remove="wwwroot\uploads\**" />
     <Content Remove="Views\Photos\**" />
+    <Content Remove="wwwroot\uploads\**" />
     <EmbeddedResource Remove="Views\Photos\**" />
+    <EmbeddedResource Remove="wwwroot\uploads\**" />
     <None Remove="Views\Photos\**" />
+    <None Remove="wwwroot\uploads\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,10 +30,6 @@
     <ProjectReference Include="..\BuckScience.Applicaton\BuckScience.Applicaton.csproj" />
     <ProjectReference Include="..\BuckScience.Infrastructure\BuckScience.Infrastructure.csproj" />
     <ProjectReference Include="..\BuckScience.Shared\BuckScience.Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
 </Project>
