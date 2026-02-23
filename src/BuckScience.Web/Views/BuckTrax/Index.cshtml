@@ -6,7 +6,7 @@
 <div class="container-fluid h-100 d-flex flex-column">
     <div class="d-flex flex-column h-100">
         <div class="d-flex align-items-center">
-            <i class="fas fa-route text-custom-primary me-3" style="font-size: 1.5rem;"></i>
+            <i class="fas fa-route text-amber me-3 sidebar-icon"></i>
             <h2 class="sidebar-title mb-0">BuckTrax</h2>
         </div>
         <p class="text-muted mb-3">Predict deer movement patterns based on sighting history and property features.</p>
@@ -30,7 +30,7 @@
                 }
                 else
                 {
-                    <div class="alert alert-success" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
+                    <div class="alert alert-bs-info">
                         <i class="fas fa-info-circle me-2"></i>
                         No properties found. <a href="/properties">Create a property</a> to get started.
                     </div>
@@ -38,7 +38,7 @@
             </div>
 
             <!-- Profile Selection -->
-            <div class="mb-3" id="profile-section" style="display: none;">
+            <div class="mb-3" id="profile-section" class="section-hidden">
                 <label class="form-label fw-bold">
                     <i class="fas fa-deer me-2"></i>Select Profile
                 </label>
@@ -48,13 +48,13 @@
             </div>
 
             <!-- Prediction Controls -->
-            <div class="mb-3" id="prediction-section" style="display: none;">
+            <div class="mb-3" id="prediction-section" class="section-hidden">
                 <button id="run-prediction" class="btn btn-custom-primary w-100" disabled>
                     <i class="fas fa-play me-2"></i>
                     Run BuckTrax Prediction
                 </button>
-                <div id="prediction-loading" class="text-center mt-3" style="display: none;">
-                    <div class="spinner-border" style="color: #527A52;" role="status">
+                <div id="prediction-loading" class="text-center mt-3 section-hidden">
+                    <div class="spinner-border" role="status" class="bucktrax-spinner">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="mt-2 text-muted">Analyzing movement patterns...</p>
@@ -62,9 +62,9 @@
             </div>
 
             <!-- Results Section -->
-            <div class="flex-grow-1" id="results-section" style="display: none;">
+            <div class="flex-grow-1" id="results-section" class="flex-grow-1 section-hidden">
                 <!-- Limited Data Warning -->
-                <div id="limited-data-warning" class="alert alert-warning" style="display: none;">
+                <div id="limited-data-warning" class="alert alert-bs-warning section-hidden">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <span id="limited-data-message"></span>
                 </div>
@@ -113,7 +113,7 @@
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body px-2 py-2">
-                                <div class="h6 text-success mb-0" id="total-transitions">0</div>
+                                <div class="h6 text-amber mb-0" id="total-transitions">0</div>
                                 <small class="text-muted">Transitions</small>
                             </div>
                         </div>
@@ -173,15 +173,15 @@
                 if (selectedPropertyId) {
                     // Clear existing property features before loading new ones
                     clearFeatureLayers();
-                    
+
                     loadPropertyProfiles(selectedPropertyId);
                     loadPropertyFeatures(selectedPropertyId);
-                    
+
                     // Trigger map layer update - same as Properties Details
                     if (window.App && window.App.triggerMapLayerUpdate) {
                         window.App.triggerMapLayerUpdate({ propertyId: selectedPropertyId });
                     }
-                    
+
                     showProfileSection();
                 } else {
                     hideProfileSection();
@@ -213,7 +213,7 @@
             if (window.App && window.App.initializePropertyFeatures) {
                 console.log('Using properties.js initializePropertyFeatures for property:', propertyId);
                 window.App.initializePropertyFeatures(propertyId);
-                
+
                 // Track the feature layer IDs created by initializePropertyFeatures for visibility control
                 bucktraxLayers.features = ['property-features-fill', 'property-features-line', 'property-features-points'];
             } else {
@@ -239,7 +239,7 @@
 
             if (profiles.length === 0) {
                 container.html(`
-                    <div class="alert alert-success" style="background-color: #f0f8f0; border-color: #527A52; color: #2d3748;">
+                    <div class="alert alert-bs-info" >
                         <i class="fas fa-info-circle me-2"></i>
                         No profiles found for this property. <a href="/properties/${selectedPropertyId}">Create a profile</a> to get started.
                     </div>
@@ -249,12 +249,12 @@
 
             profiles.forEach(profile => {
                 const statusBadge = getProfileStatusBadge(profile.profileStatus);
-                const photoHtml = profile.coverPhotoUrl 
-                    ? '<img src="' + profile.coverPhotoUrl + '" class="rounded me-2" style="width: 32px; height: 32px; object-fit: cover;">'
-                    : `<div class="bg-secondary rounded me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><i class="fas fa-deer text-white" style="font-size: 14px;"></i></div>`;
+                const photoHtml = profile.coverPhotoUrl
+                    ? '<img src="' + profile.coverPhotoUrl + '" class="profile-avatar rounded me-2">'
+                    : `<div class="profile-avatar-placeholder bg-bark rounded me-2 d-flex align-items-center justify-content-center"><i class="fas fa-deer text-white profile-avatar-icon"></i></div>`;
 
                 const profileCard = $(`
-                    <div class="card profile-item mb-2 cursor-pointer" data-profile-id="${profile.id}" style="cursor: pointer;">
+                    <div class="card profile-item mb-2 cursor-pointer" data-profile-id="${profile.id}">
                         <div class="card-body py-2">
                             <div class="d-flex align-items-center">
                                 ${photoHtml}
@@ -290,11 +290,11 @@
 
         function selectProfile(profileId, profileName) {
             selectedProfileId = profileId;
-            
+
             // Update UI to show selection
             $('.profile-item').removeClass('border-primary');
             $('.profile-item[data-profile-id="' + profileId + '"]').addClass('border-primary');
-            
+
             // Enable prediction button
             $('#run-prediction').prop('disabled', false);
             showPredictionSection();
@@ -303,15 +303,15 @@
         function runMovementPrediction(profileId) {
             const button = $('#run-prediction');
             const loading = $('#prediction-loading');
-            
+
             button.prop('disabled', true);
-            loading.show();
+            loading.removeClass('section-hidden');
 
             $.ajax({
                 url: '/bucktrax/api/predict',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ 
+                data: JSON.stringify({
                     profileId: profileId,
                     season: null,
                     timeOfDayFilter: null
@@ -319,11 +319,11 @@
                 success: function(predictions) {
                     currentPredictions = predictions;
                     displayPredictionResults(predictions);
-                    loading.hide();
+                    loading.addClass('section-hidden');
                     button.prop('disabled', false);
                 },
                 error: function(xhr) {
-                    loading.hide();
+                    loading.addClass('section-hidden');
                     button.prop('disabled', false);
                     window.App?.showModal?.("Error", "Failed to generate movement predictions: " + (xhr.responseText || "Unknown error"), "error");
                 }
@@ -334,9 +334,9 @@
             // Show limited data warning if needed
             if (predictions.isLimitedData && predictions.limitedDataMessage) {
                 $('#limited-data-message').text(predictions.limitedDataMessage);
-                $('#limited-data-warning').show();
+                $('#limited-data-warning').removeClass('section-hidden');
             } else {
-                $('#limited-data-warning').hide();
+                $('#limited-data-warning').addClass('section-hidden');
             }
 
             // Update summary stats
@@ -346,7 +346,7 @@
 
             // Initialize map (clear existing layers) BEFORE creating time segment tabs
             updateMapWithPredictions(predictions);
-            
+
             // Create time segment tabs (this will populate the map with default segment data)
             createTimeSegmentTabs(predictions.timeSegments);
 
@@ -363,8 +363,8 @@
 
             timeSegments.forEach((segment, index) => {
                 const isActive = index === defaultIndex ? 'active' : '';
-                const badgeClass = segment.sightingCount > 0 ? 'bg-success' : 'bg-secondary';
-                
+                const badgeClass = segment.sightingCount > 0 ? 'badge-custom-primary' : 'badge-custom-secondary';
+
                 const tab = $(`
                     <li class="nav-item" role="presentation">
                         <button class="nav-link ${isActive} py-1 px-2" id="tab-${index}" data-bs-toggle="pill" data-bs-target="#content-${index}" type="button" role="tab">
@@ -373,7 +373,7 @@
                         </button>
                     </li>
                 `);
-                
+
                 tabsContainer.append(tab);
             });
 
@@ -396,7 +396,7 @@
 
         function displayTimeSegmentContent(segment) {
             const container = $('#time-segment-content');
-            
+
             if (segment.sightingCount === 0 && (!segment.timeSegmentCorridors || segment.timeSegmentCorridors.length === 0)) {
                 container.html(`
                     <div class="text-center text-muted py-3">
@@ -461,8 +461,8 @@
 
             // Clear existing BuckTrax layers
             clearMapLayers();
-            
-            // Note: We don't add any data here anymore - 
+
+            // Note: We don't add any data here anymore -
             // the time segment selection will handle displaying the appropriate data
             // This function now just ensures the map is ready for time segment updates
         }
@@ -515,7 +515,7 @@
             // Only fit bounds if we have points
             if (hasPoints) {
                 try {
-                    map.fitBounds(bounds, { 
+                    map.fitBounds(bounds, {
                         padding: 50,
                         maxZoom: 15 // Don't zoom in too close
                     });
@@ -527,16 +527,16 @@
 
         function addCorridorsToMap(map, corridors) {
             const showCorridors = $('#show-movement-corridors').is(':checked');
-            
+
             // Separate simple corridors from multi-point routes
             const simpleCorridors = corridors.filter(c => !c.isPartOfMultiPointRoute);
             const multiPointRoutes = corridors.filter(c => c.isPartOfMultiPointRoute);
-            
+
             // Add simple corridors as lines
             if (simpleCorridors.length > 0) {
                 addSimpleCorridors(map, simpleCorridors, showCorridors);
             }
-            
+
             // Add multi-point routes with numbered indicators
             if (multiPointRoutes.length > 0) {
                 addMultiPointRoutes(map, multiPointRoutes, showCorridors);
@@ -574,8 +574,8 @@
                 id: layerId,
                 type: 'line',
                 source: sourceId,
-                layout: { 
-                    'line-join': 'round', 
+                layout: {
+                    'line-join': 'round',
                     'line-cap': 'round',
                     'visibility': showCorridors ? 'visible' : 'none'
                 },
@@ -615,7 +615,7 @@
                 for (let i = 0; i < route.routePoints.length - 1; i++) {
                     const current = route.routePoints[i];
                     const next = route.routePoints[i + 1];
-                    
+
                     lineFeatures.push({
                         type: 'Feature',
                         properties: {
@@ -649,8 +649,8 @@
                     id: lineLayerId,
                     type: 'line',
                     source: lineSourceId,
-                    layout: { 
-                        'line-join': 'round', 
+                    layout: {
+                        'line-join': 'round',
                         'line-cap': 'round',
                         'visibility': showCorridors ? 'visible' : 'none'
                     },
@@ -985,19 +985,19 @@
         }
 
         // UI Helper Functions
-        function showProfileSection() { $('#profile-section').show(); }
-        function hideProfileSection() { 
-            $('#profile-section').hide(); 
+        function showProfileSection() { $('#profile-section').removeClass('section-hidden'); }
+        function hideProfileSection() {
+            $('#profile-section').addClass('section-hidden');
             hidePredictionSection();
         }
-        function showPredictionSection() { $('#prediction-section').show(); }
-        function hidePredictionSection() { 
-            $('#prediction-section').hide(); 
+        function showPredictionSection() { $('#prediction-section').removeClass('section-hidden'); }
+        function hidePredictionSection() {
+            $('#prediction-section').addClass('section-hidden');
             hideResultsSection();
         }
-        function showResultsSection() { $('#results-section').show(); }
-        function hideResultsSection() { 
-            $('#results-section').hide(); 
+        function showResultsSection() { $('#results-section').removeClass('section-hidden'); }
+        function hideResultsSection() {
+            $('#results-section').addClass('section-hidden');
             clearMapLayers();
         }
 

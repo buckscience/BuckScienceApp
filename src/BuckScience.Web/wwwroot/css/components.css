@@ -670,3 +670,103 @@
     transform: translateY(-2px);
     box-shadow: var(--bs-shadow-lg);
 }
+/* ========== Phase 1 Component Additions ========== */
+
+/* ---- Info alert — replaces old green alert-success banners ---- */
+.alert-bs-info {
+  background-color: rgba(200, 131, 42, 0.08);
+  border: none;
+  border-left: 4px solid var(--bs-amber);
+  color: var(--bs-cream);
+  border-radius: var(--bs-border-radius);
+}
+
+.alert-bs-info h5,
+.alert-bs-info .alert-heading {
+  color: var(--bs-amber);
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.alert-bs-info p,
+.alert-bs-info ol,
+.alert-bs-info li {
+  color: var(--bs-tan);
+  margin-bottom: 0.25rem;
+}
+
+.alert-bs-info strong { color: var(--bs-cream); }
+.alert-bs-info a { color: var(--bs-amber); text-decoration: underline; }
+
+/* ---- Warning alert variant ---- */
+.alert-bs-warning {
+  background-color: rgba(232, 168, 56, 0.08);
+  border: none;
+  border-left: 4px solid var(--bs-gold);
+  color: var(--bs-cream);
+  border-radius: var(--bs-border-radius);
+}
+
+/* ---- BuckTrax loading spinner — replaces style="color:#527A52" ---- */
+.bucktrax-spinner {
+  color: var(--bs-amber) !important;
+}
+
+/* ---- Profile avatar thumbnails in BuckTrax ---- */
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profile-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-icon {
+  font-size: 14px;
+}
+
+/* ---- Upload modal header — replaces bg-success ---- */
+.modal-header.bg-bark {
+  background-color: var(--bs-bark) !important;
+  border-bottom: 1px solid rgba(200, 131, 42, 0.2);
+  color: var(--bs-white);
+}
+
+/* ---- form-range thumb — amber ---- */
+.form-range::-webkit-slider-thumb {
+  background-color: var(--bs-amber);
+}
+.form-range::-moz-range-thumb {
+  background-color: var(--bs-amber);
+  border: none;
+}
+.form-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 1px var(--bs-dark), 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+}
+
+/* ---- form-select option bg ---- */
+.form-select option {
+  background-color: var(--bs-forest);
+  color: var(--bs-cream);
+}
+
+/* ---- Drawing instructions floating panel ---- */
+.drawing-instructions-panel {
+  position: fixed;
+  top: 10px;
+  right: 60px;
+  z-index: 1000;
+  max-width: 300px;
+  background-color: rgba(26, 35, 24, 0.97) !important;
+  border: 1px solid rgba(200, 131, 42, 0.4) !important;
+  color: var(--bs-cream) !important;
+}
+
+/* ---- Small alert variant ---- */
+.alert-sm { padding: 0.375rem 0.75rem; }

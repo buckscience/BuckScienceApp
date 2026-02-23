@@ -220,3 +220,42 @@ a:hover {
   color: var(--bs-tan);
   font-weight: 500;
 }
+/* ========== Phase 1 Utility Additions ========== */
+
+/* Visibility helpers — replaces style="display:none" */
+.section-hidden {
+  display: none !important;
+}
+
+.tagging-controls-hidden {
+  display: none !important;
+}
+
+/* Amber text — replaces style="color:#527A52" */
+.text-amber {
+  color: var(--bs-amber) !important;
+}
+
+/* Subtle amber border */
+.border-amber-subtle {
+  border-color: rgba(200, 131, 42, 0.3) !important;
+}
+
+/* Cursor helpers */
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+/* Label margin helper — replaces style="margin-left:20px" */
+.ms-custom-label {
+  margin-left: 20px;
+}
+
+/* Sidebar icon sizing — replaces style="font-size:1.5rem" */
+.sidebar-icon {
+  font-size: 1.5rem;
+}
+
+/* ---- Compact font-size utilities (sidebar use) ---- */
+.fs-7 { font-size: 0.75rem !important; }
+.fs-8 { font-size: 0.7rem  !important; }

@@ -45,75 +45,62 @@
                             </div>
 
                             <!-- Text with exact 30px spacing -->
-                            <label class="mb-0 fs-7" for="showHistoricalPlacements" style="margin-left: 20px;">
+                            <label class="mb-0 fs-7 ms-custom-label" for="showHistoricalPlacements">
                                 <i class="fas fa-history me-1"></i>
                                 Show Historical Camera Placements
                             </label>
                         </div>
 
                         
-                        <div class="container-fluid px-0">
-                            <div class="row g-3">
+                        <div class="d-flex flex-column gap-2">
                                 @foreach (var camera in Model.Cameras)
                                 {
-                                    <div class="col-12">
-    <div class="card camera-card w-100" style="cursor: pointer;" onclick="navigateToCamera(@camera.Id)">
-        <div class="card-body p-3">
-            <!-- Title and Badge -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="card-title mb-0 fs-6">@camera.LocationName</h6>
-                <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary") fs-7">
-                    @(camera.IsActive ? "Active" : "Inactive")
-                </span>
-            </div>
-
-            <!-- Camera Brand/Model -->
-            <p class="card-text text-muted mb-2 fs-7">
-                <span>@camera.Brand @(!string.IsNullOrEmpty(camera.Model) ? $"/ {camera.Model}" : "")</span>
-            </p>
-
-            <!-- Location -->
-            <p class="card-text text-muted mb-2 fs-7">
-                <i class="fas fa-map-marker-alt me-1"></i>
-                @camera.Latitude.ToString("F4"), @camera.Longitude.ToString("F4")
-            </p>
-
-            <!-- Direction -->
-            <p class="card-text text-muted mb-2 fs-7">
-                <i class="fas fa-compass me-1"></i>
-                @{
-                    var compassDirection = DirectionHelper.FromFloat(camera.DirectionDegrees);
-                    var compassText = DirectionHelper.GetDisplayName(compassDirection);
-                }
-                @camera.DirectionDegrees.ToString("F0")° (@compassText)
-            </p>
-
-            <!-- Buttons -->
-            <div class="btn-group w-100 mt-2" role="group">
-                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); panToCameraLocation(@camera.Longitude, @camera.Latitude)" title="Focus on map">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button type="button" class="btn btn-outline-primary btn-sm fs-7" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)" title="View details">
-                    <i class="fas fa-circle-info"></i>
-                </button>
-                <a href="/properties/@Model.Id/photos?&cameras=@camera.Id" class="btn btn-outline-primary btn-sm fs-7 d-flex align-items-center justify-content-center" title="View photos" onclick="event.stopPropagation();">
-                    <i class="fas fa-images"></i>
-                </a>
-                <a href="/properties/@Model.Id/cameras/@camera.Id/edit" class="btn btn-outline-secondary btn-sm fs-7 d-flex align-items-center justify-content-center" title="Edit camera" onclick="event.stopPropagation();">
-                    <i class="fas fa-edit"></i>
-                </a>
-                <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm fs-7 d-flex align-items-center justify-content-center" title="Delete camera" onclick="event.stopPropagation();">
-                    <i class="fas fa-trash"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
+                                    var compassDirection = DirectionHelper.FromFloat(camera.DirectionDegrees);
+                                    var compassText = DirectionHelper.GetDisplayName(compassDirection);
+                                    <div class="card camera-card" onclick="navigateToCamera(@camera.Id)">
+                                        <div class="card-body">
+                                            <!-- Row 1: name + status badge -->
+                                            <div class="camera-card-top">
+                                                <div class="camera-info">
+                                                    <div class="camera-title">@camera.LocationName</div>
+                                                    <div class="camera-meta">
+                                                        @if (!string.IsNullOrEmpty(camera.Brand))
+                                                        {
+                                                            <span><i class="fas fa-tag"></i>@camera.Brand@(!string.IsNullOrEmpty(camera.Model) ? $" / {camera.Model}" : "")</span>
+                                                        }
+                                                        <span><i class="fas fa-compass"></i>@camera.DirectionDegrees.ToString("F0")° @compassText</span>
+                                                        <span><i class="fas fa-map-marker-alt"></i>@camera.Latitude.ToString("F3"), @camera.Longitude.ToString("F3")</span>
+                                                    </div>
+                                                </div>
+                                                <div class="camera-status">
+                                                    <span class="badge @(camera.IsActive ? "badge-custom-success" : "badge-custom-secondary")">
+                                                        @(camera.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <!-- Row 2: action buttons spread full width -->
+                                            <div class="camera-actions">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); panToCameraLocation(@camera.Longitude, @camera.Latitude)" title="Focus map">
+                                                    <i class="fas fa-crosshairs"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); navigateToCamera(@camera.Id)" title="View details">
+                                                    <i class="fas fa-arrow-up-right-from-square"></i>
+                                                </button>
+                                                <a href="/properties/@Model.Id/photos?cameras=@camera.Id" class="btn btn-outline-primary btn-sm" title="Photos" onclick="event.stopPropagation();">
+                                                    <i class="fas fa-images"></i>
+                                                </a>
+                                                <a href="/properties/@Model.Id/cameras/@camera.Id/edit" class="btn btn-outline-secondary btn-sm" title="Edit" onclick="event.stopPropagation();">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="/properties/@Model.Id/cameras/@camera.Id/delete" class="btn btn-outline-danger btn-sm" title="Delete" onclick="event.stopPropagation();">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 }
-                            </div>
                         </div>
-                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" style="min-width:unset; padding:0.25rem 0.75rem;">
+                        <a href="/properties/@Model.Id/cameras/add" class="btn btn-custom-primary btn-sm mt-2 fs-7 col-12" >
                             <i class="fas fa-plus me-1"></i> Add Camera
                         </a>
                     }
@@ -145,9 +132,9 @@
                             @foreach (var profile in Model.Profiles)
                             {
                                 <div class="col-12">
-                                    <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" style="cursor:pointer;">
+                                    <a href="/profiles/@profile.Id" class="card profile-card d-flex flex-column" >
                                         <div class="position-relative">
-                                            <img src="@profile.CoverPhotoUrl" class="card-img-top" alt="Cover photo for @profile.Name" style="object-fit: cover; height: 120px;">
+                                            <img src="@profile.CoverPhotoUrl" class="profile-cover-img card-img-top" alt="Cover photo for @profile.Name">
                                             <div class="position-absolute top-0 end-0 m-1">
                                                 <span class="badge @GetProfileStatusBadgeClass(profile.ProfileStatus) fs-7">
                                                     @profile.ProfileStatus
@@ -366,264 +353,7 @@
     }
 }
 
-@section Styles {
-    <style>
-        /* Custom font sizes for compact layout */
-        .fs-7 {
-            font-size: 0.75rem !important;
-        }
-        
-        .fs-6 {
-            font-size: 0.875rem !important;
-        }
-        
-        .camera-card,
-        .profile-card,
-        .feature-card {
-            height: 100%;
-            transition: all 0.15s ease;
-        }
-        
-        .camera-card:hover,
-        .profile-card:hover,
-        .feature-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        /* Optimize accordion body padding */
-        .accordion-body {
-            padding: 1rem;
-        }
-        
-        /* Optimize card spacing */
-        .card-body {
-            padding: 0.75rem;
-        }
-        
-        /* Fix: Remove padding for single-column camera cards */
-        .property-details .row > .col-12 {
-            padding-left: 0;
-            padding-right: 0;
-        }
-        
-        /* Better responsive card sizing for sidebar */
-        @@media (min-width: 576px) {
-            .col-sm-6 {
-                min-width: 180px; /* Optimal for 400px sidebar */
-            }
-        }
-        
-        /* Tighter spacing for sidebar layout */
-        .property-details .row {
-            margin: 0 -0.5rem;
-        }
-        
-        .property-details .row > * {
-            padding: 0 0.5rem;
-        }
 
-        /* Feature category collapse styling */
-        .feature-category-group .collapse {
-            transition: all 0.3s ease;
-        }
-
-        .feature-category-group button[data-bs-toggle="collapse"] {
-            border: none;
-            background: transparent;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-        }
-
-        .feature-category-group button[data-bs-toggle="collapse"]:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .feature-category-group button[data-bs-toggle="collapse"] i {
-            transition: transform 0.2s ease;
-        }
-        
-        /* Compact button styling */
-        .btn-sm.fs-7 {
-            padding: 0.2rem 0.5rem;
-            font-size: 0.7rem;
-        }
-        
-        /* Optimize badge sizing */
-        .badge.fs-7 {
-            font-size: 0.65rem !important;
-            padding: 0.2em 0.4em;
-        }
-
-        /* Feature weights styling */
-        .feature-weights-panel {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .feature-weight-item {
-            padding: 0.75rem;
-            background-color: #f8f9fa;
-            border-radius: 0.375rem;
-            border: 1px solid #e9ecef;
-        }
-
-        .weight-slider {
-            margin: 0;
-        }
-
-        .seasonal-weights-panel {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            padding: 0.5rem;
-        }
-
-        .seasonal-weights-panel .form-label {
-            margin-bottom: 0.25rem;
-            font-weight: 500;
-        }
-
-        .seasonal-weight-display {
-            display: block;
-            text-align: center;
-            font-weight: 500;
-            color: #6c757d;
-        }
-
-        .fs-8 {
-            font-size: 0.7rem !important;
-        }
-
-        .weight-display {
-            font-weight: 600;
-            color: #527A52;
-            background-color: #f0f8f0;
-            padding: 0.1rem 0.4rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-        }
-
-        .feature-category-weights h6 {
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 0.25rem;
-        }
-
-        .weighting-summary {
-            border-left: 4px solid #527A52;
-        }
-
-        .weighting-summary .summary-content p {
-            margin-bottom: 0.5rem;
-            line-height: 1.4;
-        }
-
-        .weighting-summary .alert-heading {
-            color: #527A52;
-        }
-
-        /* Category collapse styling */
-        .category-header {
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            transition: background-color 0.2s ease;
-        }
-
-        .category-header:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .category-chevron {
-            color: #6c757d;
-            font-size: 0.875rem;
-        }
-
-        /* Season notice styling */
-        .season-notice {
-            font-size: 0.75rem;
-            padding: 0.5rem;
-            margin-bottom: 0;
-        }
-
-        .alert-sm {
-            padding: 0.375rem 0.75rem;
-        }
-
-        /* Season overrides styling */
-        .month-selector-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 0.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .month-checkbox {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.375rem 0.25rem;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background-color: #ffffff;
-            min-height: 36px;
-            position: relative;
-        }
-
-        .month-checkbox input[type="checkbox"] {
-            display: none;
-        }
-
-        .month-checkbox .month-label {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #6c757d;
-            transition: color 0.2s ease;
-        }
-
-        .month-checkbox:hover {
-            border-color: #527A52;
-            background-color: #f8f9fa;
-        }
-
-        .month-checkbox.active {
-            background-color: #527A52;
-            border-color: #527A52;
-        }
-
-        .month-checkbox.active .month-label {
-            color: #ffffff;
-        }
-
-        .month-checkbox.default-month {
-            border-color: #28a745;
-            border-width: 2px;
-        }
-
-        .month-checkbox.default-month.active {
-            background-color: #28a745;
-            border-color: #28a745;
-        }
-
-        .season-override-item {
-            border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            background-color: #fafafa;
-        }
-
-        .season-summary {
-            border-top: 1px solid #dee2e6;
-            padding-top: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .fs-8 {
-            font-size: 0.7rem !important;
-        }
-    </style>
-}
 
 @section Scripts {
     <script>
@@ -667,7 +397,7 @@
                 const instructionDiv = document.createElement('div');
                 instructionDiv.id = 'drawing-instructions';
                 instructionDiv.className = 'alert alert-info position-fixed';
-                instructionDiv.style.cssText = 'top: 10px; right: 60px; z-index: 1000; max-width: 300px;';
+                instructionDiv.className += ' drawing-instructions-panel';
                 instructionDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -954,13 +684,13 @@
                         <div class="d-flex justify-content-between align-items-center mb-2 category-header" 
                              data-bs-toggle="collapse" data-bs-target="#${categoryId}" 
                              aria-expanded="true" aria-controls="${categoryId}" 
-                             style="cursor: pointer;">
+                             >
                             <h6 class="text-muted mb-0 fs-6">
                                 <i class="${category.icon} me-1"></i>
                                 ${category.name}
                                 <span class="badge badge-custom-secondary ms-2 fs-7">${category.items.length}</span>
                             </h6>
-                            <i class="fas fa-chevron-down category-chevron" style="transition: transform 0.2s ease;"></i>
+                            <i class="fas fa-chevron-down category-chevron"></i>
                         </div>
                         <div class="collapse show feature-weights-list" id="${categoryId}">
                 `;
@@ -992,7 +722,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="seasonal-weights-panel mt-2" id="seasonal-${fw.classificationType}" style="display: none;">
+                            <div class="seasonal-weights-panel section-hidden mt-2" id="seasonal-${fw.classificationType}">
                                 <div class="row g-2">
                                     <div class="col-4">
                                         <label class="form-label fs-8">Pre-Rut</label>
@@ -1096,7 +826,7 @@
         function toggleSeasonalWeights(classification) {
             const panel = document.getElementById(`seasonal-${classification}`);
             if (panel) {
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                panel.classList.toggle('section-hidden');
             }
         }
 
@@ -1242,11 +972,11 @@
             
             // Update the season selector display style to indicate active season
             if (selectedSeason === 'all') {
-                selector.style.backgroundColor = '';
-                selector.style.borderColor = '';
+                
+                
             } else {
-                selector.style.backgroundColor = '#f0f8f0';
-                selector.style.borderColor = '#527A52';
+                
+                
             }
             
             // Show helpful text
