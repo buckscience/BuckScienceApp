@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{6945BACE-EED7-4AFD-9C2A-1A1C8F406074}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\..\Downloads\buckscience-reference-new.html = ..\..\..\Downloads\buckscience-reference-new.html
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CD83329E-84BC-4B52-AD28-B8B5CABA6DC4}"
 EndProject

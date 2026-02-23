@@ -1,0 +1,222 @@
+/* ========== Google Fonts Import ========== */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap');
+
+/* ========== CSS Custom Properties ========== */
+:root {
+  /* Color Palette - Dark Forest Theme */
+  --bs-forest: #1a2318;
+  --bs-dark: #0d1409;
+  --bs-bark: #2e3a28;
+  --bs-moss: #3d5c30;
+  --bs-olive: #6b8c3e;
+  --bs-amber: #c8832a;
+  --bs-gold: #e8a838;
+  --bs-cream: #f0e8d8;
+  --bs-tan: #c4a882;
+  --bs-white: #faf8f4;
+  
+  /* Legacy Colors (for gradual migration from old Bootstrap colors) */
+  --bs-primary: var(--bs-amber);
+  --bs-primary-hover: var(--bs-gold);
+  --bs-secondary: var(--bs-bark);
+  --bs-success: var(--bs-olive);
+  --bs-info: var(--bs-moss);
+  --bs-warning: var(--bs-gold);
+  --bs-danger: #dc3545;
+  --bs-light: var(--bs-cream);
+  --bs-muted: var(--bs-tan);
+  
+  /* Spacing Scale */
+  --bs-space-xs: 0.25rem;
+  --bs-space-sm: 0.5rem;
+  --bs-space-md: 1rem;
+  --bs-space-lg: 1.5rem;
+  --bs-space-xl: 2rem;
+  --bs-space-xxl: 3rem;
+  
+  /* Typography Scale */
+  --bs-font-family-primary: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bs-font-family-heading: 'Bebas Neue', Impact, sans-serif;
+  --bs-font-family-condensed: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  
+  --bs-font-size-xs: 0.75rem;
+  --bs-font-size-sm: 0.875rem;
+  --bs-font-size-base: 1rem;
+  --bs-font-size-lg: 1.125rem;
+  --bs-font-size-xl: 1.25rem;
+  --bs-font-size-2xl: 1.5rem;
+  --bs-font-size-3xl: 2rem;
+  --bs-font-size-4xl: 2.5rem;
+  
+  /* Shadows */
+  --bs-shadow-sm: 0 1px 3px rgba(13, 20, 9, 0.12);
+  --bs-shadow-md: 0 4px 6px rgba(13, 20, 9, 0.15);
+  --bs-shadow-lg: 0 10px 15px rgba(13, 20, 9, 0.2);
+  --bs-shadow-xl: 0 20px 25px rgba(13, 20, 9, 0.25);
+  
+  /* Border Radius */
+  --bs-border-radius-sm: 2px;
+  --bs-border-radius: 4px;
+  --bs-border-radius-md: 6px;
+  --bs-border-radius-lg: 8px;
+  --bs-border-radius-xl: 12px;
+  
+  /* Transitions */
+  --bs-transition-fast: 0.15s ease;
+  --bs-transition-base: 0.2s ease;
+  --bs-transition-slow: 0.3s ease;
+}
+
+/* ========== Typography Foundation ========== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--bs-font-family-primary);
+  font-size: var(--bs-font-size-base);
+  line-height: 1.6;
+  color: var(--bs-cream);
+  background: var(--bs-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--bs-font-family-heading);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--bs-white);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--bs-space-md);
+}
+
+h1, .h1 { font-size: clamp(2.5rem, 5vw, var(--bs-font-size-4xl)); }
+h2, .h2 { font-size: clamp(2rem, 4vw, var(--bs-font-size-3xl)); }
+h3, .h3 { font-size: var(--bs-font-size-2xl); }
+h4, .h4 { font-size: var(--bs-font-size-xl); }
+h5, .h5 { font-size: var(--bs-font-size-lg); }
+h6, .h6 { font-size: var(--bs-font-size-base); }
+
+/* Labels and UI Text */
+.label, .form-label, .nav-label {
+  font-family: var(--bs-font-family-condensed);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--bs-font-size-sm);
+  color: var(--bs-tan);
+}
+
+/* Body text variations */
+.text-muted { color: var(--bs-tan) !important; }
+.text-light { color: var(--bs-cream) !important; }
+.text-white { color: var(--bs-white) !important; }
+.text-primary { color: var(--bs-amber) !important; }
+.text-secondary { color: var(--bs-bark) !important; }
+
+/* Small text */
+small, .small {
+  font-size: var(--bs-font-size-sm);
+  color: var(--bs-tan);
+}
+
+/* Links */
+a {
+  color: var(--bs-amber);
+  text-decoration: none;
+  transition: var(--bs-transition-base);
+}
+
+a:hover {
+  color: var(--bs-gold);
+  text-decoration: none;
+}
+
+/* ========== Utility Classes ========== */
+
+/* Spacing utilities */
+.mt-xs { margin-top: var(--bs-space-xs) !important; }
+.mt-sm { margin-top: var(--bs-space-sm) !important; }
+.mt-md { margin-top: var(--bs-space-md) !important; }
+.mt-lg { margin-top: var(--bs-space-lg) !important; }
+.mt-xl { margin-top: var(--bs-space-xl) !important; }
+
+.mb-xs { margin-bottom: var(--bs-space-xs) !important; }
+.mb-sm { margin-bottom: var(--bs-space-sm) !important; }
+.mb-md { margin-bottom: var(--bs-space-md) !important; }
+.mb-lg { margin-bottom: var(--bs-space-lg) !important; }
+.mb-xl { margin-bottom: var(--bs-space-xl) !important; }
+
+.p-xs { padding: var(--bs-space-xs) !important; }
+.p-sm { padding: var(--bs-space-sm) !important; }
+.p-md { padding: var(--bs-space-md) !important; }
+.p-lg { padding: var(--bs-space-lg) !important; }
+.p-xl { padding: var(--bs-space-xl) !important; }
+
+/* Background utilities */
+.bg-dark { background-color: var(--bs-dark) !important; }
+.bg-forest { background-color: var(--bs-forest) !important; }
+.bg-bark { background-color: var(--bs-bark) !important; }
+.bg-moss { background-color: var(--bs-moss) !important; }
+.bg-cream { background-color: var(--bs-cream) !important; }
+.bg-white { background-color: var(--bs-white) !important; }
+
+/* Border utilities */
+.border-amber { border-color: var(--bs-amber) !important; }
+.border-gold { border-color: var(--bs-gold) !important; }
+.border-tan { border-color: var(--bs-tan) !important; }
+
+/* Shadow utilities */
+.shadow-sm { box-shadow: var(--bs-shadow-sm) !important; }
+.shadow-md { box-shadow: var(--bs-shadow-md) !important; }
+.shadow-lg { box-shadow: var(--bs-shadow-lg) !important; }
+.shadow-xl { box-shadow: var(--bs-shadow-xl) !important; }
+
+/* ========== Base Component Overrides ========== */
+
+/* Override Bootstrap variables with our hunting theme */
+:root {
+  --bs-primary: var(--bs-amber);
+  --bs-primary-rgb: 200, 131, 42;
+  --bs-secondary: var(--bs-bark);
+  --bs-success: var(--bs-olive);
+  --bs-info: var(--bs-moss);
+  --bs-warning: var(--bs-gold);
+  --bs-light: var(--bs-cream);
+  --bs-dark: #0d1409;
+  
+  --bs-body-font-family: var(--bs-font-family-primary);
+  --bs-body-bg: var(--bs-dark);
+  --bs-body-color: var(--bs-cream);
+  
+  --bs-border-radius: var(--bs-border-radius);
+  --bs-border-radius-sm: var(--bs-border-radius-sm);
+  --bs-border-radius-lg: var(--bs-border-radius-lg);
+}
+
+/* Form controls */
+.form-control {
+  background-color: rgba(240, 232, 216, 0.05);
+  border-color: rgba(196, 168, 130, 0.3);
+  color: var(--bs-cream);
+}
+
+.form-control:focus {
+  background-color: rgba(240, 232, 216, 0.08);
+  border-color: var(--bs-amber);
+  box-shadow: 0 0 0 0.25rem rgba(200, 131, 42, 0.25);
+  color: var(--bs-white);
+}
+
+.form-control::placeholder {
+  color: rgba(196, 168, 130, 0.6);
+}
+
+/* Form labels */
+.form-label {
+  color: var(--bs-tan);
+  font-weight: 500;
+}

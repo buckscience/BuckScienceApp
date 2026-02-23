@@ -1,57 +1,157 @@
-﻿@{
-    Layout = null;
-    var title = ViewData["Title"] as string ?? "BuckScience";
-    var isAuth = Context?.User?.Identity?.IsAuthenticated ?? false;
+﻿/* Fix the landing-page.css file - this appears to contain HTML instead of CSS */
+
+/* ========== Landing Page Styles - Temporary Fix ========== */
+/* This file needs proper CSS content, not HTML */
+
+.landing-nav {
+  background: var(--bs-dark, #0d1409);
+  padding: 1rem 0;
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>@title - BuckScience</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/landing-css.css" asp-append-version="true" />
 
-    @await RenderSectionAsync("Head", required: false)
-</head>
-<body>
-    <header class="landing-nav">
-        <div class="container nav-inner">
-            <a class="brand" href="@Url.Content("~/")" aria-label="BuckScience home">
-                <span class="dot" aria-hidden="true"></span>
-                <span>BuckScience</span>
-            </a>
-            <div class="nav-actions">
-                <a class="btn btn-ghost" href="#">Docs</a>
-                @if (isAuth)
-                {
-                    <a class="btn btn-primary" href="~/">Go to app</a>
-                }
-                else
-                {
-                    <a class="btn btn-primary" href="/auth/login">Sign in</a>
-                }
-            </div>
-        </div>
-    </header>
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
 
-    <main class="hero">
-        <div class="container hero-inner">
-            @RenderBody()
-        </div>
-    </main>
+.brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  color: var(--bs-white, #faf8f4);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+}
 
-    <footer>
-        <div class="container" style="display:flex; align-items:center; justify-content:space-between; flex-wrap: wrap; gap: .75rem;">
-            <div>© @DateTime.UtcNow.Year BuckScience</div>
-            <div style="display:flex; gap:.75rem;">
-                <a href="#">Privacy</a>
-                <a href="#">Terms</a>
-                <a href="#">Contact</a>
-            </div>
-        </div>
-    </footer>
+.nav-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
 
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+.hero {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  background: var(--bs-cream, #f0e8d8);
+  padding: 4rem 0;
+}
+
+.hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  text-align: center;
+}
+
+.hero-copy h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 6vw, 5rem);
+  color: var(--bs-dark, #0d1409);
+  margin-bottom: 1rem;
+  letter-spacing: 0.03em;
+}
+
+.hero-copy p {
+  font-size: 1.125rem;
+  color: var(--bs-tan, #c4a882);
+  margin-bottom: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.login-card {
+  background: var(--bs-white, #faf8f4);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.login-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+footer {
+  background: var(--bs-bark, #2e3a28);
+  color: var(--bs-cream, #f0e8d8);
+  padding: 2rem;
+  text-align: center;
+}
+
+footer a {
+  color: var(--bs-amber, #c8832a);
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: var(--bs-gold, #e8a838);
+}
+
+/* Button styles for landing page */
+.btn-primary {
+  background-color: var(--bs-amber, #c8832a);
+  color: var(--bs-dark, #0d1409);
+  padding: 0.875rem 1.75rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  border: 1px solid var(--bs-amber, #c8832a);
+}
+
+.btn-primary:hover {
+  background-color: var(--bs-gold, #e8a838);
+  color: var(--bs-dark, #0d1409);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--bs-tan, #c4a882);
+  padding: 0.875rem 1.75rem;
+  border: 1px solid rgba(196, 168, 130, 0.3);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.btn-ghost:hover {
+  border-color: var(--bs-amber, #c8832a);
+  color: var(--bs-amber, #c8832a);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cta {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .nav-inner {
+    padding: 0 1rem;
+  }
+  
+  .hero-inner {
+    padding: 0 1rem;
+  }
+}
